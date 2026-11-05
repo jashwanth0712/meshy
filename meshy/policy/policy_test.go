@@ -56,10 +56,10 @@ func TestCheck(t *testing.T) {
 	}{
 		{"/srv/reports", false, true},
 		{"/srv/reports/q3.csv", false, true},
-		{"/srv/reports/q3.csv", true, false},       // ro
-		{"/srv/reports/drafts/a.md", true, true},   // longest prefix rw
-		{"/srv/reportsX/a", false, false},          // component boundary
-		{"/srv/reports/../secrets", false, false},  // cleaned before matching
+		{"/srv/reports/q3.csv", true, false},      // ro
+		{"/srv/reports/drafts/a.md", true, true},  // longest prefix rw
+		{"/srv/reportsX/a", false, false},         // component boundary
+		{"/srv/reports/../secrets", false, false}, // cleaned before matching
 		{"/etc/shadow", false, false},
 		{"/srv", false, false},
 	}

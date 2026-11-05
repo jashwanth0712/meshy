@@ -85,13 +85,20 @@ func Seal(p *Policy, recipients ...*ecdh.PublicKey) (string, error) {
 	if err := p.Validate(); err != nil {
 		return "", err
 	}
-	if len(recipients) == 0 {
-		return "", errors.New("policy: no recipients")
-	}
 	plain, err := p.Marshal()
 	if err != nil {
 		return "", err
 	}
+	return SealBytes(plain, p.Grant, recipients...)
+}
+
+// SealBytes encrypts arbitrary plaintext to recipients with aad bound in
+// (used for audit payloads on Arkiv, aad = entity schema + session).
+func SealBytes(plain []byte, aad string, recipients ...*ecdh.PublicKey) (string, error) {
+	if len(recipients) == 0 {
+		return "", errors.New("policy: no recipients")
+	}
+	ad := []byte(aad)
 	cek := make([]byte, chacha20poly1305.KeySize)
 	if _, err := rand.Read(cek); err != nil {
 		return "", err
@@ -102,7 +109,7 @@ func Seal(p *Policy, recipients ...*ecdh.PublicKey) (string, error) {
 		V:          1,
 		Alg:        alg,
 		Nonce:      b64.EncodeToString(nonce),
-		Ciphertext: b64.EncodeToString(aead.Seal(nil, nonce, plain, []byte(p.Grant))),
+		Ciphertext: b64.EncodeToString(aead.Seal(nil, nonce, plain, ad)),
 	}
 	for _, pub := range recipients {
 		eph, err := GenerateKey()
@@ -119,7 +126,7 @@ func Seal(p *Policy, recipients ...*ecdh.PublicKey) (string, error) {
 			KID:        KeyID(pub),
 			Ephemeral:  b64.EncodeToString(eph.PublicKey().Bytes()),
 			Nonce:      b64.EncodeToString(wn),
-			WrappedKey: b64.EncodeToString(wrap.Seal(nil, wn, cek, []byte(p.Grant))),
+			WrappedKey: b64.EncodeToString(wrap.Seal(nil, wn, cek, ad)),
 		})
 	}
 	out, err := json.Marshal(env)
@@ -129,6 +136,23 @@ func Seal(p *Policy, recipients ...*ecdh.PublicKey) (string, error) {
 // Open decrypts an envelope with priv. grant must be the ENS name the record
 // was read from; a mismatch (record copied from another grant) fails AEAD.
 func Open(record string, grant string, priv *ecdh.PrivateKey) (*Policy, error) {
+	plain, err := OpenBytes(record, grant, priv)
+	if err != nil {
+		return nil, err
+	}
+	p, err := Unmarshal(plain)
+	if err != nil {
+		return nil, err
+	}
+	if p.Grant != grant {
+		return nil, fmt.Errorf("policy: grant mismatch: record for %q read from %q", p.Grant, grant)
+	}
+	return p, nil
+}
+
+// OpenBytes decrypts an envelope sealed with SealBytes under the same aad.
+func OpenBytes(record string, aad string, priv *ecdh.PrivateKey) ([]byte, error) {
+	grant := aad
 	var env Envelope
 	if err := json.Unmarshal([]byte(record), &env); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrEnvelope, err)
@@ -170,14 +194,7 @@ func Open(record string, grant string, priv *ecdh.PrivateKey) (*Policy, error) {
 		if err != nil {
 			return nil, fmt.Errorf("policy: decrypt failed: %w", err)
 		}
-		p, err := Unmarshal(plain)
-		if err != nil {
-			return nil, err
-		}
-		if p.Grant != grant {
-			return nil, fmt.Errorf("policy: grant mismatch: record for %q read from %q", p.Grant, grant)
-		}
-		return p, nil
+		return plain, nil
 	}
 	return nil, ErrNotRecipient
 }

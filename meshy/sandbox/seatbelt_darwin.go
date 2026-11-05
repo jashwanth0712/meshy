@@ -55,7 +55,9 @@ func (s *Seatbelt) Check() error {
 	return nil
 }
 
-func sbQuote(p string) string { return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(p) + `"` }
+func sbQuote(p string) string {
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(p) + `"`
+}
 
 // realpath resolves symlinks (/tmp -> /private/tmp) since Seatbelt matches
 // on vnode paths.

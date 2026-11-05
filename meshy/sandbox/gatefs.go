@@ -112,23 +112,23 @@ type gateNode struct {
 }
 
 var (
-	_ fs.NodeWrapChilder     = (*gateNode)(nil)
-	_ fs.NodeLookuper        = (*gateNode)(nil)
-	_ fs.NodeOpener          = (*gateNode)(nil)
-	_ fs.NodeOpendirHandler  = (*gateNode)(nil)
-	_ fs.NodeReaddirer       = (*gateNode)(nil)
-	_ fs.NodeCreater         = (*gateNode)(nil)
-	_ fs.NodeMkdirer         = (*gateNode)(nil)
-	_ fs.NodeMknoder         = (*gateNode)(nil)
-	_ fs.NodeUnlinker        = (*gateNode)(nil)
-	_ fs.NodeRmdirer         = (*gateNode)(nil)
-	_ fs.NodeRenamer         = (*gateNode)(nil)
-	_ fs.NodeSymlinker       = (*gateNode)(nil)
-	_ fs.NodeLinker          = (*gateNode)(nil)
-	_ fs.NodeSetattrer       = (*gateNode)(nil)
-	_ fs.NodeSetxattrer      = (*gateNode)(nil)
-	_ fs.NodeRemovexattrer   = (*gateNode)(nil)
-	_ fs.NodeCopyFileRanger  = (*gateNode)(nil)
+	_ fs.NodeWrapChilder    = (*gateNode)(nil)
+	_ fs.NodeLookuper       = (*gateNode)(nil)
+	_ fs.NodeOpener         = (*gateNode)(nil)
+	_ fs.NodeOpendirHandler = (*gateNode)(nil)
+	_ fs.NodeReaddirer      = (*gateNode)(nil)
+	_ fs.NodeCreater        = (*gateNode)(nil)
+	_ fs.NodeMkdirer        = (*gateNode)(nil)
+	_ fs.NodeMknoder        = (*gateNode)(nil)
+	_ fs.NodeUnlinker       = (*gateNode)(nil)
+	_ fs.NodeRmdirer        = (*gateNode)(nil)
+	_ fs.NodeRenamer        = (*gateNode)(nil)
+	_ fs.NodeSymlinker      = (*gateNode)(nil)
+	_ fs.NodeLinker         = (*gateNode)(nil)
+	_ fs.NodeSetattrer      = (*gateNode)(nil)
+	_ fs.NodeSetxattrer     = (*gateNode)(nil)
+	_ fs.NodeRemovexattrer  = (*gateNode)(nil)
+	_ fs.NodeCopyFileRanger = (*gateNode)(nil)
 )
 
 func (n *gateNode) WrapChild(ctx context.Context, ops fs.InodeEmbedder) fs.InodeEmbedder {
@@ -330,13 +330,13 @@ type auditFile struct {
 }
 
 var (
-	_ fs.FileReader   = (*auditFile)(nil)
-	_ fs.FileWriter   = (*auditFile)(nil)
-	_ fs.FileReleaser = (*auditFile)(nil)
-	_ fs.FileFlusher  = (*auditFile)(nil)
-	_ fs.FileFsyncer  = (*auditFile)(nil)
+	_ fs.FileReader    = (*auditFile)(nil)
+	_ fs.FileWriter    = (*auditFile)(nil)
+	_ fs.FileReleaser  = (*auditFile)(nil)
+	_ fs.FileFlusher   = (*auditFile)(nil)
+	_ fs.FileFsyncer   = (*auditFile)(nil)
 	_ fs.FileGetattrer = (*auditFile)(nil)
-	_ fs.FileLseeker  = (*auditFile)(nil)
+	_ fs.FileLseeker   = (*auditFile)(nil)
 )
 
 func (f *auditFile) Read(ctx context.Context, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
