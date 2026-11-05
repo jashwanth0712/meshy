@@ -73,7 +73,7 @@ say "agent join"
 JP=$!
 for _ in $(seq 1 40); do grep -q MESHY_APPROVE_URL "$WORK/join.log" && break; sleep 0.5; done
 "$BIN/meshy-admin" agent add --org "$ORG" --approve "$(awk '/MESHY_APPROVE_URL/{print $2}' "$WORK/join.log")" --dev-attest-key "$ATT_KEY"
-wait $JP && grep -q MESHY_JOINED "$WORK/join.log" && ok "joined" || fail "join"
+{ wait $JP || true; } && grep -q MESHY_JOINED "$WORK/join.log" && ok "joined" || fail "join"
 
 expect() { # name, want-exit, want-substring, command...
   local name=$1 want=$2 sub=$3; shift 3
@@ -96,12 +96,12 @@ say "revocation latency ($RUNS runs, ${BLOCK_TIME}s blocks)"
 LAT=()
 for i in $(seq 1 "$RUNS"); do
   [[ $i -gt 1 ]] && "$BIN/meshy-admin" grant --resource "$RES" --agent claude-1 --path "$SRV/reports:ro" --for 1h >/dev/null
-  ("$BIN/meshy" ssh "$RES" -- "echo started; sleep 300; echo SURVIVED" >"$WORK/live$i.log" 2>&1; echo "exit=$?" >>"$WORK/live$i.log") &
+  (set +e; "$BIN/meshy" ssh "$RES" -- "echo started; sleep 300; echo SURVIVED" >"$WORK/live$i.log" 2>&1; echo "exit=$?" >>"$WORK/live$i.log") &
   LP=$!
   for _ in $(seq 1 40); do grep -q started "$WORK/live$i.log" 2>/dev/null && break; sleep 0.25; done
   T0=$(python3 -c 'import time;print(time.time())')
   "$BIN/meshy-admin" revoke --resource "$RES" --agent claude-1 >"$WORK/revoke$i.log"
-  wait $LP
+  wait $LP || true
   T1=$(python3 -c 'import time;print(time.time())')
   L=$(python3 -c "print('%.2f' % ($T1-$T0))")
   if grep -q MESHY_REVOKED "$WORK/live$i.log" && ! grep -q SURVIVED "$WORK/live$i.log"; then
