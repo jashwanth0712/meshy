@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/ethereum/go-ethereum v1.17.10
 	github.com/gliderlabs/ssh v0.3.8
+	github.com/hanwen/go-fuse/v2 v2.12.1
 	golang.org/x/crypto v0.58.0
 )
 

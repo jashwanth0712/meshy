@@ -3,6 +3,7 @@ package meshyd
 import (
 	"context"
 	"errors"
+	"io"
 	"os/exec"
 
 	"github.com/jashwanth0712/meshy/meshy/audit"
@@ -26,6 +27,11 @@ type Prepared struct {
 	// Cleanup releases sandbox resources (FUSE mounts, temp dirs). It is called
 	// after the process group is dead. Safe to call more than once.
 	Cleanup func()
+	// WrapStderr optionally wraps the session's stderr (e.g. to detect
+	// blocked accesses from tool error messages).
+	WrapStderr func(io.Writer) io.Writer
+	// OnStart is called with the pid right after the command starts.
+	OnStart func(pid int)
 }
 
 // Sandbox builds confined commands. The command MUST be started in its own

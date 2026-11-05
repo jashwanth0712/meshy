@@ -1,0 +1,8 @@
+# Linux test image for meshyd's sandbox (bwrap + FUSE). Run:
+#   docker build -f deploy/Dockerfile.test -t meshy-test . && \
+#   docker run --rm --device /dev/fuse --cap-add SYS_ADMIN \
+#     --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+#     -v "$PWD/meshy":/src -w /src meshy-test go test ./...
+FROM golang:1.27-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap fuse3 procps && rm -rf /var/lib/apt/lists/*
+ENV GOFLAGS=-buildvcs=false

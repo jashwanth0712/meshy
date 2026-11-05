@@ -192,7 +192,11 @@ func (s *Server) handle(sess ssh.Session) {
 	}
 	defer prep.Cleanup()
 	cmd := prep.Cmd
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = sess, sess, sess.Stderr()
+	var stderr io.Writer = sess.Stderr()
+	if prep.WrapStderr != nil {
+		stderr = prep.WrapStderr(stderr)
+	}
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = sess, sess, stderr
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -203,6 +207,9 @@ func (s *Server) handle(sess ssh.Session) {
 		fmt.Fprintf(sess.Stderr(), "MESHY_EXEC_ERROR %v\n", err)
 		sess.Exit(127)
 		return
+	}
+	if prep.OnStart != nil {
+		prep.OnStart(cmd.Process.Pid)
 	}
 	s.mu.Lock()
 	s.sessions[ss.id] = ss
