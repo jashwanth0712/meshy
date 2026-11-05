@@ -180,3 +180,14 @@ func TestWatcherUnwatch(t *testing.T) {
 	heads.ch <- head(1)
 	expectNone(t, revs)
 }
+
+func TestClampTip(t *testing.T) {
+	g := func(n int64) *big.Int { return big.NewInt(n) }
+	for _, c := range []struct{ in, want *big.Int }{
+		{nil, g(1e9)}, {g(25), g(1e9)}, {g(3e9), g(3e9)}, {g(5e12), g(1e10)},
+	} {
+		if got := ClampTip(c.in); got.Cmp(c.want) != 0 {
+			t.Errorf("ClampTip(%v) = %v", c.in, got)
+		}
+	}
+}

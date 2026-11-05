@@ -153,8 +153,10 @@ func (a *Admin) Send(ctx context.Context, to common.Address, data []byte) (*type
 	if err != nil {
 		tip = big.NewInt(2_000_000_000)
 	}
-	// Revocations should land in the next block: pay a generous tip.
-	tip = new(big.Int).Mul(tip, big.NewInt(2))
+	// Clamp to [1, 10] gwei. Never multiply the suggestion: on quiet chains
+	// (or a fork) it is derived from our own previous txs and would grow
+	// exponentially. 1+ gwei is plenty for next-block inclusion of revokes.
+	tip = ClampTip(tip)
 	head, err := a.Eth.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -207,6 +209,18 @@ func (a *Admin) tx(ctx context.Context, to common.Address, method string, args .
 		return nil, err
 	}
 	return a.Send(ctx, to, data)
+}
+
+// ClampTip bounds a suggested priority fee to [1, 10] gwei.
+func ClampTip(tip *big.Int) *big.Int {
+	lo, hi := big.NewInt(1_000_000_000), big.NewInt(10_000_000_000)
+	switch {
+	case tip == nil || tip.Cmp(lo) < 0:
+		return lo
+	case tip.Cmp(hi) > 0:
+		return hi
+	}
+	return tip
 }
 
 func randomSalt() *big.Int {

@@ -62,8 +62,11 @@ func (w *Writer) Execute(ctx context.Context, creates ...Create) (common.Hash, e
 		return common.Hash{}, fmt.Errorf("arkivkit: nonce: %w", err)
 	}
 	tip, err := w.Chain.SuggestGasTipCap(ctx)
-	if err != nil {
+	if err != nil || tip.Cmp(big.NewInt(1_000_000_000)) < 0 {
 		tip = big.NewInt(1_000_000_000)
+	}
+	if tip.Cmp(big.NewInt(10_000_000_000)) > 0 { // never chase our own fee history
+		tip = big.NewInt(10_000_000_000)
 	}
 	head, err := w.Chain.HeaderByNumber(ctx, nil)
 	if err != nil {
