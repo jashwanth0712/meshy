@@ -46,7 +46,8 @@ const abiJSON = `[
    {"name":"status","type":"uint8"},{"name":"expiry","type":"uint64"},{"name":"latestOwner","type":"address"},{"name":"tokenId","type":"uint256"},{"name":"resource","type":"uint256"}]}]},
  {"type":"function","name":"getResolver","stateMutability":"view","inputs":[{"name":"label","type":"string"}],"outputs":[{"type":"address"}]},
  {"type":"function","name":"text","stateMutability":"view","inputs":[{"name":"node","type":"bytes32"},{"name":"key","type":"string"}],"outputs":[{"type":"string"}]},
- {"type":"function","name":"addr","stateMutability":"view","inputs":[{"name":"node","type":"bytes32"}],"outputs":[{"type":"address"}]}
+ {"type":"function","name":"addr","stateMutability":"view","inputs":[{"name":"node","type":"bytes32"}],"outputs":[{"type":"address"}]},
+ {"type":"function","name":"resolve","stateMutability":"view","inputs":[{"name":"name","type":"bytes"},{"name":"data","type":"bytes"}],"outputs":[{"type":"bytes"}]}
 ]`
 
 var ensABI = func() abi.ABI {
@@ -139,9 +140,27 @@ func (c *Client) Resolver(ctx context.Context, registry common.Address, label st
 	return res[0].(common.Address), nil
 }
 
+// resolveCall performs an ENSIP-10 resolve(name, innerCall) on resolver.
+// ENSv2's PermissionedResolver exposes record reads only through resolve().
+func (c *Client) resolveCall(ctx context.Context, resolver common.Address, name Name, method string, args ...any) ([]any, error) {
+	dns, err := DNSEncode(string(name))
+	if err != nil {
+		return nil, err
+	}
+	inner, err := ensABI.Pack(method, args...)
+	if err != nil {
+		return nil, err
+	}
+	res, err := c.call(ctx, resolver, nil, "resolve", dns, inner)
+	if err != nil {
+		return nil, err
+	}
+	return ensABI.Methods[method].Outputs.Unpack(res[0].([]byte))
+}
+
 // Text reads a text record from resolver for name.
 func (c *Client) Text(ctx context.Context, resolver common.Address, name Name, key string) (string, error) {
-	res, err := c.call(ctx, resolver, nil, "text", Namehash(string(name)), key)
+	res, err := c.resolveCall(ctx, resolver, name, "text", Namehash(string(name)), key)
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +169,7 @@ func (c *Client) Text(ctx context.Context, resolver common.Address, name Name, k
 
 // Addr reads the ETH address record from resolver for name.
 func (c *Client) Addr(ctx context.Context, resolver common.Address, name Name) (common.Address, error) {
-	res, err := c.call(ctx, resolver, nil, "addr", Namehash(string(name)))
+	res, err := c.resolveCall(ctx, resolver, name, "addr", Namehash(string(name)))
 	if err != nil {
 		return common.Address{}, err
 	}

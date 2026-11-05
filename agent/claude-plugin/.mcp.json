@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "meshy": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "env": { "MESHY_BIN": "meshy" }
+    }
+  }
+}

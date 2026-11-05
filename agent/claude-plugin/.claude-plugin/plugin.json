@@ -1,0 +1,8 @@
+{
+  "name": "meshy",
+  "version": "0.1.0",
+  "description": "Meshy: ENSv2-controlled, folder-sandboxed SSH access to your team's infrastructure for Claude Code. Join with a World ID-backed invite, run commands on granted resources, and see exactly what you may touch.",
+  "author": { "name": "Meshy team (ETHGlobal Mumbai 2026)" },
+  "homepage": "https://github.com/jashwanth0712/meshy",
+  "license": "AGPL-3.0"
+}

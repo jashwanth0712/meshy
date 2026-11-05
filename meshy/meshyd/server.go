@@ -179,6 +179,13 @@ func (s *Server) handle(sess ssh.Session) {
 	sink := audit.SinkFunc(func(e audit.Event) {
 		e.Session, e.Agent, e.Grant = ss.id, az.Agent, string(az.Grant.Name)
 		s.emit(e)
+		if e.Kind == audit.Blocked {
+			// Tell the agent precisely what happened and how to get access, in
+			// a machine-readable line (tools only say "Permission denied").
+			fmt.Fprintf(sess.Stderr(), "MESHY_BLOCKED path=%s op=%s reason=%q allowed=%s grant=%s expires=%s ask=admins-of-%s\n",
+				e.Path, e.Op, e.Reason, az.Policy.AllowedSummary(), az.Grant.Name,
+				az.Expiry.Format("15:04"), az.Grant.Name.Org())
+		}
 	})
 	prep, err := s.Sandbox.Prepare(sess.Context(), SandboxSpec{
 		SessionID: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name),
