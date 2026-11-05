@@ -214,7 +214,7 @@ func TestBwrapKillGroupKillsSandbox(t *testing.T) {
 	syscall.Kill(-prep.Cmd.Process.Pid, syscall.SIGKILL)
 	prep.Cmd.Wait()
 	time.Sleep(200 * time.Millisecond)
-	out, _ := exec.Command("sh", "-c", "pgrep -f 'sleep 300' || true").Output()
+	out, _ := exec.Command("pgrep", "-x", "sleep").Output()
 	if len(bytes.TrimSpace(out)) != 0 {
 		t.Fatalf("sandboxed processes survived kill: %s", out)
 	}

@@ -1,8 +1,12 @@
-# Linux test image for meshyd's sandbox (bwrap + FUSE). Run:
-#   docker build -f deploy/Dockerfile.test -t meshy-test . && \
+# Linux test image for meshyd's sandbox (bwrap + FUSE). From the repo root:
+#   docker build -f deploy/Dockerfile.test -t meshy-test deploy
 #   docker run --rm --device /dev/fuse --cap-add SYS_ADMIN \
 #     --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
-#     -v "$PWD/meshy":/src -w /src meshy-test go test ./...
+#     --security-opt systempaths=unconfined \
+#     -e GOFLAGS=-mod=mod -v "$PWD/meshy":/src -v "$(go env GOMODCACHE)":/go/pkg/mod \
+#     -w /src meshy-test go test ./...
+# (Mounting the host module cache avoids slow in-container downloads.
+#  Without systempaths=unconfined sessions get an empty /proc instead.)
 FROM golang:1.27-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap fuse3 procps && rm -rf /var/lib/apt/lists/*
 ENV GOFLAGS=-buildvcs=false

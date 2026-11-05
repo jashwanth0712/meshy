@@ -27,13 +27,26 @@ import (
 //
 // meshyd needs /dev/fuse and CAP_SYS_ADMIN; in Docker run with
 // --device /dev/fuse --cap-add SYS_ADMIN --security-opt seccomp=unconfined
-// --security-opt apparmor=unconfined.
+// --security-opt apparmor=unconfined --security-opt systempaths=unconfined.
+// Without systempaths=unconfined Docker's masked /proc makes a fresh procfs
+// impossible inside the user namespace; we then fall back to an empty /proc
+// (never the container's real one, which would expose meshyd's environment).
 type Bwrap struct {
 	Path       string   // bwrap binary; default "bwrap"
 	Roots      []string // data roots to gate, e.g. ["/srv"]; must exist
 	SystemRead []string // default DefaultSystemRead
 	RunDir     string   // where FUSE mountpoints live; default /run/meshy
 	UID, GID   int      // in-sandbox identity; default 1000
+
+	noProc bool // set by Check when a private procfs cannot be mounted
+}
+
+// ProcWarning is non-empty when sessions run without a real /proc.
+func (b *Bwrap) ProcWarning() string {
+	if b.noProc {
+		return "private /proc unavailable (add --security-opt systempaths=unconfined); sessions get an empty /proc"
+	}
+	return ""
 }
 
 var alwaysGated = []string{"/etc", "/home", "/root"}
@@ -58,6 +71,10 @@ func (b *Bwrap) Check() error {
 	out, err := exec.Command(b.bin(), "--unshare-all", "--die-with-parent", "--ro-bind", "/", "/", "true").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("bwrap cannot create namespaces (%s): %w; in Docker add --security-opt seccomp=unconfined --security-opt apparmor=unconfined", out, err)
+	}
+	if out, err := exec.Command(b.bin(), "--unshare-all", "--die-with-parent", "--ro-bind", "/", "/", "--proc", "/proc", "true").CombinedOutput(); err != nil {
+		b.noProc = true
+		_ = out
 	}
 	for _, r := range b.Roots {
 		if fi, err := os.Stat(r); err != nil || !fi.IsDir() {
@@ -118,8 +135,13 @@ func (b *Bwrap) Prepare(ctx context.Context, spec meshyd.SandboxSpec) (*meshyd.P
 		"--die-with-parent", "--new-session", "--unshare-all",
 		"--uid", fmt.Sprint(uid), "--gid", fmt.Sprint(gid),
 		"--cap-drop", "ALL", "--hostname", "meshy-sandbox",
-		"--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/var",
+		"--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/var",
 		"--clearenv",
+	}
+	if b.noProc {
+		args = append(args, "--tmpfs", "/proc")
+	} else {
+		args = append(args, "--proc", "/proc")
 	}
 	for _, d := range []string{"/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32"} {
 		fi, err := os.Lstat(d)
