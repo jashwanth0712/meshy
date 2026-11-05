@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+cache/
+broadcast/
+*.env
+.env*
+!.env.example
+dist/
+bin/
+*.log
+.DS_Store
