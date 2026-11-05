@@ -18,7 +18,6 @@ The interface contracts are in [../docs/INTERFACES.md](../docs/INTERFACES.md).
 ```bash
 cd meshy
 go build ./cmd/meshyd ./cmd/meshy ./cmd/meshy-admin
-go build -tags netbird -o meshyd ./cmd/meshyd   # with the mesh listener (NetBird client/embed)
 ```
 
 ## Test
@@ -40,8 +39,8 @@ docker run --rm --device /dev/fuse --cap-add SYS_ADMIN --security-opt seccomp=un
 ```bash
 meshyd init --name db1.prod.acme.eth --roots /srv                # prints ENS records + a join code
 meshy-admin resource add --org acme.eth --network prod --join meshy-join:...   # or use the dashboard
-meshyd run --name db1.prod.acme.eth --roots /srv --sepolia wss://<sepolia-ws>  \
-  [--netbird-setup-key KEY --netbird-management https://provider]   # mesh-only listener
+meshyd run --name db1.prod.acme.eth --roots /srv --sepolia wss://<sepolia-ws> --listen 127.0.0.1:2222
+meshy-mesh serve --setup-key KEY --management https://provider --forward 22=127.0.0.1:2222   # mesh-only (../meshnet)
 meshyd status -w                                                 # live view
 ```
 Under Docker on Linux, add `--device /dev/fuse --cap-add SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined`.
@@ -54,4 +53,6 @@ meshy ssh db1.prod.acme.eth -- cat /srv/reports/q3.csv
 ```
 
 ## Deviation from the plan
-The plan put this code inside a vendored NetBird fork. Instead it is a standalone module that imports `github.com/netbirdio/netbird/client/embed` (BSD-3) behind the `netbird` build tag, and copies NetBird's two `replace` directives (circl, easyjson). It is faster to build and still uses NetBird as the mesh.
+The plan put this code inside a vendored NetBird fork. Instead the mesh lives in a separate module, [`../meshnet`](../meshnet) (`meshy-mesh`), which wraps NetBird's `client/embed` (BSD-3) in userspace.
+
+It has to be separate because NetBird v0.82 and go-ethereum need incompatible `pion/stun/v3` versions, so they can't link into one binary. On resources, `meshy-mesh serve` forwards the mesh port `:22` to meshyd on localhost. On agents, `meshy-mesh proxy` is the SSH ProxyCommand, so each agent is its own mesh peer. Authorization doesn't depend on source IP: meshyd authorizes the SSH key against ENS.

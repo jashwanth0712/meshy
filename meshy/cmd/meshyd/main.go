@@ -170,8 +170,6 @@ func cmdRun(args []string) error {
 	requireHuman := fs.Bool("require-human", env("MESHY_REQUIRE_HUMAN", "true") == "true", "require World ID attestation for agents")
 	unsafe := fs.Bool("unsafe-no-sandbox", false, "run sessions without confinement (dev only)")
 	maxHeadAge := fs.Duration("max-head-age", 45*time.Second, "fail closed if no new block for this long")
-	setupKey := fs.String("netbird-setup-key", env("MESHY_SETUP_KEY", ""), "join the Meshy mesh with this setup key (build with -tags netbird); SSH then listens only on the mesh IP")
-	mgmtURL := fs.String("netbird-management", env("MESHY_MANAGEMENT_URL", ""), "provider management URL, e.g. https://provider.example:443")
 	fs.Parse(args)
 	if c.name == "" || *sepolia == "" {
 		return errors.New("--name and --sepolia are required")
@@ -255,21 +253,11 @@ func cmdRun(args []string) error {
 	}
 	defer ctl.Close()
 
-	var ln net.Listener
-	if *setupKey != "" {
-		if meshListen == nil {
-			return errors.New("--netbird-setup-key needs a binary built with -tags netbird")
-		}
-		var stopMesh func()
-		ln, stopMesh, err = meshListen(ctx, strings.ReplaceAll(c.name, ".", "-"), c.state, *setupKey, *mgmtURL, log)
-		if err != nil {
-			return err
-		}
-		defer stopMesh()
-	} else {
-		if ln, err = net.Listen("tcp", *listen); err != nil {
-			return err
-		}
+	// On the mesh, meshy-mesh forwards the mesh IP :22 to this listener
+	// (keep it on 127.0.0.1 so SSH is reachable only through the mesh).
+	ln, err := net.Listen("tcp", *listen)
+	if err != nil {
+		return err
 	}
 	log.Info("meshyd ready", "resource", c.name, "listen", ln.Addr().String(), "sandbox", sb.Name(),
 		"addr", crypto.PubkeyToAddress(keys.Eth.PublicKey).Hex(), "control", c.control)
@@ -279,9 +267,6 @@ func cmdRun(args []string) error {
 	}
 	return nil
 }
-
-// meshListen is set by mesh_netbird.go when built with -tags netbird.
-var meshListen func(ctx context.Context, name, state, setupKey, mgmtURL string, log *slog.Logger) (net.Listener, func(), error)
 
 func orgKey(ctx context.Context, ens *enskit.Client, org enskit.Name) (*ecdhPub, error) {
 	r, err := ens.Lookup(ctx, org)
