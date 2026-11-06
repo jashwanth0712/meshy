@@ -1,72 +1,31 @@
 <!-- {"title": "Activity", "active": "activity", "shell": "app"} -->
-<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
-  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">activity</span></nav>
-  <div class="flex flex-wrap items-end justify-between gap-6">
-    <div>
-      <h1 class="display flex items-center gap-4">Activity <span class="tag tag-lime translate-y-1"><span class="dot dot-live"></span>live from arkiv</span></h1>
-      <p class="lede mt-3 max-w-2xl">Every session, file operation, refusal and revocation, written by the device daemons to a public audit log and encrypted to your org key.</p>
-    </div>
-    <div class="flex gap-2"><button class="btn btn-outline"><i data-lucide="download"></i>Export CSV</button><button class="btn btn-outline"><i data-lucide="code-xml"></i>Verify it yourself</button></div>
-  </div>
-
-  <div class="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="card px-5 py-4"><div class="flex items-center justify-between text-[13px] text-muted-foreground">Live sessions<span class="dot dot-live"></span></div><div class="mt-1 text-[2rem] font-semibold tracking-tight tnum">1</div><div class="text-xs text-muted-foreground"><span class="mono">claude-1</span> on <span class="mono">db1</span></div></div>
-    <div class="card px-5 py-4"><div class="text-[13px] text-muted-foreground">Refused attempts</div><div class="mt-1 text-[2rem] font-semibold tracking-tight tnum text-destructive">7</div><div class="text-xs text-muted-foreground">last 24 h</div></div>
-    <div class="card px-5 py-4"><div class="text-[13px] text-muted-foreground">Revocations</div><div class="mt-1 text-[2rem] font-semibold tracking-tight tnum">3</div><div class="text-xs text-muted-foreground">all sessions killed</div></div>
-    <div class="card px-5 py-4"><div class="text-[13px] text-muted-foreground">Daemon kill latency</div><div class="mt-1 flex items-baseline gap-1 text-[2rem] font-semibold tracking-tight tnum">148<span class="text-base text-muted-foreground">ms avg</span></div>
-      <svg viewBox="0 0 120 22" class="mt-1 h-5 w-full" aria-label="132, 192, 120 ms"><polyline fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="5,14 60,4 115,17"/><circle cx="115" cy="17" r="2.5" fill="var(--primary)"/></svg></div>
-  </div>
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10">
+  <h1 class="display">Activity</h1>
+  <p class="lede">1 live session · 7 refused · 3 revocations in the last 24 hours</p>
 </section>
 
-<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
-  <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-warning/30 bg-warning-soft px-5 py-3.5 text-[13.5px] text-warning">
-    <i data-lucide="lock" class="h-4 w-4"></i>
-    <span class="flex-1">Paths and commands are hidden: Arkiv is public, so they are encrypted to your org key. Load it to read them here (it stays in this browser).</span>
-    <a href="settings.html#org-key" class="btn btn-sm border-warning/40 bg-card text-foreground hover:bg-muted"><i data-lucide="key-square"></i>Import org key</a>
+<main class="mx-auto max-w-5xl px-6">
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true">All</button>
+    <button role="tab">Refused</button>
+    <button role="tab">Sessions</button>
+    <button role="tab">Revocations</button>
   </div>
 
-  <section class="card overflow-hidden">
-    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 pt-2">
-      <div class="tabs border-0" role="tablist">
-        <button role="tab" aria-selected="true">All <span class="count">14</span></button>
-        <button role="tab">Refused <span class="count count-soft">7</span></button>
-        <button role="tab">Sessions <span class="count count-soft">6</span></button>
-        <button role="tab">Files</button>
-        <button role="tab">Revocations <span class="count count-soft">3</span></button>
-      </div>
-      <div class="flex items-center gap-2 pb-2">
-        <button class="btn btn-outline btn-sm"><i data-lucide="sparkle"></i>Agent: all<i data-lucide="chevron-down"></i></button>
-        <button class="btn btn-outline btn-sm"><i data-lucide="server"></i>Device: all<i data-lucide="chevron-down"></i></button>
-        <button class="btn btn-outline btn-sm"><i data-lucide="calendar"></i>24 h<i data-lucide="chevron-down"></i></button>
-      </div>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="tbl">
-        <thead><tr><th class="w-24">Time</th><th class="w-40">Event</th><th>Who and where</th><th>Detail</th><th class="w-24 text-right">Proof</th></tr></thead>
-        <tbody>
-          <tr class="bg-success-soft/40"><td class="mono text-[12.5px] text-muted-foreground">14:05</td><td><span class="badge b-live"><i data-lucide="play"></i>Session started</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">db1.prod</span></td><td class="text-muted-foreground"><i data-lucide="lock" class="inline h-3.5 w-3.5"></i> command sealed</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">12:02</td><td><span class="badge b-bad"><i data-lucide="ban"></i>Login refused</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">pi.home</span></td><td><code class="text-xs">MESHY_NO_GRANT</code> <button class="ml-2 text-xs font-semibold text-primary hover:underline">Grant this</button></td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">12:01</td><td><span class="badge b-muted"><i data-lucide="square"></i>Session ended</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">pi.home</span></td><td class="text-muted-foreground">exit</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">11:58</td><td><span class="badge b-live"><i data-lucide="play"></i>Session started</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">pi.home</span></td><td class="text-muted-foreground"><i data-lucide="lock" class="inline h-3.5 w-3.5"></i> command sealed</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">11:57</td><td><span class="badge b-bad"><i data-lucide="ban"></i>Blocked</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">camera.pi.home</span></td><td><code class="text-xs">MESHY_NO_GRANT</code> <span class="text-muted-foreground">connect</span></td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">10:12</td><td><span class="badge b-bad"><i data-lucide="ban"></i>Login refused</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">db1.prod</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">10:04</td><td><span class="badge b-muted"><i data-lucide="square"></i>Session ended</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">db1.prod</span></td><td class="text-muted-foreground">exit</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr class="bg-warning-soft/40"><td class="mono text-[12.5px] text-muted-foreground">10:03</td><td><span class="badge b-warn"><i data-lucide="zap"></i>Killed by revoke</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">db1.prod</span></td><td>block <span class="mono">12,073,050</span> · daemon reacted in <b>132 ms</b></td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr><td class="mono text-[12.5px] text-muted-foreground">10:01</td><td><span class="badge b-live"><i data-lucide="play"></i>Session started</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">db1.prod</span></td><td class="text-muted-foreground"><i data-lucide="lock" class="inline h-3.5 w-3.5"></i> command sealed</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-          <tr class="bg-warning-soft/40"><td class="mono text-[12.5px] text-muted-foreground">09:59</td><td><span class="badge b-warn"><i data-lucide="zap"></i>Killed by revoke</span></td><td><span class="mono font-medium">claude-1</span> <span class="text-muted-foreground">on</span> <span class="ens">db1.prod</span></td><td>block <span class="mono">12,073,047</span> · daemon reacted in <b>192 ms</b></td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">entity ↗</a></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="flex items-center justify-between border-t border-border px-5 py-3 text-[13px] text-muted-foreground">
-      <span>Showing 10 of 14 · only entities signed by your device daemons (<span class="mono">0x6E36…5B7F</span>, <span class="mono">0x80F6…CE6e</span>, <span class="mono">0x7Dec…3384</span>)</span>
-      <button class="btn btn-outline btn-sm">Load older</button>
-    </div>
-  </section>
-
-  <details class="card group">
-    <summary class="flex cursor-pointer list-none items-center justify-between px-5 py-4"><span class="h3 flex items-center gap-2"><i data-lucide="code-xml" class="h-4 w-4"></i>Verify it yourself</span><span class="badge b-info">public Arkiv RPC · no key</span></summary>
-    <div class="border-t border-border p-5"><pre class="mono overflow-x-auto whitespace-pre-wrap rounded-xl bg-ink p-4 text-[12px] leading-relaxed text-white/85 dark:bg-black">curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network \
-  -H 'content-type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"arkiv_query","params":["arkiv.schema = str('meshy.blocked') AND org = str('meshydemo.eth') ORDER BY ts:u64 DESC",{"select":{"key":true,"attributes":true},"limit":"0x14"}]}'</pre></div>
-  </details>
+  <div class="card mt-4 overflow-x-auto">
+    <table class="tbl">
+      <thead><tr><th class="w-20">Time</th><th>Event</th><th>Agent</th><th>Device</th></tr></thead>
+      <tbody>
+        <tr><td class="mono text-[13px] muted">14:05</td><td>Session started</td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+        <tr><td class="mono text-[13px] muted">12:02</td><td><span class="badge b-bad">Refused</span></td><td class="mono">claude-1</td><td class="mono">pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">12:01</td><td>Session ended</td><td class="mono">claude-1</td><td class="mono">pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">11:58</td><td>Session started</td><td class="mono">claude-1</td><td class="mono">pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">11:57</td><td><span class="badge b-bad">Refused</span></td><td class="mono">claude-1</td><td class="mono">camera.pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">10:12</td><td><span class="badge b-bad">Refused</span></td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+        <tr><td class="mono text-[13px] muted">10:03</td><td><span class="badge b-warn">Revoked</span> <span class="text-[13px] muted">ended in 132 ms</span></td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+        <tr><td class="mono text-[13px] muted">10:01</td><td>Session started</td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-4 text-[13px] muted">Commands and paths are encrypted. <a href="settings.html" class="link">Import the org key</a> to read them. Every row is a public Arkiv record. <a href="#" class="link">Verify on Arkiv</a></p>
 </main>

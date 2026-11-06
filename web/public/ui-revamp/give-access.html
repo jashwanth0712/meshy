@@ -196,9 +196,13 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
   background: linear-gradient(90deg, rgb(5 11 36 / .78) 0%, rgb(5 11 36 / .35) 45%, transparent 75%); }
 .band-edge { height: 3px; background: linear-gradient(90deg, transparent, #38bdf8 20%, #f6f8ff 50%, #a5d8ff 80%, transparent); opacity: .9; }
 .topbar { background: color-mix(in srgb, var(--background) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-.page-head > section { padding-top: 2.5rem !important; padding-bottom: 1.75rem !important; }
-.page-head .display { font-size: clamp(1.75rem, 2.6vw, 2.25rem); }
-.page-head .lede { font-size: .9375rem; margin-top: .5rem; }
+.page-head .display { font-size: 1.875rem; letter-spacing: -0.025em; }
+.page-head .lede { font-size: .9375rem; margin-top: .375rem; }
+.row { display: flex; align-items: center; gap: 1rem; padding: .875rem 1.25rem; }
+.row + .row { border-top: 1px solid var(--border); }
+.muted { color: var(--muted-foreground); }
+.link { color: var(--primary); font-weight: 500; }
+.link:hover { text-decoration: underline; text-underline-offset: 2px; }
 .dark .band-edge { opacity: .6; }
 
 /* cards */
@@ -298,7 +302,7 @@ textarea.input { height: auto; padding: .7rem .85rem; line-height: 1.5; }
 kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .3rem; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--muted); color: var(--muted-foreground); font-size: .6875rem; font-weight: 500; }
 
 /* nav */
-.navlink { display: inline-flex; align-items: center; height: 2.25rem; padding: 0 .8rem; border-radius: 9999px; font-size: .9375rem; font-weight: 500; color: var(--muted-foreground); transition: color .2s, background-color .2s; }
+.navlink { display: inline-flex; align-items: center; height: 2rem; padding: 0 .7rem; border-radius: 9999px; font-size: .875rem; font-weight: 500; color: var(--muted-foreground); transition: color .2s, background-color .2s; }
 .navlink:hover { color: var(--foreground); }
 .navlink[aria-current="page"] { color: var(--foreground); background: color-mix(in srgb, var(--foreground) 6%, transparent); font-weight: 600; }
 
@@ -343,132 +347,68 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 <body class="min-h-screen bg-background text-foreground">
 
 <header class="topbar sticky top-0 z-40">
-  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-6 lg:px-8">
-    <a href="index.html" class="shrink-0 text-foreground" title="All mockups"><svg class="h-7 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk7" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk7)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
-    <button class="ml-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground hover:text-foreground lg:inline-flex" title="Switch org">
-      <span class="mono text-[13px] text-foreground">meshydemo.eth</span><span class="text-xs">▾</span>
-    </button>
-    <nav class="ml-2 hidden items-center gap-0.5 md:flex" aria-label="Main"><a class="navlink" href="access.html" aria-current="page">Access</a>
+  <div class="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
+    <a href="index.html" class="shrink-0 text-foreground" title="Meshy"><svg class="h-6 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk7" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk7)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
+    <nav class="hidden items-center gap-0.5 md:flex" aria-label="Main"><a class="navlink" href="access.html" aria-current="page">Access</a>
 <a class="navlink" href="directory.html">Directory</a>
 <a class="navlink" href="activity.html">Activity</a>
 <a class="navlink" href="billing.html">Billing</a>
 <a class="navlink" href="provider.html">Provider</a>
 <a class="navlink" href="settings.html">Settings</a></nav>
-    <div class="ml-auto flex items-center gap-2">
-      <button onclick="openPalette()" class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Search">Search <kbd>⌘K</kbd></button>
-      <button onclick="toggleTheme()" class="btn btn-ghost btn-sm btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
-      <button class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full border border-border px-3 text-sm hover:border-border-strong">
-        <span class="mono text-[13px]">0x45e8…E0EA</span><span class="text-xs text-muted-foreground">owner</span>
-      </button>
+    <div class="ml-auto flex items-center gap-3">
+      <button onclick="openPalette()" class="text-sm text-muted-foreground hover:text-foreground" aria-label="Search"><kbd>⌘K</kbd></button>
+      <span class="mono text-[13px] text-muted-foreground">0x45e8…E0EA</span>
     </div>
   </div>
 </header><div class="page-head">
-<!-- Access home, dimmed behind the sheet -->
-<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8" aria-hidden="true">
-  <div class="ens mb-4 text-[13px] text-muted-foreground">meshydemo.eth / access</div>
-  <h1 class="display">Access right now</h1>
-  <p class="lede mt-3 max-w-2xl">One agent can reach one thing. Every grant is an ENS name that expires on its own.</p>
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10" aria-hidden="true">
+  <h1 class="display">Access</h1>
+  <p class="lede">One agent can reach one thing right now.</p>
 </section>
 </div>
-<div class="relative pb-20 pt-2">
+<div class="relative pb-24">
 
-<div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8" aria-hidden="true">
-  <div class="card h-80 p-6"><div class="skeleton h-4 w-40"></div><div class="mt-6 space-y-4"><div class="skeleton h-14"></div><div class="skeleton h-14 opacity-60"></div><div class="skeleton h-14 opacity-40"></div></div></div>
-  <div class="card h-80 p-6"><div class="skeleton h-4 w-32"></div><div class="mt-6 space-y-3"><div class="skeleton h-4"></div><div class="skeleton h-4 w-5/6"></div><div class="skeleton h-4 w-4/6"></div></div></div>
-</div>
+<div class="mx-auto max-w-5xl px-6" aria-hidden="true"><div class="card h-40"></div></div>
 
 <div class="scrim"></div>
-<aside role="dialog" aria-modal="true" aria-labelledby="sheet-title" class="pop fixed inset-y-2 right-2 z-[55] flex w-[min(580px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl">
-  <header class="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
-    <div>
-      <div class="eyebrow mb-1">New grant</div>
-      <h2 id="sheet-title" class="h2">Give access</h2>
-      <p class="mt-1 text-[13.5px] text-muted-foreground">Creates an ENS subname owned by the agent. It expires on its own.</p>
-    </div>
-    <button class="btn btn-ghost btn-icon" aria-label="Close"><i data-lucide="x"></i></button>
+<aside role="dialog" aria-modal="true" aria-labelledby="sheet-title" class="pop fixed inset-y-2 right-2 z-[55] flex w-[min(480px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl">
+  <header class="flex items-center justify-between px-6 pb-2 pt-6">
+    <h2 id="sheet-title" class="h2">Give access</h2>
+    <a href="access.html" class="btn btn-ghost btn-sm btn-icon" aria-label="Close"><i data-lucide="x"></i></a>
   </header>
 
-  <div class="flex-1 space-y-7 overflow-y-auto px-6 py-6">
-    <!-- 1 agent -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">1 · Agent</span><span class="hint">1 agent in the org</span></div>
-      <button class="flex w-full items-center gap-3 rounded-xl border-[1.5px] border-input bg-card px-3 py-2.5 text-left hover:border-border-strong">
-        
-        <span class="min-w-0 flex-1"><span class="ens block font-semibold">claude-1<span class="rest">.agents.meshydemo.eth</span></span><span class="text-xs text-muted-foreground">Claude Code · 0x35e7…A62f · 1 live grant</span></span>
-        <span class="badge b-live">Human-backed</span>
-        
-      </button>
-    </section>
+  <div class="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+    <label class="block">
+      <span class="label">Agent</span>
+      <select class="input mono mt-2"><option>claude-1</option></select>
+    </label>
 
-    <!-- 2 target -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">2 · What it can reach</span>
-        <div class="seg"><button aria-pressed="true">Device folders</button><button>One service port</button></div>
+    <fieldset>
+      <legend class="label">Device</legend>
+      <div class="card mt-2 text-[14px]">
+        <label class="row cursor-pointer"><input type="radio" name="t" checked class="accent-[var(--primary)]"><span class="mono flex-1">rig1.home</span></label>
+        <label class="row cursor-pointer"><input type="radio" name="t" class="accent-[var(--primary)]"><span class="mono flex-1">db1.prod</span><span class="text-xs muted">has access</span></label>
+        <label class="row cursor-pointer"><input type="radio" name="t" class="accent-[var(--primary)]"><span class="mono flex-1">pi.home</span></label>
       </div>
-      <div class="grid gap-2" role="radiogroup">
-        <label class="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-primary bg-accent/50 px-3 py-2.5">
-          <span class="grid h-4 w-4 place-items-center rounded-full border-2 border-primary"><span class="h-2 w-2 rounded-full bg-primary"></span></span>
-          
-          <span class="ens flex-1 font-semibold">rig1<span class="rest">.home.meshydemo.eth</span></span>
-          <span class="text-xs text-muted-foreground">server · no live grants</span>
-        </label>
-        <label class="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-border px-3 py-2.5 hover:border-border-strong">
-          <span class="h-4 w-4 rounded-full border-2 border-border-strong"></span>
-          
-          <span class="ens flex-1">db1<span class="rest">.prod.meshydemo.eth</span></span>
-          <span class="badge b-live">claude-1 has it · 58m</span>
-        </label>
-        <label class="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-border px-3 py-2.5 hover:border-border-strong">
-          <span class="h-4 w-4 rounded-full border-2 border-border-strong"></span>
-          
-          <span class="ens flex-1">pi<span class="rest">.home.meshydemo.eth</span></span>
-          <span class="text-xs text-muted-foreground">Raspberry Pi 5 · front door</span>
-        </label>
-      </div>
-    </section>
+    </fieldset>
 
-    <!-- 3 folders -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">3 · Folders</span><span class="hint">rig1 shares <span class="mono">~/meshy-demo/rig1</span></span></div>
-      <div class="space-y-2">
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1"><input class="input mono" value="~/meshy-demo/rig1/models"></div>
-          <div class="seg"><button aria-pressed="true">Read</button><button>Read + write</button></div>
-          <button class="btn btn-ghost btn-icon" aria-label="Remove folder"></button>
-        </div>
-        <div class="flex flex-wrap items-center gap-1.5 pt-1">
-          <span class="text-xs text-muted-foreground">Suggested:</span>
-          <button class="badge b-outline hover:border-foreground">datasets</button>
-          <button class="badge b-outline hover:border-foreground">reports</button>
-          <button class="badge b-outline hover:border-foreground">Add folder</button>
-        </div>
-      </div>
-    </section>
+    <label class="block">
+      <span class="label">Folder</span>
+      <input class="input mono mt-2" value="~/meshy-demo/rig1/models">
+      <div class="seg mt-2"><button aria-pressed="true">Read</button><button>Read and write</button></div>
+    </label>
 
-    <!-- 4 duration -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">4 · For how long</span><span class="hint">Agent grants are capped at 4 hours</span></div>
-      <div class="flex items-center gap-3">
-        <div class="seg"><button>15 min</button><button aria-pressed="true">1 hour</button><button>4 hours</button></div>
-        <span class="text-[13px] text-muted-foreground">Expires <b class="tnum font-semibold text-foreground">15:08 today</b>. Nobody has to remember to revoke.</span>
-      </div>
-    </section>
+    <div>
+      <span class="label">For</span>
+      <div class="seg mt-2"><button>15 min</button><button aria-pressed="true">1 hour</button><button>4 hours</button></div>
+    </div>
 
-    <!-- preview -->
-    <section class="rounded-2xl border border-border bg-muted/50 p-4">
-      <div class="eyebrow mb-2">In plain words</div>
-      <p class="text-[15px] leading-relaxed"><b class="mono font-semibold">claude-1</b> can <b>read</b> <span class="mono">~/meshy-demo/rig1/models</span> on <b class="mono font-semibold">rig1</b> for <b>1 hour</b>. Everything else on rig1 is refused with <code class="rounded bg-card px-1 text-[13px]">MESHY_BLOCKED</code>, and its sandbox has no network.</p>
-      <div class="mt-4 space-y-2 border-t border-border pt-3 text-[13px]">
-        <div class="flex items-center gap-2">Creates <span class="ens font-semibold">claude-1<span class="dot-sep">.</span>rig1<span class="dot-sep">.</span>home<span class="rest">.meshydemo.eth</span></span></div>
-        <div class="flex items-center gap-2">Policy sealed in your browser to rig1's daemon and the org key. Paths never appear on-chain in clear.</div>
-        <div class="flex items-center gap-2">claude-1 has a World ID attestation from a trusted attestor.</div>
-      </div>
-    </section>
+    <p class="rounded-xl bg-muted p-4 text-[14px] leading-relaxed"><b class="mono">claude-1</b> can read <span class="mono">models</span> on <b class="mono">rig1</b> until 15:08. Nothing else on rig1.</p>
   </div>
 
-  <footer class="flex items-center justify-between gap-4 border-t border-border bg-card px-6 py-4">
-    <div class="text-[13px] text-muted-foreground"><b class="text-foreground">2 transactions</b> on Sepolia · about 30 s</div>
-    <div class="flex gap-2"><button class="btn btn-outline">Cancel</button><a href="revoke.html" class="btn btn-primary">Give access</a></div>
+  <footer class="flex items-center justify-between border-t border-border px-6 py-4">
+    <span class="text-[13px] muted">2 transactions</span>
+    <a href="access.html" class="btn btn-primary">Give access</a>
   </footer>
 </aside>
 
@@ -517,24 +457,19 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
     </div>
   </div>
 </div>
-<footer class="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-md">
-  <div class="mx-auto flex h-9 max-w-7xl items-center gap-5 px-6 text-xs text-muted-foreground lg:px-8">
-    <span class="flex items-center gap-1.5"><span class="dot dot-live"></span>Sepolia <span class="mono tnum text-foreground">#12,074,308</span></span>
-    <span class="hidden items-center gap-1.5 sm:flex">Arkiv</span>
-    <a href="activity.html" class="hidden min-w-0 items-center gap-1.5 truncate hover:text-foreground md:flex"><span class="mono text-foreground">claude-1</span> started a session on <span class="mono text-foreground">db1.prod</span><span>· 1m ago</span></a>
-    <span class="ml-auto flex items-center gap-1.5">Org key not loaded · <a href="settings.html#org-key" class="font-medium text-foreground underline-offset-2 hover:underline">Import</a></span>
-  </div>
-</footer>
 <script>
 // Mockup behaviour: theme toggle, ⌘K palette, live countdowns. Not production code.
 (function () {
   const q = new URLSearchParams(location.search);
   const root = document.documentElement;
-  const stored = localStorage.getItem("meshy-mock-theme");
-  if (q.get("theme") === "dark" || (!q.get("theme") && stored === "dark")) root.classList.add("dark");
+  let stored = null;
+  try { stored = localStorage.getItem("meshy-mock-theme"); } catch (e) {}
+  // ?theme= wins, then a saved choice, then the system setting (so the Mac app follows macOS)
+  const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  if (q.get("theme") === "dark" || (!q.get("theme") && (stored === "dark" || (!stored && sysDark)))) root.classList.add("dark");
   window.toggleTheme = () => {
     root.classList.toggle("dark");
-    localStorage.setItem("meshy-mock-theme", root.classList.contains("dark") ? "dark" : "light");
+    try { localStorage.setItem("meshy-mock-theme", root.classList.contains("dark") ? "dark" : "light"); } catch (e) {}
   };
 
   // ---- command palette (cmdk stand-in) ----

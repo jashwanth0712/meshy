@@ -196,9 +196,13 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
   background: linear-gradient(90deg, rgb(5 11 36 / .78) 0%, rgb(5 11 36 / .35) 45%, transparent 75%); }
 .band-edge { height: 3px; background: linear-gradient(90deg, transparent, #38bdf8 20%, #f6f8ff 50%, #a5d8ff 80%, transparent); opacity: .9; }
 .topbar { background: color-mix(in srgb, var(--background) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-.page-head > section { padding-top: 2.5rem !important; padding-bottom: 1.75rem !important; }
-.page-head .display { font-size: clamp(1.75rem, 2.6vw, 2.25rem); }
-.page-head .lede { font-size: .9375rem; margin-top: .5rem; }
+.page-head .display { font-size: 1.875rem; letter-spacing: -0.025em; }
+.page-head .lede { font-size: .9375rem; margin-top: .375rem; }
+.row { display: flex; align-items: center; gap: 1rem; padding: .875rem 1.25rem; }
+.row + .row { border-top: 1px solid var(--border); }
+.muted { color: var(--muted-foreground); }
+.link { color: var(--primary); font-weight: 500; }
+.link:hover { text-decoration: underline; text-underline-offset: 2px; }
 .dark .band-edge { opacity: .6; }
 
 /* cards */
@@ -298,7 +302,7 @@ textarea.input { height: auto; padding: .7rem .85rem; line-height: 1.5; }
 kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .3rem; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--muted); color: var(--muted-foreground); font-size: .6875rem; font-weight: 500; }
 
 /* nav */
-.navlink { display: inline-flex; align-items: center; height: 2.25rem; padding: 0 .8rem; border-radius: 9999px; font-size: .9375rem; font-weight: 500; color: var(--muted-foreground); transition: color .2s, background-color .2s; }
+.navlink { display: inline-flex; align-items: center; height: 2rem; padding: 0 .7rem; border-radius: 9999px; font-size: .875rem; font-weight: 500; color: var(--muted-foreground); transition: color .2s, background-color .2s; }
 .navlink:hover { color: var(--foreground); }
 .navlink[aria-current="page"] { color: var(--foreground); background: color-mix(in srgb, var(--foreground) 6%, transparent); font-weight: 600; }
 
@@ -343,105 +347,46 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 <body class="min-h-screen bg-background text-foreground">
 
 <header class="topbar sticky top-0 z-40">
-  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-6 lg:px-8">
-    <a href="index.html" class="shrink-0 text-foreground" title="All mockups"><svg class="h-7 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk5" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk5)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
-    <button class="ml-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground hover:text-foreground lg:inline-flex" title="Switch org">
-      <span class="mono text-[13px] text-foreground">meshydemo.eth</span><span class="text-xs">▾</span>
-    </button>
-    <nav class="ml-2 hidden items-center gap-0.5 md:flex" aria-label="Main"><a class="navlink" href="access.html">Access</a>
+  <div class="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
+    <a href="index.html" class="shrink-0 text-foreground" title="Meshy"><svg class="h-6 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk5" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk5)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
+    <nav class="hidden items-center gap-0.5 md:flex" aria-label="Main"><a class="navlink" href="access.html">Access</a>
 <a class="navlink" href="directory.html">Directory</a>
 <a class="navlink" href="activity.html">Activity</a>
 <a class="navlink" href="billing.html" aria-current="page">Billing</a>
 <a class="navlink" href="provider.html">Provider</a>
 <a class="navlink" href="settings.html">Settings</a></nav>
-    <div class="ml-auto flex items-center gap-2">
-      <button onclick="openPalette()" class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Search">Search <kbd>⌘K</kbd></button>
-      <button onclick="toggleTheme()" class="btn btn-ghost btn-sm btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
-      <button class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full border border-border px-3 text-sm hover:border-border-strong">
-        <span class="mono text-[13px]">0x45e8…E0EA</span><span class="text-xs text-muted-foreground">owner</span>
-      </button>
+    <div class="ml-auto flex items-center gap-3">
+      <button onclick="openPalette()" class="text-sm text-muted-foreground hover:text-foreground" aria-label="Search"><kbd>⌘K</kbd></button>
+      <span class="mono text-[13px] text-muted-foreground">0x45e8…E0EA</span>
     </div>
   </div>
 </header><div class="page-head">
-<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
-  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">billing</span></nav>
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10">
   <h1 class="display">Billing</h1>
-  <p class="lede mt-3 max-w-2xl">Seats are paid to a staked provider in test USDC, held in escrow and released month by month. Self-hosting a provider is free.</p>
+  <p class="lede">Paid in test USDC to provider #1.</p>
 </section>
 </div>
-<div class="relative pb-20 pt-2">
+<div class="relative pb-24">
 
 
-<main class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:px-8">
-  <div class="space-y-6">
-    <section class="card overflow-hidden">
-      <div class="flex flex-wrap items-start justify-between gap-4 p-6">
-        <div>
-          <div class="flex items-center gap-2"><span class="badge b-live"><span class="dot dot-live" style="width:6px;height:6px"></span>Active</span><span class="text-[13px] text-muted-foreground">MeshySubscription · <a href="#" class="mono hover:underline">0x8398…04Df ↗</a></span></div>
-          <div class="mt-3 text-[2.5rem] font-semibold leading-none tracking-tight">Paid until 6 Dec 2026</div>
-          <div class="mt-2 text-[14px] text-muted-foreground">30 days left · then sessions keep working, but the provider refuses new device admissions.</div>
-        </div>
-        <div class="ticket"><span class="t1">Dec</span><span class="t2 text-2xl">06</span><span class="t1">2026</span></div>
-      </div>
-      <div class="border-t border-border p-6">
-        <div class="mb-2 flex items-baseline justify-between"><span class="label">Seats</span><span class="text-[13px]"><b class="tnum text-foreground">4</b> <span class="text-muted-foreground">of 5 used</span></span></div>
-        <div class="flex h-3 gap-1">
-          <div class="flex-1 rounded-l-full bg-foreground" title="db1.prod"></div><div class="flex-1 bg-foreground" title="pi.home"></div><div class="flex-1 bg-foreground" title="rig1.home"></div><div class="flex-1 bg-primary" title="claude-1"></div><div class="flex-1 rounded-r-full border-2 border-dashed border-border-strong"></div>
-        </div>
-        <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-muted-foreground"><span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-foreground"></span>3 devices: db1, pi, rig1</span><span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-primary"></span>1 agent: claude-1</span><span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border-2 border-dashed border-border-strong"></span>1 free</span><span class="ml-auto">Services are free</span></div>
-      </div>
-    </section>
+<main class="mx-auto max-w-5xl px-6">
+  <div class="card max-w-xl p-6">
+    <div class="flex items-baseline justify-between">
+      <h2 class="h2">Paid until 6 Dec 2026</h2>
+      <span class="badge b-live">Active</span>
+    </div>
+    <p class="mt-1 text-[14px] muted">30 days left</p>
 
-    <section class="card">
-      <div class="card-h"><h2 class="h3">Provider</h2><a href="provider.html" class="text-[13px] font-semibold text-primary hover:underline">All providers →</a></div>
-      <div class="grid gap-4 p-5 text-[13.5px] sm:grid-cols-4">
-        <div><div class="eyebrow">Provider</div><div class="mt-1 font-semibold">#1</div><div class="mono text-xs text-muted-foreground">provider.meshy.local</div></div>
-        <div><div class="eyebrow">Price</div><div class="mt-1 font-semibold">2 USDC</div><div class="text-xs text-muted-foreground">per seat · month</div></div>
-        <div><div class="eyebrow">Stake</div><div class="mt-1 font-semibold">0.010 ETH</div><div class="text-xs text-muted-foreground">slashable</div></div>
-        <div><div class="eyebrow">Status</div><div class="mt-1"><span class="badge b-live">Active</span></div></div>
-      </div>
-    </section>
+    <div class="mt-6 flex items-baseline justify-between text-[14px]"><span>Seats</span><span><b>4</b> <span class="muted">of 5</span></span></div>
+    <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div class="h-full w-4/5 rounded-full bg-primary"></div></div>
+    <p class="mt-2 text-[13px] muted">3 devices and 1 agent. Services are free.</p>
 
-    <section class="card overflow-hidden">
-      <div class="card-h"><h2 class="h3">Payments</h2><span class="hint">From contract events · sample rows</span></div>
-      <table class="tbl">
-        <thead><tr><th>Date</th><th>What</th><th class="text-right">Amount</th><th class="text-right">Tx</th></tr></thead>
-        <tbody>
-          <tr><td>6 Nov 2026</td><td>Subscribed · 5 seats · 1 month</td><td class="text-right font-semibold tnum">10.00 USDC</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">0x5c1e…a93b ↗</a></td></tr>
-          <tr><td>6 Nov 2026</td><td class="text-muted-foreground">Approve USDC to MeshySubscription</td><td class="text-right text-muted-foreground tnum">—</td><td class="text-right"><a href="#" class="mono text-xs text-primary hover:underline">0x2f70…11d4 ↗</a></td></tr>
-        </tbody>
-      </table>
-    </section>
+    <div class="mt-6 flex gap-2">
+      <button class="btn btn-primary">Add seats</button>
+      <button class="btn btn-outline">Renew</button>
+    </div>
   </div>
-
-  <aside class="space-y-6">
-    <section class="card">
-      <div class="card-h"><h2 class="h3">Change plan</h2><div class="seg"><button aria-pressed="true">Add seats</button><button>Renew</button></div></div>
-      <div class="space-y-5 p-5">
-        <div>
-          <label class="label">Extra seats</label>
-          <div class="mt-2 flex items-center gap-2">
-            <button class="btn btn-outline btn-icon text-lg" aria-label="Fewer">−</button>
-            <input class="input tnum w-20 text-center text-lg font-semibold" value="5">
-            <button class="btn btn-outline btn-icon text-lg" aria-label="More">+</button>
-            <span class="ml-2 text-[13px] text-muted-foreground">→ 10 seats total</span>
-          </div>
-        </div>
-        <div class="rounded-xl bg-muted/60 p-4 text-[13.5px]">
-          <div class="flex justify-between"><span class="text-muted-foreground">5 seats × 2 USDC × 1 month left</span><span class="tnum">10.00 USDC</span></div>
-          <div class="mt-1 text-xs text-muted-foreground">Prorated: you pay only for the months left in this period (ends 6 Dec).</div>
-          <div class="mt-3 flex justify-between border-t border-border pt-3 text-base font-semibold"><span>Total</span><span class="tnum">10.00 USDC</span></div>
-        </div>
-        <ol class="space-y-2 text-[13px]">
-          <li class="flex items-center gap-2.5"><span class="step-dot h-5 w-5 text-[10px] font-bold">1</span>Mint 10 test USDC <span class="ml-auto text-xs text-muted-foreground">MockUSDC is public</span></li>
-          <li class="flex items-center gap-2.5"><span class="step-dot h-5 w-5 text-[10px] font-bold">2</span>Approve 10 USDC</li>
-          <li class="flex items-center gap-2.5"><span class="step-dot h-5 w-5 text-[10px] font-bold">3</span>Add 5 seats</li>
-        </ol>
-        <button class="btn btn-primary btn-lg w-full">Add 5 seats · 10 USDC</button>
-        <p class="text-center text-xs text-muted-foreground">Escrowed. Cancelling refunds unused months.</p>
-      </div>
-    </section>
-  </aside>
+  <p class="mt-4 text-[13px] muted">2 USDC per seat per month. Unused months are refunded if you cancel.</p>
 </main>
 
 </div>
@@ -489,24 +434,19 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
     </div>
   </div>
 </div>
-<footer class="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-md">
-  <div class="mx-auto flex h-9 max-w-7xl items-center gap-5 px-6 text-xs text-muted-foreground lg:px-8">
-    <span class="flex items-center gap-1.5"><span class="dot dot-live"></span>Sepolia <span class="mono tnum text-foreground">#12,074,308</span></span>
-    <span class="hidden items-center gap-1.5 sm:flex">Arkiv</span>
-    <a href="activity.html" class="hidden min-w-0 items-center gap-1.5 truncate hover:text-foreground md:flex"><span class="mono text-foreground">claude-1</span> started a session on <span class="mono text-foreground">db1.prod</span><span>· 1m ago</span></a>
-    <span class="ml-auto flex items-center gap-1.5">Org key not loaded · <a href="settings.html#org-key" class="font-medium text-foreground underline-offset-2 hover:underline">Import</a></span>
-  </div>
-</footer>
 <script>
 // Mockup behaviour: theme toggle, ⌘K palette, live countdowns. Not production code.
 (function () {
   const q = new URLSearchParams(location.search);
   const root = document.documentElement;
-  const stored = localStorage.getItem("meshy-mock-theme");
-  if (q.get("theme") === "dark" || (!q.get("theme") && stored === "dark")) root.classList.add("dark");
+  let stored = null;
+  try { stored = localStorage.getItem("meshy-mock-theme"); } catch (e) {}
+  // ?theme= wins, then a saved choice, then the system setting (so the Mac app follows macOS)
+  const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  if (q.get("theme") === "dark" || (!q.get("theme") && (stored === "dark" || (!stored && sysDark)))) root.classList.add("dark");
   window.toggleTheme = () => {
     root.classList.toggle("dark");
-    localStorage.setItem("meshy-mock-theme", root.classList.contains("dark") ? "dark" : "light");
+    try { localStorage.setItem("meshy-mock-theme", root.classList.contains("dark") ? "dark" : "light"); } catch (e) {}
   };
 
   // ---- command palette (cmdk stand-in) ----

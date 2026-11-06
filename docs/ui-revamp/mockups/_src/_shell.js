@@ -2,11 +2,14 @@
 (function () {
   const q = new URLSearchParams(location.search);
   const root = document.documentElement;
-  const stored = localStorage.getItem("meshy-mock-theme");
-  if (q.get("theme") === "dark" || (!q.get("theme") && stored === "dark")) root.classList.add("dark");
+  let stored = null;
+  try { stored = localStorage.getItem("meshy-mock-theme"); } catch (e) {}
+  // ?theme= wins, then a saved choice, then the system setting (so the Mac app follows macOS)
+  const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  if (q.get("theme") === "dark" || (!q.get("theme") && (stored === "dark" || (!stored && sysDark)))) root.classList.add("dark");
   window.toggleTheme = () => {
     root.classList.toggle("dark");
-    localStorage.setItem("meshy-mock-theme", root.classList.contains("dark") ? "dark" : "light");
+    try { localStorage.setItem("meshy-mock-theme", root.classList.contains("dark") ? "dark" : "light"); } catch (e) {}
   };
 
   // ---- command palette (cmdk stand-in) ----

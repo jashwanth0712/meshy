@@ -1,95 +1,44 @@
 <!-- {"title": "Directory", "active": "directory", "shell": "app"} -->
-<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
-  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">directory</span></nav>
-  <div class="flex flex-wrap items-end justify-between gap-6">
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10">
+  <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="display">Directory</h1>
-      <p class="lede mt-3 max-w-2xl">Every network, device, service and agent is an ENS name: clean names instead of IPs and ports, with their facts stored as records.</p>
+      <p class="lede">Your devices, services and agents.</p>
     </div>
-    <div class="flex items-center gap-2">
-      <button class="btn btn-outline"><i data-lucide="user-plus"></i>Invite agent</button>
-      <button class="btn btn-ink"><i data-lucide="plus"></i>Add<i data-lucide="chevron-down" class="-mr-1"></i></button>
-    </div>
+    <button class="btn btn-primary">Add device</button>
   </div>
 </section>
 
-<main class="mx-auto max-w-7xl px-6 lg:px-8">
-  <div class="card grid overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)]">
-    <!-- master list -->
-    <aside class="border-b border-border lg:border-b-0 lg:border-r">
-      <div class="border-b border-border p-3"><div class="relative"><i data-lucide="search" class="absolute left-3 top-3 h-4 w-4 text-muted-foreground"></i><input class="input" placeholder="Filter names"></div></div>
-      <nav class="p-2 text-[13.5px]" aria-label="Directory tree">
-        <div class="eyebrow flex items-center justify-between px-2 pb-1 pt-2"><span class="ens normal-case tracking-normal">home.meshydemo.eth</span><span>2 devices</span></div>
-        <a href="#" aria-current="true" class="flex items-center gap-2.5 rounded-lg bg-accent px-2 py-2 text-accent-foreground"><i data-lucide="cpu" class="h-4 w-4"></i><span class="ens flex-1 font-semibold">pi</span><span class="text-xs opacity-80">Pi 5</span></a>
-        <a href="#" class="ml-6 flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-muted"><i data-lucide="cctv" class="h-4 w-4"></i><span class="ens flex-1 text-foreground">camera</span><span class="text-xs">http</span></a>
-        <a href="#" class="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted"><i data-lucide="server" class="h-4 w-4 text-muted-foreground"></i><span class="ens flex-1">rig1</span><span class="text-xs text-muted-foreground">server</span></a>
-        <div class="eyebrow flex items-center justify-between px-2 pb-1 pt-4"><span class="ens normal-case tracking-normal">prod.meshydemo.eth</span><span>1 device</span></div>
-        <a href="#" class="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted"><i data-lucide="server" class="h-4 w-4 text-muted-foreground"></i><span class="ens flex-1">db1</span><span class="badge b-live h-5">1 live</span></a>
-        <div class="eyebrow flex items-center justify-between px-2 pb-1 pt-4"><span class="ens normal-case tracking-normal">agents.meshydemo.eth</span><span>1 agent</span></div>
-        <a href="agent.html" class="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted"><i data-lucide="sparkle" class="h-4 w-4 text-muted-foreground"></i><span class="ens flex-1">claude-1</span><span class="badge b-live h-5"><i data-lucide="fingerprint"></i>World ID</span></a>
-        <a href="#" class="mt-1 flex items-center gap-2.5 rounded-lg border border-dashed border-border-strong px-2 py-2 text-muted-foreground hover:border-foreground hover:text-foreground"><i data-lucide="plus" class="h-4 w-4"></i>Invite an agent</a>
-      </nav>
-    </aside>
+<main class="mx-auto grid max-w-5xl gap-6 px-6 md:grid-cols-[220px_minmax(0,1fr)]">
+  <nav class="text-[14px]" aria-label="Directory">
+    <div class="eyebrow px-3 pb-1">home</div>
+    <a href="#" aria-current="true" class="mono block rounded-lg bg-accent px-3 py-1.5 font-medium text-accent-foreground">pi</a>
+    <a href="#" class="mono block rounded-lg px-3 py-1.5 pl-6 muted hover:text-foreground">camera</a>
+    <a href="#" class="mono block rounded-lg px-3 py-1.5 hover:bg-muted">rig1</a>
+    <div class="eyebrow px-3 pb-1 pt-5">prod</div>
+    <a href="#" class="mono block rounded-lg px-3 py-1.5 hover:bg-muted">db1</a>
+    <div class="eyebrow px-3 pb-1 pt-5">agents</div>
+    <a href="agent.html" class="mono block rounded-lg px-3 py-1.5 hover:bg-muted">claude-1</a>
+  </nav>
 
-    <!-- detail -->
-    <section class="min-w-0">
-      <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-5">
-        <div class="flex items-start gap-4">
-          <span class="grid h-12 w-12 place-items-center rounded-xl bg-muted text-foreground"><i data-lucide="cpu" class="h-6 w-6"></i></span>
-          <div>
-            <div class="ens text-xl font-semibold tracking-tight"><a href="#">pi</a><span class="dot-sep">.</span><a href="#">home</a><span class="dot-sep">.</span><a href="settings.html" class="text-muted-foreground">meshydemo.eth</a></div>
-            <div class="mt-2 flex flex-wrap gap-1.5"><span class="tag tag-cyan">raspberry pi 5</span><span class="tag tag-sun">front door</span><span class="tag tag-lime"><span class="dot dot-live"></span>daemon online</span></div>
-          </div>
-        </div>
-        <div class="flex gap-2"><a href="give-access.html" class="btn btn-primary btn-sm"><i data-lucide="key-round"></i>Give access</a><button class="btn btn-outline btn-sm"><i data-lucide="plug"></i>Add service</button><button class="btn btn-ghost btn-sm btn-icon" aria-label="More"><i data-lucide="ellipsis"></i></button></div>
-      </header>
-
-      <div class="tabs px-6" role="tablist"><button role="tab" aria-selected="true">Overview</button><button role="tab">Grants <span class="count count-soft">0</span></button><button role="tab">Activity</button><button role="tab">ENS records <span class="count count-soft">6</span></button></div>
-
-      <div class="space-y-6 p-6">
-        <!-- connect -->
-        <div class="flex items-center gap-3 rounded-xl bg-ink px-4 py-3 text-[13px] text-white dark:bg-black">
-          <i data-lucide="terminal" class="h-4 w-4 text-white/60"></i><code class="flex-1"><span class="text-white/50">$</span> meshy ssh pi.home.meshydemo.eth</code>
-          <button class="btn btn-sm h-7 border-white/20 bg-white/10 px-2.5 text-white hover:bg-white/20"><i data-lucide="copy"></i>Copy</button>
-        </div>
-
-        <!-- facts -->
-        <dl class="grid gap-x-8 gap-y-4 text-[13.5px] sm:grid-cols-2">
-          <div><dt class="eyebrow">Shared folder</dt><dd class="mono mt-1">~/meshy-demo/pi-srv</dd></div>
-          <div><dt class="eyebrow">Daemon address</dt><dd class="mono mt-1 flex items-center gap-2">0x6E36…5B7F <a href="#" class="text-xs text-primary hover:underline">Etherscan ↗</a></dd></div>
-          <div><dt class="eyebrow">SSH host key</dt><dd class="mt-1 flex items-center gap-2"><span class="mono">ed25519 · SHA256:q4N1…xT0c</span><span class="badge b-info h-5">pinned in ENS</span></dd></div>
-          <div><dt class="eyebrow">Who can reach it now</dt><dd class="mt-1">Nobody. <a href="give-access.html" class="font-semibold text-primary hover:underline">Give access</a></dd></div>
-        </dl>
-
-        <!-- services table -->
-        <div>
-          <div class="mb-2 flex items-center justify-between"><h3 class="h3">Services on pi</h3><span class="hint">An agent with a service grant reaches one port, never a shell.</span></div>
-          <div class="overflow-hidden rounded-xl border border-border">
-            <table class="tbl">
-              <thead><tr><th>Name</th><th>Target</th><th>Description</th><th>Grants</th><th class="w-10"></th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="ens font-semibold"><a href="#">camera</a><span class="rest">.pi.home.meshydemo.eth</span></span></td>
-                  <td class="whitespace-nowrap"><span class="badge b-outline mono">http</span> <span class="mono text-[13px]">127.0.0.1:8001</span></td>
-                  <td class="text-muted-foreground">Front door camera (snapshots + motion)</td>
-                  <td><span class="text-muted-foreground">None · 1 expired</span></td>
-                  <td><button class="btn btn-ghost btn-sm btn-icon" aria-label="Actions"><i data-lucide="ellipsis"></i></button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- recent -->
-        <div>
-          <div class="mb-2 flex items-center justify-between"><h3 class="h3">Recent on pi</h3><a href="activity.html" class="text-[13px] font-semibold text-primary hover:underline">All activity →</a></div>
-          <ul class="divide rounded-xl border border-border text-[13.5px]">
-            <li class="flex gap-3 px-4 py-2.5"><i data-lucide="ban" class="mt-0.5 h-4 w-4 text-destructive"></i><span class="flex-1"><span class="mono">claude-1</span> refused: no live grant</span><button class="text-xs font-semibold text-primary hover:underline">Grant this</button><span class="w-8 text-right text-xs text-muted-foreground">2h</span></li>
-            <li class="flex gap-3 px-4 py-2.5"><i data-lucide="square" class="mt-0.5 h-4 w-4 text-muted-foreground"></i><span class="flex-1"><span class="mono">claude-1</span> session ended (exit)</span><span class="w-8 text-right text-xs text-muted-foreground">2h</span></li>
-            <li class="flex gap-3 px-4 py-2.5"><i data-lucide="ban" class="mt-0.5 h-4 w-4 text-destructive"></i><span class="flex-1"><span class="mono">claude-1</span> blocked on <span class="mono">camera</span>: <code class="text-xs">MESHY_NO_GRANT</code></span><span class="w-8 text-right text-xs text-muted-foreground">2h</span></li>
-          </ul>
-        </div>
+  <section class="space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="ens text-xl font-semibold">pi<span class="rest">.home.meshydemo.eth</span></h2>
+        <p class="mt-1 text-[14px] muted">Raspberry Pi 5 · front door · online</p>
       </div>
-    </section>
-  </div>
+      <a href="give-access.html" class="btn btn-outline btn-sm">Give access</a>
+    </div>
+
+    <div class="flex items-center gap-3 rounded-xl bg-muted px-4 py-3 text-[13px]">
+      <code class="flex-1">meshy ssh pi.home.meshydemo.eth</code>
+      <button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button>
+    </div>
+
+    <dl class="card text-[14px]">
+      <div class="row"><dt class="w-36 muted">Shared folder</dt><dd class="mono">~/meshy-demo/pi-srv</dd></div>
+      <div class="row"><dt class="w-36 muted">Who can reach it</dt><dd>Nobody right now</dd></div>
+      <div class="row"><dt class="w-36 muted">Service</dt><dd><span class="mono">camera</span> <span class="muted">· http 127.0.0.1:8001</span></dd></div>
+    </dl>
+  </section>
 </main>

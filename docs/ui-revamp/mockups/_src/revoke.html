@@ -1,100 +1,33 @@
-<!-- {"title": "Revoke timeline", "active": "access", "shell": "app"} -->
-<section class="mx-auto max-w-7xl px-6 pb-6 pt-12 lg:px-8">
-  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="access.html">meshydemo.eth</a><span class="dot-sep"> / </span><a href="access.html">access</a><span class="dot-sep"> / </span><span class="text-foreground">revoke</span></nav>
-  <h1 class="display">Revoke, then watch it land</h1>
-  <p class="lede mt-3 max-w-2xl">Two moments of one flow: a confirmation that says exactly what will break, then a live timeline from click to dead session, with every step linked to its proof.</p>
+<!-- {"title": "Revoke", "active": "access", "shell": "app"} -->
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10" aria-hidden="true">
+  <h1 class="display">Access</h1>
+  <p class="lede">One agent can reach one thing right now.</p>
 </section>
+<div class="mx-auto max-w-5xl px-6" aria-hidden="true"><div class="card h-40"></div></div>
 
-<main class="mx-auto grid max-w-7xl items-start gap-8 px-6 lg:grid-cols-[420px_minmax(0,1fr)] lg:px-8">
-  <!-- frame 1: AlertDialog -->
-  <div>
-    <div class="eyebrow mb-3 flex items-center gap-2"><span class="count">1</span>Confirm (AlertDialog)</div>
-    <div role="alertdialog" aria-labelledby="ad-t" class="pop p-6">
-      <div class="mb-4 grid h-11 w-11 place-items-center rounded-full bg-danger-soft text-destructive"><i data-lucide="zap" class="h-5 w-5"></i></div>
-      <h2 id="ad-t" class="h2">Revoke claude-1 on db1.prod?</h2>
-      <p class="mt-2 text-[14px] leading-relaxed text-muted-foreground">This unregisters <span class="ens text-foreground">claude-1.db1.prod.meshydemo.eth</span>. The <b class="text-foreground">open session will be killed</b> in the block that includes the transaction, and new connections are refused right away.</p>
-      <ul class="mt-4 space-y-1.5 rounded-xl bg-muted/60 p-3 text-[13px]">
-        <li class="flex justify-between"><span class="text-muted-foreground">Live sessions</span><span class="font-semibold">1 · started 1m ago</span></li>
-        <li class="flex justify-between"><span class="text-muted-foreground">Time left on grant</span><span class="mono tnum font-semibold" data-left="3460">57m 40s</span></li>
-        <li class="flex justify-between"><span class="text-muted-foreground">Cost</span><span class="font-semibold">1 transaction</span></li>
-      </ul>
-      <div class="mt-6 flex justify-end gap-2"><button class="btn btn-outline">Cancel</button><button class="btn btn-danger-solid"><i data-lucide="zap"></i>Revoke now</button></div>
-    </div>
-    <p class="mock-note mt-3">The Revoke button never sends a transaction without this step. Focus starts on Cancel; <kbd>Enter</kbd> does not confirm.</p>
-<!-- frame 3: Sonner stepper toast (what "Minimise" turns into, also used by every multi-tx flow) -->
-<div class="mt-8"><div class="eyebrow mb-3 flex items-center gap-2"><span class="count">3</span>Stepper toast (Sonner)</div><div class="w-full max-w-[380px] space-y-2">
-  <div class="pop fade-in p-3.5">
-    <div class="flex items-start gap-3">
-      <span class="step-dot step-doing mt-0.5"><i data-lucide="loader-circle" class="spin"></i></span>
-      <div class="min-w-0 flex-1">
-        <div class="flex items-center justify-between"><span class="text-[13.5px] font-semibold">Revoking claude-1 on db1.prod</span><span class="text-[11px] text-muted-foreground">3 of 4</span></div>
-        <div class="mt-2 flex gap-1"><span class="h-1 flex-1 rounded-full bg-foreground"></span><span class="h-1 flex-1 rounded-full bg-foreground"></span><span class="h-1 flex-1 rounded-full bg-foreground"></span><span class="h-1 flex-1 rounded-full bg-primary/40"></span></div>
-        <div class="mt-2 text-xs text-muted-foreground">Session killed 216 ms after block 12,073,941 · <a href="#" class="font-medium text-foreground hover:underline">Open</a></div>
-      </div>
-    </div>
-  </div>
-  <div class="pop flex items-center gap-3 p-3.5 opacity-90">
-    <span class="step-dot step-done"><i data-lucide="check"></i></span>
-    <div class="flex-1 text-[13.5px]"><b class="font-semibold">Granted</b> <span class="ens">claude-1.db1.prod</span><div class="text-xs text-muted-foreground">2 transactions · block 12,074,301 · <a href="#" class="hover:underline">Etherscan ↗</a></div></div>
+<div class="scrim"></div>
+
+<!-- step 1: confirm -->
+<div id="confirm" role="alertdialog" aria-labelledby="c-t" class="pop fixed left-1/2 top-[18vh] z-[55] w-[min(420px,92vw)] -translate-x-1/2 p-6">
+  <h2 id="c-t" class="h2">Revoke claude-1 on db1.prod?</h2>
+  <p class="mt-2 text-[14px] leading-relaxed muted">Its open session ends in the next block. This takes one transaction.</p>
+  <div class="mt-6 flex justify-end gap-2">
+    <a href="access.html" class="btn btn-outline">Cancel</a>
+    <button class="btn btn-danger-solid" onclick="document.getElementById('confirm').hidden=true;document.getElementById('progress').hidden=false">Revoke</button>
   </div>
 </div>
+
+<!-- step 2: progress (shown after Revoke) -->
+<div id="progress" hidden role="dialog" aria-labelledby="p-t" class="pop fixed left-1/2 top-[18vh] z-[55] w-[min(420px,92vw)] -translate-x-1/2 p-6">
+  <div class="flex items-baseline justify-between">
+    <h2 id="p-t" class="h2">Revoked</h2>
+    <span class="mono tnum text-[13px] muted">11.0 s</span>
+  </div>
+  <ol class="mt-5 space-y-3 text-[14px]">
+    <li class="flex items-center gap-3"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span><span class="flex-1">Transaction sent</span><span class="mono text-xs muted">0.0 s</span></li>
+    <li class="flex items-center gap-3"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span><span class="flex-1">Mined in block 12,073,941</span><span class="mono text-xs muted">9.4 s</span></li>
+    <li class="flex items-center gap-3"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span><span class="flex-1">Session ended on db1</span><span class="mono text-xs muted">11.0 s</span></li>
+    <li class="flex items-center gap-3"><span class="step-dot step-doing h-5 w-5"><i data-lucide="loader-circle" class="spin"></i></span><span class="flex-1 muted">Recording on Arkiv</span></li>
+  </ol>
+  <div class="mt-6 flex justify-end"><a href="access.html" class="btn btn-outline">Done</a></div>
 </div>
-
-  </div>
-
-  <!-- frame 2: timeline Dialog -->
-  <div>
-    <div class="eyebrow mb-3 flex items-center gap-2"><span class="count">2</span>Live timeline (Dialog, can be minimised into a toast)</div>
-    <div role="dialog" class="pop overflow-hidden">
-      <div class="flex items-center justify-between border-b border-border px-6 py-4">
-        <div>
-          <h2 class="h2">Revoking access</h2>
-          <div class="ens mt-0.5 text-[13px]"><a href="agent.html">claude-1</a><span class="dot-sep">.</span><a href="directory.html">db1</a><span class="dot-sep">.</span><a href="directory.html">prod</a><span class="rest">.meshydemo.eth</span></div>
-        </div>
-        <div class="flex gap-1"><button class="btn btn-ghost btn-sm"><i data-lucide="minimize-2"></i>Minimise</button></div>
-      </div>
-      <div class="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
-        <!-- big clock -->
-        <div class="flex flex-col items-center justify-center gap-3 border-b border-border bg-muted/40 p-6 md:border-b-0 md:border-r">
-          <div class="relative h-36 w-36">
-            <svg viewBox="0 0 120 120" class="h-36 w-36 -rotate-90"><circle cx="60" cy="60" r="52" fill="none" stroke-width="6" class="ring-track"/><circle cx="60" cy="60" r="52" fill="none" stroke-width="6" stroke-linecap="round" stroke="var(--success)" stroke-dasharray="326.7" stroke-dashoffset="0"/></svg>
-            <div class="absolute inset-0 grid place-items-center text-center"><div><div class="mono tnum text-3xl font-semibold tracking-tight">11.0<span class="text-lg">s</span></div><div class="text-[11px] text-muted-foreground">click → session dead</div></div></div>
-          </div>
-          <span class="badge b-live"><i data-lucide="circle-check"></i>Access revoked</span>
-        </div>
-        <!-- steps -->
-        <ol class="relative space-y-5 p-6">
-          <li class="flex gap-3">
-            <span class="step-dot step-done"><i data-lucide="check"></i></span>
-            <div class="min-w-0 flex-1"><div class="flex items-baseline justify-between gap-3"><span class="font-semibold">Transaction sent</span><span class="mono tnum text-xs text-muted-foreground">+0.0 s</span></div>
-              <div class="mt-0.5 text-[13px] text-muted-foreground"><span class="mono">unregister(claude-1)</span> on db1's grants registry · <a class="mono text-primary hover:underline" href="#">0x6479d2fc…d57c ↗</a></div></div>
-          </li>
-          <li class="flex gap-3">
-            <span class="step-dot step-done"><i data-lucide="check"></i></span>
-            <div class="min-w-0 flex-1"><div class="flex items-baseline justify-between gap-3"><span class="font-semibold">Mined on Sepolia</span><span class="mono tnum text-xs text-muted-foreground">+9.4 s</span></div>
-              <div class="mt-0.5 text-[13px] text-muted-foreground">Block <span class="mono text-foreground">12,073,941</span>. ENS now answers "no such name"; new connections are refused.</div></div>
-          </li>
-          <li class="flex gap-3">
-            <span class="step-dot step-done"><i data-lucide="check"></i></span>
-            <div class="min-w-0 flex-1"><div class="flex items-baseline justify-between gap-3"><span class="font-semibold">db1 killed the live session</span><span class="mono tnum text-xs text-muted-foreground">+11.0 s</span></div>
-              <div class="mt-0.5 text-[13px] text-muted-foreground">The daemon re-checks every grant on every block. It reacted <b class="text-foreground">216 ms</b> after seeing the block; the agent got <code class="rounded bg-muted px-1">MESHY_REVOKED block=12073941</code>.</div></div>
-          </li>
-          <li class="flex gap-3">
-            <span class="step-dot step-doing"><i data-lucide="loader-circle" class="spin"></i></span>
-            <div class="min-w-0 flex-1"><div class="flex items-baseline justify-between gap-3"><span class="font-semibold">Recorded on Arkiv</span><span class="mono tnum text-xs text-muted-foreground">waiting…</span></div>
-              <div class="mt-0.5 text-[13px] text-muted-foreground">Looking for <span class="mono">meshy.session-revoke</span> from db1's daemon address <span class="mono">0x7Dec…3384</span>.</div></div>
-          </li>
-          <!-- latency bar -->
-          <li class="pt-1">
-            <div class="flex h-2.5 overflow-hidden rounded-full bg-muted" title="Where the 11 s went">
-              <div class="bg-foreground/80" style="width:85%"></div><div class="bg-primary" style="width:13%"></div><div class="bg-success" style="width:2%"></div>
-            </div>
-            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-muted-foreground"><span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-foreground/80"></span>Waiting for inclusion 9.4 s</span><span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-primary"></span>Block propagation 1.4 s</span><span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-success"></span>Daemon 216 ms</span></div>
-          </li>
-        </ol>
-      </div>
-      <div class="flex items-center justify-between border-t border-border px-6 py-3 text-[13px]"><span class="text-muted-foreground">Done? The grant moves to <b class="text-foreground">Recently ended</b> with a "Grant again" button.</span><button class="btn btn-outline btn-sm">Close</button></div>
-    </div>
-  </div>
-</main>
-

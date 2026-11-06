@@ -1,56 +1,30 @@
 <!-- {"title": "Provider", "active": "provider", "shell": "app"} -->
-<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
-  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">provider</span></nav>
-  <div class="flex flex-wrap items-end justify-between gap-6">
-    <div>
-      <h1 class="display">Providers</h1>
-      <p class="lede mt-3 max-w-2xl">Providers run the NetBird mesh and stake ETH on honesty. If one admits a name that ENS shows was already revoked, anyone can prove it and take half the stake.</p>
-    </div>
-    <a href="#" class="btn btn-outline"><i data-lucide="external-link"></i>ProviderRegistry</a>
-  </div>
-  <div class="tabs mt-8" role="tablist"><button role="tab" aria-selected="true">Providers <span class="count">1</span></button><button role="tab">Run a provider</button><button role="tab">Challenge a provider</button></div>
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10">
+  <h1 class="display">Provider</h1>
+  <p class="lede">The mesh your devices and agents connect through.</p>
 </section>
 
-<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
-  <section class="card overflow-hidden">
-    <table class="tbl">
-      <thead><tr><th>#</th><th>Endpoint</th><th>Signer</th><th>Price</th><th>Stake</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-        <tr>
-          <td class="mono text-muted-foreground">1</td>
-          <td><div class="mono font-semibold">provider.meshy.local</div><div class="text-xs text-muted-foreground">owner <span class="mono">0x45e8…E0EA</span> · <span class="badge b-info h-5">your org's provider</span></div></td>
-          <td class="mono text-[13px]">0x6Aaf…0EC4</td>
-          <td>2 USDC <span class="text-xs text-muted-foreground">/ seat / mo</span></td>
-          <td><div class="font-semibold tnum">0.010 ETH</div><div class="h-1 w-20 overflow-hidden rounded-full bg-muted"><div class="h-full w-full bg-foreground"></div></div></td>
-          <td><span class="badge b-live">Active</span></td>
-          <td class="text-right"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Actions"><i data-lucide="ellipsis"></i></button></td>
-        </tr>
-      </tbody>
-    </table>
+<main class="mx-auto max-w-5xl space-y-10 px-6">
+  <section>
+    <div class="card">
+      <div class="row">
+        <div class="min-w-0 flex-1">
+          <div class="mono font-semibold">provider.meshy.local</div>
+          <div class="mt-0.5 text-[13px] muted">0.010 ETH staked · 2 USDC per seat per month</div>
+        </div>
+        <span class="badge b-live">Active</span>
+      </div>
+    </div>
   </section>
 
-  <div class="grid gap-6 lg:grid-cols-2">
-    <section class="card">
-      <div class="card-h"><div><h2 class="h3">This dashboard's provider</h2><p class="mono text-[12.5px] text-muted-foreground">meshy-sync · http://localhost:8787</p></div><span class="tag tag-lime"><span class="dot dot-live"></span>online · v0.1.0</span></div>
-      <ul class="divide text-[13.5px]">
-        <li class="flex items-center justify-between px-5 py-3"><span class="flex items-center gap-2"><i data-lucide="pen-line" class="h-4 w-4 text-muted-foreground"></i>Attestor</span><span class="mono">0x6Aaf…0EC4 <span class="badge b-live h-5 font-sans">trusted by org</span></span></li>
-        <li class="flex items-center justify-between px-5 py-3"><span class="flex items-center gap-2"><i data-lucide="fingerprint" class="h-4 w-4 text-muted-foreground"></i>World ID</span><span class="badge b-warn">Disabled</span></li>
-        <li class="flex items-center justify-between px-5 py-3"><span class="flex items-center gap-2"><i data-lucide="flask-conical" class="h-4 w-4 text-muted-foreground"></i>Dev attestation</span><span class="badge b-warn"><i data-lucide="triangle-alert"></i>On · demo only</span></li>
-      </ul>
-      <div class="border-t border-border px-5 py-3 text-[12.5px] text-muted-foreground">With World ID disabled and dev attestation on, agents can join without a real human proof. Fine for the demo; turn it off before real use.</div>
-    </section>
+  <section>
+    <h2 class="h3">Status</h2>
+    <dl class="card mt-3 text-[14px]">
+      <div class="row"><dt class="flex-1">meshy-sync</dt><dd class="muted">Online · v0.1.0</dd></div>
+      <div class="row"><dt class="flex-1">World ID</dt><dd><span class="badge b-warn">Off</span></dd></div>
+      <div class="row"><dt class="flex-1">Dev attestation</dt><dd><span class="badge b-warn">On · demo only</span></dd></div>
+    </dl>
+  </section>
 
-    <section class="card">
-      <div class="card-h"><div><h2 class="h3 flex items-center gap-2"><i data-lucide="gavel" class="h-4 w-4"></i>Challenge a provider</h2><p class="text-[13px] text-muted-foreground">Paste an admission the provider signed. The contract checks ENSv2 itself.</p></div><span class="badge b-muted">Example input</span></div>
-      <div class="space-y-3 p-5">
-        <textarea class="input mono h-28 text-[12px]" spellcheck="false">{"providerId":1,"dnsName":"claude-1.rig1.home.meshydemo.eth","resource":"0x…","issuedAt":1793930000,"validUntil":1793933600,"peerKey":"…","sig":"0x…"}</textarea>
-        <ul class="space-y-1.5 text-[13px]">
-          <li class="flex items-center gap-2"><i data-lucide="circle-check" class="h-4 w-4 text-success"></i>Valid JSON, signed by provider #1's signer</li>
-          <li class="flex items-center gap-2"><i data-lucide="circle-check" class="h-4 w-4 text-success"></i><span class="ens">claude-1.rig1.home</span> was <b>revoked</b> before <span class="mono">issuedAt</span></li>
-          <li class="flex items-center gap-2"><i data-lucide="coins" class="h-4 w-4 text-muted-foreground"></i>You would receive 0.005 ETH (50% of stake)</li>
-        </ul>
-        <div class="flex justify-end"><button class="btn btn-danger"><i data-lucide="gavel"></i>Submit fraud proof</button></div>
-      </div>
-    </section>
-  </div>
+  <p class="text-[13px] muted">Think a provider admitted a revoked name? <a href="#" class="link">Submit a fraud proof</a>. Want to run one? <a href="#" class="link">Register as a provider</a>.</p>
 </main>

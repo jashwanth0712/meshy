@@ -83,18 +83,12 @@ def topnav(active: str) -> str:
     links = "\n".join(f'<a class="navlink" href="{HREF[k]}"{cur if k == active else ""}>{label}</a>' for k, label in NAV)
     return f"""
 <header class="topbar sticky top-0 z-40">
-  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-6 lg:px-8">
-    <a href="index.html" class="shrink-0 text-foreground" title="All mockups">{lockup("h-7 w-auto")}</a>
-    <button class="ml-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground hover:text-foreground lg:inline-flex" title="Switch org">
-      <span class="mono text-[13px] text-foreground">meshydemo.eth</span><span class="text-xs">▾</span>
-    </button>
-    <nav class="ml-2 hidden items-center gap-0.5 md:flex" aria-label="Main">{links}</nav>
-    <div class="ml-auto flex items-center gap-2">
-      <button onclick="openPalette()" class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Search">Search <kbd>⌘K</kbd></button>
-      <button onclick="toggleTheme()" class="btn btn-ghost btn-sm btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
-      <button class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full border border-border px-3 text-sm hover:border-border-strong">
-        <span class="mono text-[13px]">0x45e8…E0EA</span><span class="text-xs text-muted-foreground">owner</span>
-      </button>
+  <div class="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
+    <a href="index.html" class="shrink-0 text-foreground" title="Meshy">{lockup("h-6 w-auto")}</a>
+    <nav class="hidden items-center gap-0.5 md:flex" aria-label="Main">{links}</nav>
+    <div class="ml-auto flex items-center gap-3">
+      <button onclick="openPalette()" class="text-sm text-muted-foreground hover:text-foreground" aria-label="Search"><kbd>⌘K</kbd></button>
+      <span class="mono text-[13px] text-muted-foreground">0x45e8…E0EA</span>
     </div>
   </div>
 </header>"""
@@ -185,12 +179,8 @@ def render(page: Path) -> str:
         cut = body.index("</section>") + len("</section>")
         head, rest = body[:cut], body[cut:]
         out += '<div class="page-head">\n' + head + '\n</div>\n'
-        out += '<div class="relative pb-20 pt-2">\n' + rest + "\n</div>"
-        bar = STATUSBAR
-        if meta.get("orgkey"):
-            bar = bar.replace('<i data-lucide="lock" class="h-3.5 w-3.5"></i>Org key not loaded · <a href="settings.html#org-key" class="font-medium text-foreground underline-offset-2 hover:underline">Import</a>',
-                              '<i data-lucide="lock-open" class="h-3.5 w-3.5 text-success"></i>Org key loaded in this browser')
-        out += PALETTE + bar
+        out += '<div class="relative pb-24">\n' + rest + "\n</div>"
+        out += PALETTE
     else:
         out += body
         out += PALETTE

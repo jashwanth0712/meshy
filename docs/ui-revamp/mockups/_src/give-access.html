@@ -1,106 +1,48 @@
 <!-- {"title": "Give access", "active": "access", "shell": "app"} -->
-<!-- Access home, dimmed behind the sheet -->
-<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8" aria-hidden="true">
-  <div class="ens mb-4 text-[13px] text-muted-foreground">meshydemo.eth / access</div>
-  <h1 class="display">Access right now</h1>
-  <p class="lede mt-3 max-w-2xl">One agent can reach one thing. Every grant is an ENS name that expires on its own.</p>
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10" aria-hidden="true">
+  <h1 class="display">Access</h1>
+  <p class="lede">One agent can reach one thing right now.</p>
 </section>
-<div class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8" aria-hidden="true">
-  <div class="card h-80 p-6"><div class="skeleton h-4 w-40"></div><div class="mt-6 space-y-4"><div class="skeleton h-14"></div><div class="skeleton h-14 opacity-60"></div><div class="skeleton h-14 opacity-40"></div></div></div>
-  <div class="card h-80 p-6"><div class="skeleton h-4 w-32"></div><div class="mt-6 space-y-3"><div class="skeleton h-4"></div><div class="skeleton h-4 w-5/6"></div><div class="skeleton h-4 w-4/6"></div></div></div>
-</div>
+<div class="mx-auto max-w-5xl px-6" aria-hidden="true"><div class="card h-40"></div></div>
 
 <div class="scrim"></div>
-<aside role="dialog" aria-modal="true" aria-labelledby="sheet-title" class="pop fixed inset-y-2 right-2 z-[55] flex w-[min(580px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl">
-  <header class="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
-    <div>
-      <div class="eyebrow mb-1">New grant</div>
-      <h2 id="sheet-title" class="h2">Give access</h2>
-      <p class="mt-1 text-[13.5px] text-muted-foreground">Creates an ENS subname owned by the agent. It expires on its own.</p>
-    </div>
-    <button class="btn btn-ghost btn-icon" aria-label="Close"><i data-lucide="x"></i></button>
+<aside role="dialog" aria-modal="true" aria-labelledby="sheet-title" class="pop fixed inset-y-2 right-2 z-[55] flex w-[min(480px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl">
+  <header class="flex items-center justify-between px-6 pb-2 pt-6">
+    <h2 id="sheet-title" class="h2">Give access</h2>
+    <a href="access.html" class="btn btn-ghost btn-sm btn-icon" aria-label="Close"><i data-lucide="x"></i></a>
   </header>
 
-  <div class="flex-1 space-y-7 overflow-y-auto px-6 py-6">
-    <!-- 1 agent -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">1 · Agent</span><span class="hint">1 agent in the org</span></div>
-      <button class="flex w-full items-center gap-3 rounded-xl border-[1.5px] border-input bg-card px-3 py-2.5 text-left hover:border-border-strong">
-        <span class="grid h-9 w-9 place-items-center rounded-lg bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span>
-        <span class="min-w-0 flex-1"><span class="ens block font-semibold">claude-1<span class="rest">.agents.meshydemo.eth</span></span><span class="text-xs text-muted-foreground">Claude Code · 0x35e7…A62f · 1 live grant</span></span>
-        <span class="badge b-live"><i data-lucide="fingerprint"></i>Human-backed</span>
-        <i data-lucide="chevrons-up-down" class="h-4 w-4 text-muted-foreground"></i>
-      </button>
-    </section>
+  <div class="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+    <label class="block">
+      <span class="label">Agent</span>
+      <select class="input mono mt-2"><option>claude-1</option></select>
+    </label>
 
-    <!-- 2 target -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">2 · What it can reach</span>
-        <div class="seg"><button aria-pressed="true"><i data-lucide="folder" class="h-3.5 w-3.5"></i>Device folders</button><button><i data-lucide="plug" class="h-3.5 w-3.5"></i>One service port</button></div>
+    <fieldset>
+      <legend class="label">Device</legend>
+      <div class="card mt-2 text-[14px]">
+        <label class="row cursor-pointer"><input type="radio" name="t" checked class="accent-[var(--primary)]"><span class="mono flex-1">rig1.home</span></label>
+        <label class="row cursor-pointer"><input type="radio" name="t" class="accent-[var(--primary)]"><span class="mono flex-1">db1.prod</span><span class="text-xs muted">has access</span></label>
+        <label class="row cursor-pointer"><input type="radio" name="t" class="accent-[var(--primary)]"><span class="mono flex-1">pi.home</span></label>
       </div>
-      <div class="grid gap-2" role="radiogroup">
-        <label class="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-primary bg-accent/50 px-3 py-2.5">
-          <span class="grid h-4 w-4 place-items-center rounded-full border-2 border-primary"><span class="h-2 w-2 rounded-full bg-primary"></span></span>
-          <i data-lucide="server" class="h-4 w-4 text-muted-foreground"></i>
-          <span class="ens flex-1 font-semibold">rig1<span class="rest">.home.meshydemo.eth</span></span>
-          <span class="text-xs text-muted-foreground">server · no live grants</span>
-        </label>
-        <label class="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-border px-3 py-2.5 hover:border-border-strong">
-          <span class="h-4 w-4 rounded-full border-2 border-border-strong"></span>
-          <i data-lucide="server" class="h-4 w-4 text-muted-foreground"></i>
-          <span class="ens flex-1">db1<span class="rest">.prod.meshydemo.eth</span></span>
-          <span class="badge b-live">claude-1 has it · 58m</span>
-        </label>
-        <label class="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-border px-3 py-2.5 hover:border-border-strong">
-          <span class="h-4 w-4 rounded-full border-2 border-border-strong"></span>
-          <i data-lucide="cpu" class="h-4 w-4 text-muted-foreground"></i>
-          <span class="ens flex-1">pi<span class="rest">.home.meshydemo.eth</span></span>
-          <span class="text-xs text-muted-foreground">Raspberry Pi 5 · front door</span>
-        </label>
-      </div>
-    </section>
+    </fieldset>
 
-    <!-- 3 folders -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">3 · Folders</span><span class="hint">rig1 shares <span class="mono">~/meshy-demo/rig1</span></span></div>
-      <div class="space-y-2">
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1"><i data-lucide="folder" class="absolute left-3 top-3 h-4 w-4 text-muted-foreground"></i><input class="input mono" value="~/meshy-demo/rig1/models"></div>
-          <div class="seg"><button aria-pressed="true">Read</button><button>Read + write</button></div>
-          <button class="btn btn-ghost btn-icon" aria-label="Remove folder"><i data-lucide="trash-2"></i></button>
-        </div>
-        <div class="flex flex-wrap items-center gap-1.5 pt-1">
-          <span class="text-xs text-muted-foreground">Suggested:</span>
-          <button class="badge b-outline hover:border-foreground"><i data-lucide="plus"></i>datasets</button>
-          <button class="badge b-outline hover:border-foreground"><i data-lucide="plus"></i>reports</button>
-          <button class="badge b-outline hover:border-foreground"><i data-lucide="plus"></i>Add folder</button>
-        </div>
-      </div>
-    </section>
+    <label class="block">
+      <span class="label">Folder</span>
+      <input class="input mono mt-2" value="~/meshy-demo/rig1/models">
+      <div class="seg mt-2"><button aria-pressed="true">Read</button><button>Read and write</button></div>
+    </label>
 
-    <!-- 4 duration -->
-    <section>
-      <div class="mb-2 flex items-center justify-between"><span class="label">4 · For how long</span><span class="hint">Agent grants are capped at 4 hours</span></div>
-      <div class="flex items-center gap-3">
-        <div class="seg"><button>15 min</button><button aria-pressed="true">1 hour</button><button>4 hours</button></div>
-        <span class="text-[13px] text-muted-foreground">Expires <b class="tnum font-semibold text-foreground">15:08 today</b>. Nobody has to remember to revoke.</span>
-      </div>
-    </section>
+    <div>
+      <span class="label">For</span>
+      <div class="seg mt-2"><button>15 min</button><button aria-pressed="true">1 hour</button><button>4 hours</button></div>
+    </div>
 
-    <!-- preview -->
-    <section class="rounded-2xl border border-border bg-muted/50 p-4">
-      <div class="eyebrow mb-2">In plain words</div>
-      <p class="text-[15px] leading-relaxed"><b class="mono font-semibold">claude-1</b> can <b>read</b> <span class="mono">~/meshy-demo/rig1/models</span> on <b class="mono font-semibold">rig1</b> for <b>1 hour</b>. Everything else on rig1 is refused with <code class="rounded bg-card px-1 text-[13px]">MESHY_BLOCKED</code>, and its sandbox has no network.</p>
-      <div class="mt-4 space-y-2 border-t border-border pt-3 text-[13px]">
-        <div class="flex items-center gap-2"><i data-lucide="at-sign" class="h-4 w-4 text-muted-foreground"></i>Creates <span class="ens font-semibold">claude-1<span class="dot-sep">.</span>rig1<span class="dot-sep">.</span>home<span class="rest">.meshydemo.eth</span></span></div>
-        <div class="flex items-center gap-2"><i data-lucide="lock" class="h-4 w-4 text-muted-foreground"></i>Policy sealed in your browser to rig1's daemon and the org key. Paths never appear on-chain in clear.</div>
-        <div class="flex items-center gap-2"><i data-lucide="shield-check" class="h-4 w-4 text-success"></i>claude-1 has a World ID attestation from a trusted attestor.</div>
-      </div>
-    </section>
+    <p class="rounded-xl bg-muted p-4 text-[14px] leading-relaxed"><b class="mono">claude-1</b> can read <span class="mono">models</span> on <b class="mono">rig1</b> until 15:08. Nothing else on rig1.</p>
   </div>
 
-  <footer class="flex items-center justify-between gap-4 border-t border-border bg-card px-6 py-4">
-    <div class="text-[13px] text-muted-foreground"><b class="text-foreground">2 transactions</b> on Sepolia · about 30 s</div>
-    <div class="flex gap-2"><button class="btn btn-outline">Cancel</button><a href="revoke.html" class="btn btn-primary"><i data-lucide="key-round"></i>Give access</a></div>
+  <footer class="flex items-center justify-between border-t border-border px-6 py-4">
+    <span class="text-[13px] muted">2 transactions</span>
+    <a href="access.html" class="btn btn-primary">Give access</a>
   </footer>
 </aside>
