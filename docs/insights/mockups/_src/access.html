@@ -1,0 +1,133 @@
+<!-- {"title": "Access history · Insights", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-6 pt-10 lg:px-8">
+  <div class="eyebrow">meshydemo.eth / activity / access</div>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">Access granted vs. access used</h1>
+      <p class="lede">6 grants issued on 6 Nov · 5 revoked, 1 expired · grant windows from ENS, use from Arkiv</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-outline btn-sm" data-copy="https://meshy-bay.vercel.app/org/meshydemo.eth/activity/access?agent=claude-1&amp;day=2026-11-06">Copy link</button>
+      <button class="btn btn-outline btn-sm">Export CSV</button>
+    </div>
+  </div>
+</section>
+
+<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
+  <nav class="subtabs" aria-label="Activity views">
+    <a href="./index.html">Overview</a>
+    <a href="./timeline.html">Timeline</a>
+    <a href="./access.html" aria-current="page">Access</a>
+    <a href="./reach.html">Who can reach what</a>
+    <a href="./files.html">Files &amp; refusals</a>
+    <a href="./replay.html">Session replay</a>
+  </nav>
+
+  <div class="facets">
+    <span class="chip"><span class="k">Agent</span> <b class="mono">claude-1</b><button class="x" aria-label="Remove">✕</button></span>
+    <span class="chip"><span class="k">Day</span> <b>Fri 6 Nov</b><button class="x" aria-label="Remove">✕</button></span>
+    <span class="chip chip-add">+ Granter</span><span class="chip chip-add">+ Network</span><span class="chip chip-add">+ Ended by</span>
+    <span class="ml-auto seg" role="group"><button aria-pressed="true">Chart</button><button>Table</button></span>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-4">
+    <div class="card stat"><div class="v">6</div><div class="l">grants issued</div></div>
+    <div class="card stat"><div class="v">1h 21m</div><div class="l">of access handed out</div></div>
+    <div class="card stat"><div class="v">7.7%</div><div class="l">of granted time used <span class="text-xs">(rig1 excluded)</span></div></div>
+    <div class="card stat"><div class="v">0</div><div class="l">grants never used <span class="text-xs">(rig1 unknown)</span></div></div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="card-h">
+      <h2 class="h3">Grant lifetimes</h2>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--grant);height:12px"></i>granted window</span>
+        <span><i class="sw" style="background:var(--grant-ink)"></i>in use (a session)</span>
+        <span><i class="sw" style="background:repeating-linear-gradient(135deg,var(--grant) 0 4px,transparent 4px 7px);height:12px"></i>expired unused</span>
+        <span><i class="mk mk-r" style="position:static;transform:none;margin:0;width:14px;height:14px">⚡</i>revoked (block)</span>
+      </div>
+    </div>
+    <div>
+      <div class="grow">
+        <div class="meta"><span class="ens">claude-1<span class="rest">.db1.prod</span></span> <span class="badge b-muted">#1</span><div class="muted">by <span class="mono">0x45e8…E0EA</span> (you) · ro /srv/reports</div></div>
+        <div class="track"><div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+          <div class="gbar" style="left:7.56%;width:7.55%" data-tip="<b>LabelRegistered</b> 06:02:10 · tokenId …a1<br>expiry 07:02:10 (1 h) · sender 0x45e8…E0EA"></div>
+          <div class="guse" style="left:9.07%;width:.4%"></div><div class="guse" style="left:10.01%;width:.4%"></div><div class="guse" style="left:11.14%;width:.4%"></div><div class="guse" style="left:12.09%;width:.4%"></div><div class="guse" style="left:13.41%;width:1.7%" data-tip="5 sessions inside this grant · 11 s in use"></div>
+          <span class="mk mk-r" style="left:15.11%;margin-top:0" data-tip="<b>LabelUnregistered</b> block 12,073,043 · by 0x45e8…E0EA<br>live session killed in 120 ms">⚡</span>
+        </div>
+        <div class="util">27% <span class="muted">of 40 s</span></div>
+      </div>
+      <div class="grow">
+        <div class="meta"><span class="ens">claude-1<span class="rest">.db1.prod</span></span> <span class="badge b-muted">#2</span><div class="muted">by you · ro /srv/reports</div></div>
+        <div class="track"><div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+          <div class="gbar" style="left:19.83%;width:3.97%"></div><div class="guse" style="left:20.97%;width:2.83%"></div><span class="mk mk-r" style="left:23.8%;margin-top:0" data-tip="block 12,073,047 · 192 ms">⚡</span></div>
+        <div class="util">71% <span class="muted">of 21 s</span></div>
+      </div>
+      <div class="grow">
+        <div class="meta"><span class="ens">claude-1<span class="rest">.db1.prod</span></span> <span class="badge b-muted">#3</span><div class="muted">by you · ro /srv/reports</div></div>
+        <div class="track"><div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+          <div class="gbar" style="left:28.33%;width:2.27%"></div><div class="guse" style="left:29.47%;width:1.13%"></div><span class="mk mk-r" style="left:30.6%;margin-top:0" data-tip="block 12,073,050 · 132 ms">⚡</span></div>
+        <div class="util">50% <span class="muted">of 12 s</span></div>
+      </div>
+      <div class="grow">
+        <div class="meta"><span class="ens">claude-1<span class="rest">.camera.pi.home</span></span><div class="muted">by <span class="mono">0xf846…Fc98</span> (admin of home) · port</div></div>
+        <div class="track"><div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+          <div class="gbar expired" style="left:42.07%;width:6.6%" data-tip="<b>Expired</b> 08:54:38 · never revoked<br>1 forward of 4 s in a 1 h window"></div><div class="guse" style="left:42.97%;width:.5%"></div></div>
+        <div class="util"><span class="badge b-warn">0.1%</span> <span class="muted">of 1 h</span></div>
+      </div>
+      <div class="grow">
+        <div class="meta"><span class="ens">claude-1<span class="rest">.rig1.home</span></span><div class="muted">by <span class="mono">0xf846…Fc98</span> · ro models</div></div>
+        <div class="track"><div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+          <div class="gbar unknown" style="left:51.92%;width:10.91%" data-tip="Use unknown: rig1's daemon runs with Arkiv off"></div><span class="mk mk-r" style="left:62.83%;margin-top:0" data-tip="block 12,073,941 · by 0xf846…Fc98 · 216 ms (local log)">⚡</span></div>
+        <div class="util muted">unknown</div>
+      </div>
+      <div class="grow">
+        <div class="meta"><span class="ens">claude-1<span class="rest">.db1.prod</span></span> <span class="badge b-muted">#4</span><div class="muted">by you · ro /srv/reports</div></div>
+        <div class="track"><div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+          <div class="gbar" style="left:66.35%;width:31.24%" data-tip="10:19:05 → 10:26:26 · tokenId …d4"></div>
+          <div class="guse" style="left:67.84%;width:18.99%" data-tip="10:19:26 → 10:23:54 · killed by fail-closed (the grant was still live)"></div>
+          <span class="mk mk-r anom" style="left:86.83%;margin-top:0" data-tip="<b>Fail closed</b> · 5,002 ms · not a revoke">⚡</span>
+          <div class="guse" style="left:94.4%;width:.4%"></div><div class="guse" style="left:96.1%;width:.4%"></div><div class="guse" style="left:96.88%;width:.71%"></div>
+          <span class="mk mk-r" style="left:97.9%;margin-top:0" data-tip="block 12,074,344 · 1,316 ms">⚡</span></div>
+        <div class="util">63% <span class="muted">of 7m 21s</span></div>
+      </div>
+    </div>
+    <div class="gaxis"><div></div><div class="axis" style="display:block;border:0"><div class="ticks">
+      <span class="t" style="left:5.67%">06:02</span><span class="t" style="left:17%">06:03</span><span class="t" style="left:28.33%">06:04</span>
+      <span class="g" style="left:35.33%">1h 50m</span><span class="t" style="left:42.67%">07:54:40</span><span class="g" style="left:50%">55m</span>
+      <span class="t" style="left:60.67%">09:00</span><span class="g" style="left:64.67%">1h 16m</span>
+      <span class="t" style="left:70.25%">10:20</span><span class="t" style="left:78.75%">10:22</span><span class="t" style="left:87.25%">10:24</span><span class="t" style="left:95.75%">10:26</span>
+    </div></div><div></div></div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <div class="card">
+      <div class="card-h"><h2 class="h3">How fast was each kill?</h2><span class="text-xs muted">time from meshyd seeing the head to the session dying (<code>latencyMs</code>) · log scale</span></div>
+      <div class="card-b">
+        <div class="strip">
+          <div class="base"></div>
+          <span class="pt" style="left:3.96%" data-tip="<b>120 ms</b> · block 12,073,043 · CLI revoke"></span>
+          <span class="pt" style="left:6.03%" data-tip="<b>132 ms</b> · block 12,073,050"></span>
+          <span class="pt" style="left:14.17%" data-tip="<b>192 ms</b> · block 12,073,047"></span>
+          <span class="pt local" style="left:16.72%" data-tip="<b>216 ms</b> · block 12,073,941 · dashboard revoke by 0xf846<br>rig1, from the meshyd log only (not on Arkiv)"></span>
+          <span class="pt" style="left:55.96%" data-tip="<b>1,316 ms</b> · block 12,074,344 · over the WireGuard mesh"></span>
+          <span class="pt anom" style="left:84.97%" data-tip="<b>5,002 ms · fail closed</b> · block 12,074,331<br>RPC errors, not a revoke"></span>
+          <span class="pl" style="left:5%">120 · 132</span><span class="pl" style="left:15.5%">192 · 216</span><span class="pl" style="left:55.96%">1,316</span><span class="pl" style="left:84.97%;color:var(--refused)">5,002 fail closed</span>
+          <span class="tk" style="left:0%">100 ms</span><span class="tk" style="left:23.86%">300 ms</span><span class="tk" style="left:50%">1 s</span><span class="tk" style="left:73.86%">3 s</span><span class="tk" style="left:100%;transform:translateX(-100%);white-space:nowrap">10 s</span>
+        </div>
+        <div class="mt-5 grid gap-3 text-[13px] sm:grid-cols-3">
+          <div><div class="eyebrow">p50 of the 4 revokes on Arkiv</div><div class="mono text-lg font-semibold tnum">162 ms</div></div>
+          <div><div class="eyebrow">Slowest revoke (not fail-closed)</div><div class="mono text-lg font-semibold tnum">1,316 ms</div></div>
+          <div><div class="eyebrow">Not on Arkiv yet</div><div class="muted">tx sent → mined (6.8–15.8 s, from the CLI). Gap G13.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2 class="h3">Could be narrower</h2></div>
+      <div class="anomaly"><span class="sev sev-md">⧗</span><div><b>camera.pi.home: 1 h granted, 4 s used</b><div class="muted">One forward, then the grant sat open for 59 minutes until it expired.</div><button class="btn btn-outline btn-sm mt-2">Default this agent to 15 min</button></div></div>
+      <div class="anomaly"><span class="sev sev-lo">ro</span><div><b>db1.prod: read-only was right</b><div class="muted">No allowed write was attempted, and one write was blocked. Keep it read-only. 🔑</div></div></div>
+      <div class="anomaly"><span class="sev sev-lo">?</span><div><b>rig1.home: can't tell</b><div class="muted">With no Arkiv events, unused paths can't be judged. Enable Arkiv on rig1.</div></div></div>
+    </div>
+  </div>
+</main>

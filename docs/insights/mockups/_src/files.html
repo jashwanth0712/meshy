@@ -1,0 +1,89 @@
+<!-- {"title": "Files & refusals · Insights", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-6 pt-10 lg:px-8">
+  <div class="eyebrow">meshydemo.eth / activity / files</div>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">What was touched, and what was refused</h1>
+      <p class="lede">claude-1 on db1.prod · 6 Nov · paths decrypted in your browser with the org key</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="seg" role="group" aria-label="Path display"><button aria-pressed="true">Full paths</button><button>Basename</button><button>Hashed</button></span>
+      <button class="btn btn-outline btn-sm">Export CSV</button>
+    </div>
+  </div>
+</section>
+
+<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
+  <nav class="subtabs" aria-label="Activity views">
+    <a href="./index.html">Overview</a>
+    <a href="./timeline.html">Timeline</a>
+    <a href="./access.html">Access</a>
+    <a href="./reach.html">Who can reach what</a>
+    <a href="./files.html" aria-current="page">Files &amp; refusals</a>
+    <a href="./replay.html">Session replay</a>
+  </nav>
+
+  <div class="note"><b>Mockup data for allowed file ops.</b> Arkiv has no <code>meshy.audit-chunk</code> for this org yet: db1 runs the macOS sandbox, which logs only blocks unless eslogger runs as root, and rig1, which runs GateFS, has Arkiv off. The refusal counts and the funnel below are <b>real</b>, from the 7 <code>meshy.blocked</code> entities.</div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_1fr]">
+    <div class="card">
+      <div class="card-h"><h2 class="h3">Files by bytes read</h2>
+        <div class="legend"><span><i class="sw" style="background:var(--s-read)"></i>read</span><span><i class="sw" style="background:var(--s-list)"></i>listed</span><span><i class="sw" style="border:2px solid var(--refused)"></i>refused</span></div>
+      </div>
+      <div class="card-b">
+        <div class="tm" style="grid-template-columns:3.2fr 1.8fr 1fr;grid-template-rows:1.6fr 1fr">
+          <div class="r" style="grid-row:1 / span 2" data-tip="<b>/srv/reports/q3.csv</b><br>14 reads · 254.8 KB · 3 sessions<br>first 06:02:41 · last 10:26:24"><b>q3.csv</b>254.8 KB · 14 reads</div>
+          <div class="r" data-tip="<b>/srv/reports/q2.csv</b><br>4 reads · 96.1 KB"><b>q2.csv</b>96.1 KB · 4 reads</div>
+          <div class="r" style="opacity:.85" data-tip="<b>/srv/reports/summary.md</b><br>2 reads · 24.3 KB"><b>summary.md</b>24.3 KB</div>
+          <div class="l" data-tip="<b>/srv/reports/</b> · readdir ×19<br>(the streaming <code>ls</code> loop)"><b>reports/</b>readdir ×19</div>
+          <div class="blk" data-tip="<b>Refused · 3 attempts</b><br><code>/srv/secrets/.env</code> outside grant · 06:02:23<br><code>/etc/shadow</code> outside grant · 06:02:29<br><code>q3.csv</code> write, read-only grant · 06:02:34"><b>✕ refused</b>3 attempts</div>
+        </div>
+        <p class="mt-3 text-[12px] muted">Size = bytes read per handle (GateFS records them at <code>Release</code>). Hover a cell for counts and times.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2 class="h3">Path × minute</h2><span class="text-xs muted">10:19–10:27 · ops per minute</span></div>
+      <div class="card-b">
+        <div class="hm" style="grid-template-columns:9rem repeat(9,1fr)">
+          <span></span><span class="h">19</span><span class="h">20</span><span class="h">21</span><span class="h">22</span><span class="h">23</span><span class="h">24</span><span class="h">25</span><span class="h">26</span><span class="h">27</span>
+          <span class="p">reports/</span><i class="c c2" data-tip="10:19 · readdir ×3"></i><i class="c c1"></i><i class="c"></i><i class="c c1"></i><i class="c"></i><i class="c"></i><i class="c c2"></i><i class="c c5" data-tip="10:26 · readdir ×12 (the streaming loop)"></i><i class="c"></i>
+          <span class="p">q3.csv</span><i class="c c3" data-tip="10:19 · 4 reads · 72 KB"></i><i class="c c4"></i><i class="c c2"></i><i class="c"></i><i class="c c1"></i><i class="c"></i><i class="c"></i><i class="c c2"></i><i class="c"></i>
+          <span class="p">q2.csv</span><i class="c"></i><i class="c c2"></i><i class="c c3"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i>
+          <span class="p">summary.md</span><i class="c"></i><i class="c"></i><i class="c c1"></i><i class="c c2"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i>
+          <span class="p">drafts/</span><i class="c"></i><i class="c"></i><i class="c"></i><i class="c c1"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i>
+        </div>
+        <div class="mt-4 flex items-center gap-2 text-[11px] muted">0<span class="flex gap-0.5"><i class="c c1 inline-block h-3 w-5 rounded-sm"></i><i class="c c2 inline-block h-3 w-5 rounded-sm"></i><i class="c c3 inline-block h-3 w-5 rounded-sm"></i><i class="c c4 inline-block h-3 w-5 rounded-sm"></i><i class="c c5 inline-block h-3 w-5 rounded-sm"></i></span>12+ ops</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_1fr]">
+    <div class="card">
+      <div class="card-h"><h2 class="h3">Where attempts stopped</h2><span class="text-xs muted">all agents · 6 Nov · real</span></div>
+      <div class="card-b space-y-3">
+        <div class="fn"><span>Connection attempts</span><div class="bar" style="width:100%"></div><span class="mono tnum text-right">16</span></div>
+        <div class="fn"><span>Identity OK <span class="text-[11px] muted">(ENS key + World ID)</span></span><div class="bar" style="width:100%"></div><span class="mono tnum text-right">16</span></div>
+        <div class="fn"><span>Held a grant</span><div class="flex gap-0.5"><div class="bar" style="width:75%"></div><div class="drop" style="width:25%" data-tip="<b>4 × MESHY_NO_GRANT</b><br>3 shells (db1 ×2, pi ×1) · 1 port (camera)"></div></div><span class="mono tnum text-right">12</span></div>
+        <div class="fn"><span>No path refused</span><div class="flex gap-0.5"><div class="bar" style="width:56.25%"></div><div class="drop" style="width:18.75%" data-tip="<b>3 sessions hit a block</b><br>2 outside grant · 1 read-only grant"></div></div><span class="mono tnum text-right">9</span></div>
+      </div>
+    </div>
+
+    <div class="card overflow-x-auto">
+      <div class="card-h"><h2 class="h3">Refusals</h2><span class="count">7</span></div>
+      <table class="tbl">
+        <thead><tr><th>Time</th><th>Why</th><th>What</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono tnum text-[13px] muted">07:54:45</td><td><span class="badge b-bad">no grant</span></td><td class="mono text-[13px]">shell on pi.home</td><td><a class="link whitespace-nowrap text-[13px]" href="#">Grant this</a></td></tr>
+          <tr><td class="mono tnum text-[13px] muted">07:54:33</td><td><span class="badge b-bad">no grant</span></td><td class="mono text-[13px]">port camera.pi.home</td><td><a class="link whitespace-nowrap text-[13px]" href="#">Grant this</a></td></tr>
+          <tr><td class="mono tnum text-[13px] muted">06:04:14</td><td><span class="badge b-bad">no grant</span></td><td class="mono text-[13px]">shell on db1.prod (2 s after revoke)</td><td></td></tr>
+          <tr><td class="mono tnum text-[13px] muted">06:02:34</td><td><span class="badge b-warn">read-only</span></td><td class="mono text-[13px]">write /srv/reports/q3.csv</td><td><a class="link whitespace-nowrap text-[13px]" href="#">Allow write</a></td></tr>
+          <tr><td class="mono tnum text-[13px] muted">06:02:29</td><td><span class="badge b-bad">outside grant</span></td><td class="mono text-[13px]">/etc/shadow</td><td></td></tr>
+          <tr><td class="mono tnum text-[13px] muted">06:02:23</td><td><span class="badge b-bad">outside grant</span></td><td class="mono text-[13px]">/srv/secrets/.env</td><td></td></tr>
+          <tr><td class="mono tnum text-[13px] muted">06:01:40</td><td><span class="badge b-bad">no grant</span></td><td class="mono text-[13px]">shell on db1.prod</td><td></td></tr>
+        </tbody>
+      </table>
+      <p class="px-5 pb-4 pt-2 text-[12px] muted">Kinds and reasons are public Arkiv attributes. Paths are sealed and shown here because the org key is loaded; they're illustrative in this mockup.</p>
+    </div>
+  </div>
+</main>

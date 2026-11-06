@@ -1,0 +1,160 @@
+<!-- {"title": "Timeline · Insights", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-6 pt-10 lg:px-8">
+  <div class="eyebrow">meshydemo.eth / activity / timeline</div>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">What claude-1 did</h1>
+      <p class="lede">Fri 6 Nov, 06:00–10:30 IST · 12 sessions on 2 devices · 7 refused · 5 revocations · read live from Arkiv and ENS</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-outline btn-sm" data-copy="https://meshy-bay.vercel.app/org/meshydemo.eth/activity/timeline?agent=claude-1&amp;from=2026-11-06T06:00%2B05:30&amp;to=2026-11-06T10:30%2B05:30&amp;gaps=collapse">Copy link</button>
+      <button class="btn btn-outline btn-sm">Export JSON</button>
+      <button class="btn btn-ink btn-sm">Save view</button>
+    </div>
+  </div>
+</section>
+
+<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
+  <nav class="subtabs" aria-label="Activity views">
+    <a href="./index.html">Overview</a>
+    <a href="./timeline.html" aria-current="page">Timeline</a>
+    <a href="./access.html">Access</a>
+    <a href="./reach.html">Who can reach what</a>
+    <a href="./files.html">Files &amp; refusals</a>
+    <a href="./replay.html">Session replay</a>
+  </nav>
+
+  <div class="space-y-3">
+    <label class="search"><i data-lucide="search" class="h-4 w-4 text-muted-foreground"></i>
+      <input value="claude-1 since:6h" aria-label="Search activity">
+      <span class="tok">agent:claude-1</span><span class="tok">since:6h</span><kbd>/</kbd>
+    </label>
+    <div class="facets">
+      <span class="chip"><span class="k">Agent</span> <b class="mono">claude-1</b><button class="x" aria-label="Remove">✕</button></span>
+      <span class="chip"><span class="k">Time</span> <b>6 Nov 06:00 – 10:30 IST</b><button class="x" aria-label="Remove">✕</button></span>
+      <span class="chip chip-add">+ Device</span>
+      <span class="chip chip-add">+ Network</span>
+      <span class="chip chip-add">+ Kind</span>
+      <span class="chip chip-add">+ Outcome</span>
+      <span class="chip chip-add">+ Granter</span>
+      <span class="chip chip-add">+ Path <span class="text-[11px]">(needs org key)</span></span>
+      <span class="ml-auto seg" role="group" aria-label="Idle time"><button aria-pressed="true">Collapse idle</button><button>Linear</button></span>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <div class="space-y-6 min-w-0">
+      <div class="card overflow-hidden">
+        <div class="card-h">
+          <h2 class="h3">Activity by device</h2>
+          <div class="legend">
+            <span><i class="sw" style="background:var(--s-read)"></i>shell session</span>
+            <span><i class="sw" style="background:var(--s-list)"></i>port forward</span>
+            <span><i class="sw" style="background:var(--grant);height:6px"></i>grant held (ENS)</span>
+            <span><i class="mk mk-x" style="position:static;transform:none;margin:0;width:14px;height:14px">✕</i>blocked</span>
+            <span><i class="mk mk-d" style="position:static;transform:none;margin:0;width:14px;height:14px">!</i>no grant</span>
+            <span><i class="mk mk-r" style="position:static;transform:none;margin:0;width:14px;height:14px">⚡</i>revoked</span>
+          </div>
+        </div>
+        <div class="chart">
+          <div class="lanes">
+            <!-- idle gaps (shared by every lane) -->
+            <div class="lane">
+              <div class="name">db1<span class="rest muted">.prod</span><small>macOS sandbox · writer 0x7Dec…3384</small></div>
+              <div class="track">
+                <div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+                <div class="vgrid" style="left:5.67%"></div><div class="vgrid" style="left:17%"></div><div class="vgrid" style="left:28.33%"></div><div class="vgrid" style="left:70.25%"></div><div class="vgrid" style="left:78.75%"></div><div class="vgrid" style="left:87.25%"></div><div class="vgrid" style="left:95.75%"></div>
+                <!-- grants from ENS -->
+                <div class="grantband" style="left:7.56%;width:7.55%" data-tip="<b>Grant claude-1.db1.prod</b> #1<br>06:02:10 → revoked 06:02:50 (block 12,073,043)<br>granted and revoked by <code>0x45e8…E0EA</code> (you)"></div>
+                <div class="grantband" style="left:19.83%;width:3.97%" data-tip="<b>Grant #2</b> 06:03:15 → revoked 06:03:36 (block 12,073,047)"></div>
+                <div class="grantband" style="left:28.33%;width:2.27%" data-tip="<b>Grant #3</b> 06:04:00 → revoked 06:04:12 (block 12,073,050)"></div>
+                <div class="grantband" style="left:66.35%;width:31.24%" data-tip="<b>Grant #4</b> 10:19:05 → revoked 10:26:26 (block 12,074,344)<br>policy: <code>/srv/reports</code> ro · bound to tokenId"></div>
+                <!-- burst 1 -->
+                <span class="mk mk-d" style="left:1.89%" data-tip="<b>Refused · MESHY_NO_GRANT</b> 06:01:40<br>claude-1 logged in, but held no grant on db1 yet">!</span>
+                <div class="sess" style="left:9.07%;width:.5%" data-tip="<b>Session</b> 06:02:18 · &lt;1 s · exit 0<br>argv 🔑 <code>ls /srv/reports</code>"></div>
+                <div class="sess" style="left:10.01%;width:.5%"></div><span class="mk mk-x" style="left:10.4%" data-tip="<b>Blocked · outside grant</b> 06:02:23<br>op <code>access</code> · path 🔑 <code>/srv/secrets/.env</code>">✕</span>
+                <div class="sess" style="left:11.14%;width:.5%"></div><span class="mk mk-x" style="left:11.6%;margin-top:-22px" data-tip="<b>Blocked · outside grant</b> 06:02:29<br>path 🔑 <code>/etc/shadow</code>">✕</span>
+                <div class="sess" style="left:12.09%;width:.5%"></div><span class="mk mk-x" style="left:12.8%" data-tip="<b>Blocked · read-only grant</b> 06:02:34<br>path 🔑 <code>/srv/reports/q3.csv</code> (write)">✕</span>
+                <div class="sess" style="left:13.41%;width:1.7%" data-tip="<b>Session</b> 06:02:41 → 06:02:50 · killed<br>argv 🔑 <code>sh -c 'while :; do wc -l /srv/reports/q3.csv; sleep 1; done'</code>"></div><span class="mk mk-r" style="left:15.11%" data-tip="<b>Revoked</b> block 12,073,043<br>daemon kill <b>120 ms</b> after head seen<br>reason: revoked or expired">⚡</span>
+                <div class="sess" style="left:20.97%;width:2.83%"></div><span class="mk mk-r" style="left:23.8%" data-tip="<b>Revoked</b> block 12,073,047 · <b>192 ms</b>">⚡</span>
+                <div class="sess" style="left:29.47%;width:1.13%"></div><span class="mk mk-r" style="left:30.6%" data-tip="<b>Revoked</b> block 12,073,050 · <b>132 ms</b>">⚡</span>
+                <span class="mk mk-d" style="left:31.6%;margin-top:-22px" data-tip="<b>Refused · MESHY_NO_GRANT</b> 06:04:14<br>tried again 2 s after the revoke">!</span>
+                <!-- burst 4 -->
+                <div class="sess" style="left:67.84%;width:18.99%" aria-selected="true" data-tip="<b>Session</b> 10:19:26 → 10:23:54 · killed<br>argv 🔑 <code>/bin/sh -l</code> (interactive: typed commands need G7)"></div>
+                <span class="mk mk-r anom" style="left:86.83%" data-tip="<b>Revoked · FAIL CLOSED</b> block 12,074,331<br>cannot verify grant on chain · <b>5,002 ms</b><br>the grant itself was still live on ENS">⚡</span>
+                <div class="sess" style="left:94.4%;width:.45%"></div>
+                <div class="sess" style="left:96.1%;width:.45%"></div>
+                <div class="sess" style="left:96.88%;width:.71%" data-tip="<b>Session over the WireGuard mesh</b> 10:26:16 → 10:26:26<br>argv 🔑 <code>sh -c 'while :; do ls /srv/reports; sleep 1; done'</code>"></div><span class="mk mk-r" style="left:97.9%" data-tip="<b>Revoked</b> block 12,074,344 · <b>1,316 ms</b><br>NetBird policy removed ~27 s later">⚡</span>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="name">pi<span class="rest muted">.home</span><small>camera service · writer 0x6E36…5B7F</small></div>
+              <div class="track">
+                <div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+                <div class="grantband expired" style="left:42.07%;width:6.6%" data-tip="<b>Grant claude-1.camera.pi.home</b><br>07:54:38 → <b>expired</b> 08:54:38 (1 h)<br>granted by <code>0xf846…Fc98</code> (admin of home)"></div>
+                <span class="mk mk-x" style="left:40.57%" data-tip="<b>Blocked · connect</b> 07:54:33<br>MESHY_NO_GRANT grant=claude-1.camera.pi.home…">✕</span>
+                <div class="sess svc" style="left:42.97%;width:.6%" data-tip="<b>Port forward</b> 07:54:41 · 4 s<br>connect camera.pi.home → http 127.0.0.1:8001<br>bytes in/out 🔑"></div>
+                <span class="mk mk-d" style="left:44.6%" data-tip="<b>Refused · MESHY_NO_GRANT</b> 07:54:45<br>asked for a shell on pi; holds only the camera port">!</span>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="name">rig1<span class="rest muted">.home</span><small>Linux · GateFS</small></div>
+              <div class="track">
+                <div class="gap" style="left:34%;width:2.67%"></div><div class="gap" style="left:48.67%;width:2.66%"></div><div class="gap" style="left:63.33%;width:2.67%"></div>
+                <div class="grantband" style="left:51.92%;width:10.91%" data-tip="<b>Grant claude-1.rig1.home</b> (models, ro)<br>08:50:10 → revoked 09:02:26 (block 12,073,941)<br>granted and revoked by <code>0xf846…Fc98</code>"></div>
+                <div class="nodata" style="left:51.6%;width:11.5%">no Arkiv data</div>
+                <span class="mk mk-r" style="left:62.83%" data-tip="<b>Revoked</b> block 12,073,941<br>ENS LabelUnregistered by 0xf846…Fc98<br>kill 216 ms (meshyd log only, not on Arkiv)">⚡</span>
+              </div>
+            </div>
+          </div>
+          <div class="axis">
+            <div></div>
+            <div class="ticks">
+              <span class="t" style="left:5.67%">06:02</span><span class="t" style="left:17%">06:03</span><span class="t" style="left:28.33%">06:04</span>
+              <span class="g" style="left:35.33%">1h 50m</span>
+              <span class="t" style="left:42.67%">07:54:40</span>
+              <span class="g" style="left:50%">55m</span>
+              <span class="t" style="left:60.67%">09:00</span>
+              <span class="g" style="left:64.67%">1h 16m</span>
+              <span class="t" style="left:70.25%">10:20</span><span class="t" style="left:78.75%">10:22</span><span class="t" style="left:87.25%">10:24</span><span class="t" style="left:95.75%">10:26</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card overflow-x-auto">
+        <div class="card-h"><h2 class="h3">Events</h2><span class="text-xs muted">36 rows · newest first · decrypted in your browser</span></div>
+        <table class="tbl">
+          <thead><tr><th>Time (IST)</th><th>Event</th><th>Device</th><th>Detail</th><th>Proof</th></tr></thead>
+          <tbody>
+            <tr><td class="mono tnum text-[13px] muted">10:26:26</td><td><span class="badge b-warn">⚡ Revoked</span></td><td class="mono">db1.prod</td><td class="text-[13px]">1,316 ms after block <span class="mono">12,074,344</span></td><td><a class="link mono text-[12px]" href="#">0xb3d5…863d</a></td></tr>
+            <tr><td class="mono tnum text-[13px] muted">10:26:16</td><td>Session started</td><td class="mono">db1.prod</td><td class="mono text-[13px]">sh -c 'while :; do ls /srv/reports; sleep 1; done'</td><td><a class="link mono text-[12px]" href="#">0x67f2…6917</a></td></tr>
+            <tr><td class="mono tnum text-[13px] muted">10:23:54</td><td><span class="badge b-bad">⚡ Fail closed</span></td><td class="mono">db1.prod</td><td class="text-[13px]">cannot verify grant on chain · 5,002 ms · block <span class="mono">12,074,331</span></td><td><a class="link mono text-[12px]" href="#">0xd295…49e7</a></td></tr>
+            <tr><td class="mono tnum text-[13px] muted">07:54:45</td><td><span class="badge b-bad">Refused</span></td><td class="mono">pi.home</td><td class="text-[13px]">MESHY_NO_GRANT · wanted a shell on pi <a class="link ml-1" href="#">Grant this</a></td><td><a class="link mono text-[12px]" href="#">0x91c0…02ad</a></td></tr>
+            <tr><td class="mono tnum text-[13px] muted">06:02:34</td><td><span class="badge b-bad">Blocked</span></td><td class="mono">db1.prod</td><td class="text-[13px]">read-only grant · <span class="mono">/srv/reports/q3.csv</span> (write)</td><td><a class="link mono text-[12px]" href="#">0x4a17…c3e0</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <aside class="space-y-6">
+      <div class="card">
+        <div class="card-h"><h2 class="h3">Flags</h2><span class="count">3</span></div>
+        <div class="anomaly"><span class="sev sev-hi">!</span><div><b>Fail-closed kill on db1</b><div class="muted">10:23:54 · 5,002 ms · the chain view went stale while the grant was still live. Check the RPC.</div></div></div>
+        <div class="anomaly"><span class="sev sev-md">3</span><div><b>3 refusals in 11 s</b><div class="muted">06:02:23–06:02:34 · two paths outside the grant, one write to a read-only grant. Looks like probing.</div></div></div>
+        <div class="anomaly"><span class="sev sev-lo">∅</span><div><b>rig1 isn't writing to Arkiv</b><div class="muted">The grant and revoke are on ENS, but there are no sessions. Fund its Arkiv key.</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2 class="h3">Saved views</h2></div>
+        <div class="text-[14px]">
+          <a class="row hover:bg-muted" href="#"><span class="flex-1">Live now</span><span class="count count-soft">0</span></a>
+          <a class="row hover:bg-muted" href="#"><span class="flex-1">Refused (24 h)</span><span class="count count-soft">7</span></a>
+          <a class="row hover:bg-muted" href="#"><span class="flex-1">Slow kills (&gt; 1 s)</span><span class="count count-soft">2</span></a>
+          <a class="row hover:bg-muted" href="#"><span class="flex-1">Never-used grants</span><span class="count count-soft">0</span></a>
+          <a class="row hover:bg-muted" href="#"><span class="flex-1">Writes to prod</span><span class="count count-soft">0</span></a>
+        </div>
+      </div>
+      <div class="note"><b>How this is joined.</b> Bars come from Arkiv <code>meshy.session</code>, written by each device's ENS <code>addr</code>. Grant bands come from ENS <code>LabelRegistered</code>/<code>LabelUnregistered</code> on each device registry, joined on the grant name and time window. Each ⚡'s <code>block</code> lines up the two clocks.</div>
+    </aside>
+  </div>
+</main>
