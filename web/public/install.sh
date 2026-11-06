@@ -71,8 +71,8 @@ esac
 cat <<EOF
 
 Next:
-  agent   meshy join <invite-link>          # from the dashboard: Directory → Invite agent
-          meshy mesh-join --provider https://sync.16-4-10-3.sslip.io
-  device  meshyd init --name <device>.<network>.<org>.eth --roots /srv
+  agent   meshy join <invite-link>          # from your admin (dashboard: Directory → Invite agent)
+          meshy mesh-join --provider https://api.meshy.live
+  device  meshyd init --name <device>.<network>.<org>.eth --roots ~/shared   # or: Meshy for Mac › This Mac › Share this Mac
   docs    https://meshy.live/download  ·  https://github.com/$REPO
 EOF

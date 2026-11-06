@@ -25,6 +25,14 @@ Scope: `mac/` (Swift, AppKit, no dependencies), plus three small additions to `w
 | Connect wallet landed on someone else's admin panel | The WKWebView console is gone. **Admin Console** opens `/org/<your picked org>` in the default browser, and only once you've picked an org. |
 | Paths assumed this machine | Folder choices come from an NSOpenPanel on the device itself, or from the target device's `meshy.roots`. Nothing in `mac/` or `web/src` names a user folder. |
 
+**0.5.1: role-based menu and no rebuilds while open.**
+- **Owners and delegated admins** get the org menu: Networks, Access (all grants, Renew and Revoke), Recent and Admin Console.
+- **Members** (nodes, agents, people) get Request Access ›, My Access › and This Mac › only. They see no addresses and no give or revoke.
+- **Rebuilds.** The menu is rebuilt in `menuNeedsUpdate` and after it closes, never while it's open; earlier builds rebuilt the open menu on every refresh.
+- **Dialogs.** Async results (role check, join) show their dialog only after the menu closes, and the app never opens the menu by itself.
+- **Main thread.** launchctl work runs off it, and Install Command-Line Tools no longer spawns a login shell.
+- **Tests.** `UI.swift` routes every dialog, browser open and copy, so `--click-all` clicks every item headlessly and checks where each link goes.
+
 **Role.** `GET /api/role?org=&address=` (web) reads `exactOwner(org)` and, for each network, `hasRootRoles(ADMIN_ROLES, address)`. It returns `owner`, `admin` (with `adminOf`) or `member`. The menu adds "agent <label>" for identities in `~/.meshy`. Only owners and admins see Give Access…, Renew… and Revoke….
 
 **Hosts.** Dashboard `https://meshy.live`, provider `https://api.meshy.live`, Sepolia `wss://ethereum-sepolia-rpc.publicnode.com`. Stored `meshy-bay` / `meshy-next` / `sslip.io` settings from older builds are migrated.

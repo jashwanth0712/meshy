@@ -24,6 +24,8 @@ enum Bins {
     static var stateDir: String { ProcessInfo.processInfo.environment["MESHY_STATE"] ?? meshyHome + "/meshyd" }
     static var controlSocket: String { stateDir + "/control.sock" }
     static let tools = ["meshy", "meshyd", "meshy-mesh"]
+    /// Where Install Command-Line Tools puts symlinks.
+    static var toolsDir: String { ProcessInfo.processInfo.environment["MESHY_TOOLS_DIR"] ?? home + "/.local/bin" }
 }
 
 /// The device this Mac shares (one per Mac).
@@ -56,6 +58,7 @@ final class DeviceManager {
     private(set) var joinState: String? // "Waiting for approval of claude-1.agents.acme.eth…"
     private var joinProc: Process?
     private var timer: Timer?
+    private var starting = false
 
     var device: SharedDevice? {
         get { defaults.data(forKey: "device").flatMap { try? JSONDecoder().decode(SharedDevice.self, from: $0) } }
@@ -120,6 +123,20 @@ final class DeviceManager {
         return nil
     }
 
+    /// startDaemons off the main thread (launchctl can take a few seconds).
+    func startDaemonsAsync(_ done: @escaping (String?) -> Void = { _ in }) {
+        guard !starting else { return }
+        starting = true
+        DispatchQueue.global().async {
+            let e = self.startDaemons()
+            DispatchQueue.main.async {
+                self.starting = false
+                self.onChange?()
+                done(e)
+            }
+        }
+    }
+
     func stopDaemons() {
         for label in ["live.meshy.meshyd", "live.meshy.mesh"] { removeAgent(label) }
         if var d = device { d.running = false; device = d }
@@ -181,7 +198,7 @@ final class DeviceManager {
             DispatchQueue.main.async {
                 self.status = s
                 // finish setup by itself once the dashboard transaction landed
-                if let d = self.device, !d.running, self.registered { _ = self.startDaemons() }
+                if let d = self.device, !d.running, self.registered { self.startDaemonsAsync() }
                 self.onChange?()
             }
         }
@@ -211,7 +228,8 @@ final class DeviceManager {
         onChange?()
         let p = Process()
         p.executableURL = URL(fileURLWithPath: meshy)
-        p.arguments = ["join", link] // opens the approval page in the default browser, then waits for ENS
+        // opens the approval page in the default browser, then waits for ENS (tests: no browser, short wait)
+        p.arguments = isTest ? ["join", "--no-open", "--timeout", "3s", link] : ["join", link]
         let out = Pipe()
         p.standardOutput = out
         p.standardError = out
@@ -261,7 +279,7 @@ final class DeviceManager {
     /// Symlinks the bundled tools into ~/.local/bin. Returns what to tell the user.
     func installTools() -> String {
         guard let dir = Bins.dir, Bins.path("meshy") != nil else { return "The tools are missing from Meshy.app. Reinstall Meshy." }
-        let bin = Bins.home + "/.local/bin"
+        let bin = Bins.toolsDir
         try? FileManager.default.createDirectory(atPath: bin, withIntermediateDirectories: true)
         var done: [String] = []
         for t in Bins.tools {
@@ -269,14 +287,15 @@ final class DeviceManager {
             try? FileManager.default.removeItem(atPath: link)
             if (try? FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "\(dir)/\(t)")) != nil { done.append(t) }
         }
-        let path = ProcessInfo.processInfo.environment["PATH"] ?? ""
-        let shellPath = run("/bin/zsh", ["-lc", "echo $PATH"], timeout: 10)?.stdout ?? path
-        let onPath = shellPath.components(separatedBy: ":").contains { $0.trimmingCharacters(in: .whitespacesAndNewlines) == bin }
-        return "Installed \(done.joined(separator: ", ")) in ~/.local/bin." + (onPath ? "" : "\n\nAdd it to your PATH, then open a new Terminal window:\n  echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.zshrc")
+        // Is ~/.local/bin on the user's PATH? Read their shell profiles instead of spawning a shell.
+        let profiles = [".zshrc", ".zprofile", ".bash_profile", ".bashrc", ".profile"].compactMap { try? String(contentsOfFile: Bins.home + "/" + $0, encoding: .utf8) }
+        let onPath = bin != Bins.home + "/.local/bin" || profiles.contains { $0.contains(".local/bin") }
+        guard done.count == Bins.tools.count else { return "Couldn't link all the tools into \(bin)." }
+        return "Installed \(done.joined(separator: ", ")) in \(bin.replacingOccurrences(of: Bins.home, with: "~"))." + (onPath ? "" : "\n\nAdd it to your PATH, then open a new Terminal window:\n  echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.zshrc")
     }
 
     var toolsInstalled: Bool {
         guard let dir = Bins.dir else { return false }
-        return (try? FileManager.default.destinationOfSymbolicLink(atPath: Bins.home + "/.local/bin/meshy")) == "\(dir)/meshy"
+        return (try? FileManager.default.destinationOfSymbolicLink(atPath: Bins.toolsDir + "/meshy")) == "\(dir)/meshy"
     }
 }

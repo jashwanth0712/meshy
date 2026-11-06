@@ -250,6 +250,11 @@ final class MeshyStore {
         return try? JSONDecoder().decode(RoleInfo.self, from: d)
     }
 
+    func saveRole(_ o: String, _ info: RoleInfo) {
+        if let d = try? JSONEncoder().encode(info) { defaults.set(d, forKey: "role.\(who).\(o)") }
+        onChange?()
+    }
+
     /// Reads the address's role in an org from ENSv2 through the dashboard. nil role = not a Meshy org.
     func checkRole(_ o: String, done: @escaping (Result<RoleInfo?, SignInError>) -> Void) {
         guard let a = address else { return done(.failure(SignInError(message: "Sign in first."))) }
@@ -267,8 +272,7 @@ final class MeshyStore {
                 if let e = j["error"] as? String { return done(.failure(SignInError(message: e))) }
                 guard j["exists"] as? Bool == true, let r = j["role"] as? String else { return done(.success(nil)) }
                 let info = RoleInfo(role: r, adminOf: j["adminOf"] as? [String] ?? [], checkedAt: Date().timeIntervalSince1970)
-                if let d = try? JSONEncoder().encode(info) { self.defaults.set(d, forKey: "role.\(self.who).\(o)") }
-                self.onChange?()
+                self.saveRole(o, info)
                 done(.success(info))
             }
         }.resume()

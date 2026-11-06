@@ -1,8 +1,13 @@
 // The menu-bar menu (NSStatusItem). Layout follows docs/mac/PLAN.md §1.
 //
-//   signed out        Sign In with Ethereum… · Join with an Invite Link… · More · Quit
-//   no org yet        Add Organization… · Join… · More · Quit
-//   org selected      header · Organizations · Networks · Access · This Mac · Recent · Admin Console · More · Quit
+//   signed out          Sign In with Ethereum… · Join with an Invite Link… · More · Quit
+//   no org yet          Add Organization… · Join… · More · Quit
+//   owner / admin       Organizations · Networks · Access · This Mac · Recent · Admin Console · More · Quit
+//   member / node       Organizations · Request Access · My Access · This Mac · More · Quit
+//
+// The menu is never rebuilt while it is open (that can crash AppKit or freeze the menu); new data
+// waits for the next open. Only countdown titles update live. Dialogs that answer async work wait
+// until the menu has closed.
 import AppKit
 import ServiceManagement
 
@@ -18,7 +23,8 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     private var query = ""
     private var settingsWindow: NSWindow?
     private var checking: String? // org being checked on ENS
-    private var isOpen = false
+    private(set) var isOpen = false
+    private var afterClose: [() -> Void] = []
 
     override init() {
         super.init()
@@ -33,7 +39,11 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         root.delegate = self
         root.autoenablesItems = false
         item.menu = root
-        let changed = { [weak self] in self?.updateButton(); if self?.isOpen == true { self?.rebuild() } }
+        let changed = { [weak self] in
+            guard let self else { return }
+            self.updateButton()
+            if !self.isOpen { self.rebuild() }
+        }
         store.onChange = changed
         dev.onChange = changed
         updateButton()
@@ -45,12 +55,16 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         guard menu === root else { return }
         isOpen = true
-        store.loadLocalAgents()
-        store.refresh(force: false)
-        dev.poll()
-        rebuild()
         tick = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.updateCountdowns() }
         RunLoop.main.add(tick!, forMode: .common)
+        store.refresh(force: false) // results show next time the menu opens
+        dev.poll()
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === root, !isOpen else { return }
+        store.loadLocalAgents()
+        rebuild()
     }
 
     func menuDidClose(_ menu: NSMenu) {
@@ -58,6 +72,17 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         isOpen = false
         tick?.invalidate()
         query = ""
+        let work = afterClose
+        afterClose = []
+        DispatchQueue.main.async {
+            self.rebuild()
+            work.forEach { $0() }
+        }
+    }
+
+    /// Runs now, or once the menu has closed (never put up a modal over an open menu).
+    private func later(_ f: @escaping () -> Void) {
+        if isOpen { afterClose.append(f) } else { f() }
     }
 
     private func updateButton() {
@@ -72,8 +97,12 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
     // MARK: building
 
+    /// Owner or delegated admin of the selected org: gets the management menu.
+    var manages: Bool { store.org.flatMap { store.role($0) }?.canSign ?? false }
+
     func rebuild() {
         countdowns = []
+        networksMenu = nil
         root.removeAllItems()
         root.addItem(headerItem())
 
@@ -99,19 +128,25 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         root.addItem(label(store.statusLine, color: store.mapError != nil ? .systemOrange : .secondaryLabelColor))
         root.addItem(.separator())
         root.addItem(submenu("Organizations", orgsMenu()))
-        let net = submenu("Networks", networksMenuBuilt())
-        net.badgeText((m?.devices.count ?? 0) + (m?.services.count ?? 0))
-        root.addItem(net)
-        let acc = submenu("Access", accessMenu())
-        acc.badgeText(myLive.count + store.requests.count)
-        root.addItem(acc)
-        if !store.favorites.isEmpty, let m { root.addItem(submenu("Favorites", favoritesMenu(m))) }
+        if manages {
+            let net = submenu("Networks", networksMenuBuilt())
+            net.badgeText((m?.devices.count ?? 0) + (m?.services.count ?? 0))
+            root.addItem(net)
+            let acc = submenu("Access", accessMenu())
+            acc.badgeText(m?.liveGrants.count ?? 0)
+            root.addItem(acc)
+        } else {
+            root.addItem(submenu("Request Access", requestMenu()))
+            let mine = submenu("My Access", myAccessMenu())
+            mine.badgeText(myLive.count + store.requests.count)
+            root.addItem(mine)
+        }
         let mac = submenu("This Mac", thisMacMenu())
         if let s = dev.statusLine { mac.subtitleText(s) }
         root.addItem(mac)
-        if !store.events.isEmpty { root.addItem(submenu("Recent", recentMenu())) }
+        if manages, !store.events.isEmpty { root.addItem(submenu("Recent", recentMenu())) }
         root.addItem(.separator())
-        root.addItem(open("Admin Console", "/org/\(org)", key: "0"))
+        if manages { root.addItem(open("Admin Console", "/org/\(org)", key: "0")) }
         finish()
     }
 
@@ -152,11 +187,10 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         name.lineBreakMode = .byTruncatingTail
         v.addSubview(name)
 
-        let who: String
+        var who = "Not signed in"
         if let a = store.address {
-            who = shortAddr(a) + (store.roleLine.map { " · \($0)" } ?? "")
-        } else {
-            who = "Not signed in"
+            let role = store.org.map { store.role($0) == nil ? "checking role…" : (store.roleLine ?? "") } ?? ""
+            who = shortAddr(a) + (role.isEmpty ? "" : " · \(role)")
         }
         let sub = NSTextField(labelWithString: who)
         sub.font = .systemFont(ofSize: 11)
@@ -185,16 +219,20 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             let it = action(o, #selector(pickOrg(_:)))
             it.representedObject = o
             it.state = o == store.org ? .on : .off
-            if let r = store.role(o) { it.subtitleText(r.role == "admin" ? "admin" : r.role) }
+            if let r = store.role(o) { it.subtitleText(r.role) }
             m.addItem(it)
         }
         m.addItem(.separator())
         m.addItem(action(checking.map { "Checking \($0)…" } ?? "Add Organization…", #selector(addOrgPrompt)))
-        if let o = store.org { m.addItem(action("Remove \(o)", #selector(removeOrg))) }
+        if let o = store.org {
+            m.addItem(action("Check My Role Again", #selector(recheckRole)))
+            m.addItem(action("Remove \(o)", #selector(removeOrg)))
+        }
         return m
     }
 
-    // Networks › with a search field; typing flattens everything into matches.
+    // MARK: owner / admin: Networks › (searchable) and Access ›
+
     private func networksMenuBuilt() -> NSMenu {
         let m = NSMenu()
         m.autoenablesItems = false
@@ -227,7 +265,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             for s in map.services where s.fullName.lowercased().contains(q) || s.desc.lowercased().contains(q) { hits.append(serviceItem(s, title: short(s.fullName))) }
             m.addItem(label(hits.isEmpty ? "No matches" : "\(hits.count) match\(hits.count == 1 ? "" : "es")"))
             for h in hits.prefix(40) { m.addItem(h) }
-            if hits.count > 40 { m.addItem(open("Show all in Admin Console", dirPath())) }
+            if hits.count > 40 { m.addItem(open("Show All in Admin Console", dirPath())) }
             return
         }
         let total = map.devices.count + map.services.count
@@ -249,42 +287,38 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             }
             if (n.resources ?? []).isEmpty { m.addItem(label("No devices")) }
         }
-        if map.devices.count > 40 { m.addItem(open("Show all \(map.devices.count) in Admin Console", dirPath())) }
+        if map.devices.count > 40 { m.addItem(open("Show All \(map.devices.count) in Admin Console", dirPath())) }
+        m.addItem(.separator())
+        m.addItem(open("Add a Device…", dirPath()))
     }
 
     func controlTextDidChange(_ obj: Notification) {
         guard let f = obj.object as? NSSearchField, let m = networksMenu else { return }
         query = f.stringValue
-        // Rebuild the rows under the field, keeping the field (and its focus) in place.
-        while m.items.count > 1 { m.removeItem(at: 1) }
+        // Replace the rows under the field, keeping the field (and its focus) in place.
         let tmp = NSMenu()
         fillNetworks(tmp)
+        while m.items.count > 1 { m.removeItem(at: 1) }
         for it in tmp.items.dropFirst() {
             tmp.removeItem(it)
             m.addItem(it)
         }
     }
 
-    private var canSign: Bool { store.org.flatMap { store.role($0) }?.canSign ?? false }
-
     private func deviceItem(_ d: MapResource, title: String) -> NSMenuItem {
-        let it = NSMenuItem(title: (store.isFavorite(d.fullName) ? "★ " : "") + title, action: nil, keyEquivalent: "")
+        let it = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         if !d.summary.isEmpty { it.subtitleText(d.summary) }
         let sm = NSMenu()
         sm.autoenablesItems = false
         sm.addItem(label(d.fullName))
-        if !d.summary.isEmpty { sm.addItem(label(d.summary)) }
         if !d.rootList.isEmpty { sm.addItem(label("Shares " + d.rootList.map(tilde).joined(separator: ", "))) }
+        let live = (store.map?.liveGrants ?? []).filter { $0.target == d.fullName }
+        sm.addItem(label(live.isEmpty ? "No live access" : "\(plural(live.count, "live grant"))"))
         sm.addItem(.separator())
-        let req = action("Request Access…", #selector(requestAccess(_:)))
-        req.representedObject = d.fullName
-        sm.addItem(req)
-        if canSign { sm.addItem(open("Give Access…", "/org/\(org)?give=&target=\(q(d.fullName))")) }
+        sm.addItem(open("Give Access…", "/org/\(org)?give=&target=\(q(d.fullName))"))
         sm.addItem(copyItem("Copy “meshy ssh \(short(d.fullName))”", "meshy ssh \(d.fullName)"))
         if let a = d.addr { sm.addItem(copyItem("Copy Device Address", a)) }
-        sm.addItem(.separator())
         sm.addItem(open("Open in Admin Console", "/org/\(org)/directory?n=\(q(d.fullName))"))
-        sm.addItem(favItem(d.fullName))
         if let svcs = d.services, !svcs.isEmpty {
             sm.addItem(.separator())
             sm.addItem(sectionHeader("Services"))
@@ -295,58 +329,22 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     }
 
     private func serviceItem(_ s: MapService, title: String) -> NSMenuItem {
-        let it = NSMenuItem(title: (store.isFavorite(s.fullName) ? "★ " : "") + title, action: nil, keyEquivalent: "")
+        let it = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         it.subtitleText([s.proto, s.desc].filter { !$0.isEmpty }.joined(separator: " · "))
         let sm = NSMenu()
         sm.autoenablesItems = false
         sm.addItem(label(s.fullName))
         sm.addItem(label("\(s.proto) → \(s.target)"))
-        if !s.desc.isEmpty { sm.addItem(label(s.desc)) }
         sm.addItem(.separator())
-        let req = action("Request Access…", #selector(requestAccess(_:)))
-        req.representedObject = s.fullName
-        sm.addItem(req)
-        if canSign { sm.addItem(open("Give Access…", "/org/\(org)?give=&target=\(q(s.fullName))")) }
+        sm.addItem(open("Give Access…", "/org/\(org)?give=&target=\(q(s.fullName))"))
         sm.addItem(copyItem("Copy “meshy connect \(short(s.fullName))”", "meshy connect \(s.fullName)"))
-        sm.addItem(.separator())
         sm.addItem(open("Open in Admin Console", "/org/\(org)/directory?n=\(q(s.fullName))"))
-        sm.addItem(favItem(s.fullName))
         it.submenu = sm
         return it
     }
 
     private func grantTitle(_ g: MapGrant) -> String {
         "\(g.agentLabel) → \(short(g.target ?? g.fullName)) · \(left(g.expiry))"
-    }
-
-    /// Live grants held by this Mac's agents (or the signed-in address).
-    private var myLive: [MapGrant] {
-        let mine = Set(store.agentsHere.map { $0.addr.lowercased() } + [store.address?.lowercased() ?? "-"])
-        return (store.map?.liveGrants ?? []).filter { mine.contains($0.owner?.lowercased() ?? "") }
-    }
-
-    private func grantItem(_ g: MapGrant, mine: Bool) -> NSMenuItem {
-        let it = NSMenuItem(title: grantTitle(g), action: nil, keyEquivalent: "")
-        countdowns.append((it, g))
-        let sm = NSMenu()
-        sm.autoenablesItems = false
-        sm.addItem(label(g.fullName))
-        let until = DateFormatter.localizedString(from: Date(timeIntervalSince1970: g.expiry), dateStyle: .none, timeStyle: .short)
-        sm.addItem(label("\(g.isService ? "One port" : "Folders") · expires \(until)"))
-        sm.addItem(.separator())
-        if let t = g.target {
-            sm.addItem(g.isService ? copyItem("Copy “meshy connect \(short(t))”", "meshy connect \(t)") : copyItem("Copy “meshy ssh \(short(t))”", "meshy ssh \(t)"))
-        }
-        if canSign {
-            sm.addItem(open("Renew…", "/org/\(org)?give=\(q(g.agentLabel))&target=\(q(g.target ?? ""))"))
-            sm.addItem(open("Revoke…", "/org/\(org)?revoke=\(q(g.fullName))"))
-        } else if mine, let t = g.target {
-            let r = action("Ask for More Time…", #selector(requestAccess(_:)))
-            r.representedObject = t
-            sm.addItem(r)
-        }
-        it.submenu = sm
-        return it
     }
 
     private func accessMenu() -> NSMenu {
@@ -356,13 +354,97 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             m.addItem(label(store.fetching ? "Loading…" : "No data"))
             return m
         }
+        let live = map.liveGrants
+        if live.isEmpty { m.addItem(label("No agent can reach anything right now")) }
+        let mine = Set(myLive.map(\.fullName))
+        for g in live {
+            let it = NSMenuItem(title: grantTitle(g), action: nil, keyEquivalent: "")
+            if mine.contains(g.fullName) { it.subtitleText("yours") }
+            countdowns.append((it, g))
+            let sm = NSMenu()
+            sm.autoenablesItems = false
+            sm.addItem(label(g.fullName))
+            let until = DateFormatter.localizedString(from: Date(timeIntervalSince1970: g.expiry), dateStyle: .none, timeStyle: .short)
+            sm.addItem(label("\(g.isService ? "One port" : "Folders") · expires \(until)"))
+            sm.addItem(.separator())
+            sm.addItem(open("Renew…", "/org/\(org)?give=\(q(g.agentLabel))&target=\(q(g.target ?? ""))"))
+            sm.addItem(open("Revoke…", "/org/\(org)?revoke=\(q(g.fullName))"))
+            it.submenu = sm
+            m.addItem(it)
+        }
+        m.addItem(.separator())
+        let ended = map.endedGrants.count
+        if ended > 0 { m.addItem(open("\(ended) Ended", "/org/\(org)")) }
+        m.addItem(open("Give Access…", "/org/\(org)?give="))
+        return m
+    }
+
+    // MARK: member / node: Request Access › and My Access ›
+
+    private func requestMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
+        guard let map = store.map else {
+            m.addItem(label(store.fetching ? "Loading…" : "No data yet. Try More › Troubleshoot › Refresh Now."))
+            return m
+        }
+        m.addItem(label("Pick what you need. An admin signs it."))
+        for n in map.allNetworks {
+            m.addItem(.separator())
+            m.addItem(sectionHeader(n.name))
+            if (n.resources ?? []).isEmpty { m.addItem(label("No devices")) }
+            for d in n.resources ?? [] {
+                let it = action(d.name + "…", #selector(requestAccess(_:)))
+                it.representedObject = d.fullName
+                it.subtitleText(d.rootList.isEmpty ? "folders" : d.rootList.map(tilde).joined(separator: ", "))
+                m.addItem(it)
+                for s in d.services ?? [] {
+                    let si = action("\(s.name)…", #selector(requestAccess(_:)))
+                    si.representedObject = s.fullName
+                    si.indentationLevel = 1
+                    si.subtitleText("\(s.proto) port")
+                    m.addItem(si)
+                }
+            }
+        }
+        if map.allNetworks.isEmpty { m.addItem(label("This org has no devices yet")) }
+        return m
+    }
+
+    /// Live grants held by this Mac's agents (or the signed-in address).
+    private var myLive: [MapGrant] {
+        let mine = Set(store.agentsHere.map { $0.addr.lowercased() } + [store.address?.lowercased() ?? "-"])
+        return (store.map?.liveGrants ?? []).filter { mine.contains($0.owner?.lowercased() ?? "") }
+    }
+
+    private func myAccessMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
         let mine = myLive
         let reqs = store.requests
-        m.addItem(sectionHeader("Yours"))
-        if mine.isEmpty && reqs.isEmpty { m.addItem(label(store.agentsHere.isEmpty ? "No agent on this Mac yet. Use This Mac › Join." : "Nothing yet. Request access from Networks.")) }
-        for g in mine { m.addItem(grantItem(g, mine: true)) }
+        if store.agentsHere.isEmpty { m.addItem(label("No agent on this Mac yet. This Mac › Join with an Invite Link.")) }
+        if mine.isEmpty && reqs.isEmpty { m.addItem(label("Nothing yet. Use Request Access.")) }
+        for g in mine {
+            let it = NSMenuItem(title: grantTitle(g), action: nil, keyEquivalent: "")
+            countdowns.append((it, g))
+            let sm = NSMenu()
+            sm.autoenablesItems = false
+            sm.addItem(label(g.fullName))
+            if let t = g.target {
+                sm.addItem(g.isService ? copyItem("Copy “meshy connect \(short(t))”", "meshy connect \(t)") : copyItem("Copy “meshy ssh \(short(t))”", "meshy ssh \(t)"))
+                let r = action("Ask for More Time…", #selector(requestAccess(_:)))
+                r.representedObject = t
+                sm.addItem(r)
+            }
+            it.submenu = sm
+            m.addItem(it)
+        }
+        if !reqs.isEmpty {
+            m.addItem(.separator())
+            m.addItem(sectionHeader("Waiting for an admin"))
+        }
         for (i, r) in reqs.enumerated() {
-            let it = NSMenuItem(title: "\(r.agent) → \(short(r.target)) · waiting for an admin", action: nil, keyEquivalent: "")
+            let it = NSMenuItem(title: "\(r.agent) → \(short(r.target))", action: nil, keyEquivalent: "")
             it.subtitleText("requested \(ago(Date(timeIntervalSince1970: r.at)))")
             let sm = NSMenu()
             sm.autoenablesItems = false
@@ -376,28 +458,10 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             it.submenu = sm
             m.addItem(it)
         }
-        let others = map.liveGrants.filter { g in !mine.contains { $0.fullName == g.fullName } }
-        if !others.isEmpty {
-            m.addItem(.separator())
-            m.addItem(sectionHeader("Everyone in \(org)"))
-            for g in others { m.addItem(grantItem(g, mine: false)) }
-        }
-        m.addItem(.separator())
-        if canSign { m.addItem(open("Give Access…", "/org/\(org)?give=")) }
-        m.addItem(open("All Access in Admin Console", "/org/\(org)"))
         return m
     }
 
-    private func favoritesMenu(_ map: OrgMap) -> NSMenu {
-        let m = NSMenu()
-        m.autoenablesItems = false
-        for f in store.favorites {
-            if let d = map.devices.first(where: { $0.fullName == f }) { m.addItem(deviceItem(d, title: short(d.fullName))) }
-            else if let s = map.services.first(where: { $0.fullName == f }) { m.addItem(serviceItem(s, title: short(s.fullName))) }
-        }
-        if m.items.isEmpty { m.addItem(label("Nothing here")) }
-        return m
-    }
+    // MARK: This Mac, Recent, More
 
     private func thisMacMenu() -> NSMenu {
         let m = NSMenu()
@@ -407,22 +471,26 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             m.addItem(label(d.name))
             if let s = dev.statusLine { m.addItem(label(s.components(separatedBy: " · ").dropFirst().joined(separator: " · "))) }
             m.addItem(label("Folders: " + d.roots.map(tilde).joined(separator: ", ")))
-            if !d.running && !dev.registered, let l = dev.addDeviceLink { m.addItem(open("Finish Adding in the Dashboard…", l)) }
+            if !d.running && !dev.registered, let l = dev.addDeviceLink {
+                m.addItem(open("Finish Adding in the Dashboard…", l))
+                m.addItem(copyItem("Copy Link for an Admin", Settings.base + l))
+            }
             if d.running {
                 m.addItem(action("Stop Sharing", #selector(stopSharing)))
             } else if dev.registered {
                 m.addItem(action("Start Sharing", #selector(startSharing)))
             }
-            m.addItem(open("Open in Admin Console", "/org/\(d.org)/directory?n=\(q(d.name))"))
             m.addItem(action("Forget This Device…", #selector(forgetDevice)))
-        } else {
+        } else if store.org != nil {
             m.addItem(action("Share this Mac…", #selector(shareThisMac)))
             m.addItem(label("Let agents reach folders you choose"))
+        } else {
+            m.addItem(label("Add an org to share this Mac"))
         }
         m.addItem(.separator())
         m.addItem(sectionHeader("Agents on this Mac"))
-        let here = store.agentsHere
-        if here.isEmpty { m.addItem(label("None in this org")) }
+        let here = store.org == nil ? store.localAgents : store.agentsHere
+        if here.isEmpty { m.addItem(label("None yet")) }
         for a in here {
             let it = NSMenuItem(title: a.agent, action: nil, keyEquivalent: "")
             it.subtitleText(shortAddr(a.addr))
@@ -430,7 +498,6 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             sm.autoenablesItems = false
             sm.addItem(label("\(a.agent).agents.\(a.org)"))
             sm.addItem(copyItem("Copy Address", a.addr))
-            sm.addItem(copyItem("Copy “meshy whoami”", "meshy whoami"))
             it.submenu = sm
             m.addItem(it)
         }
@@ -460,27 +527,21 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         m.autoenablesItems = false
         m.addItem(sectionHeader("Account"))
         if let a = store.address {
-            m.addItem(copyItem("Signed in as \(shortAddr(a))", a))
-            m.addItem(action("Sign Out", #selector(signOut)))
+            m.addItem(copyItem("Signed In as \(shortAddr(a))", a))
+            m.addItem(action("Sign Out…", #selector(signOut)))
         } else {
             m.addItem(action("Sign In with Ethereum…", #selector(signIn)))
         }
         m.addItem(sectionHeader("App"))
         m.addItem(action("Settings…", #selector(openSettings), key: ","))
         let login = action("Start at Login", #selector(toggleLogin))
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        login.state = !isTest && SMAppService.mainApp.status == .enabled ? .on : .off
         m.addItem(login)
         let notif = action("Notifications", #selector(toggleNotifications))
         notif.state = store.notificationsOn ? .on : .off
         m.addItem(notif)
-        if store.address == nil {
-            let tools = action("Install Command-Line Tools", #selector(installTools))
-            tools.state = dev.toolsInstalled ? .on : .off
-            m.addItem(tools)
-        }
         m.addItem(sectionHeader("Help"))
         m.addItem(link("How Meshy Works", "https://github.com/jashwanth0712/meshy#readme"))
-        m.addItem(link("Documentation", "https://github.com/jashwanth0712/meshy/tree/main/docs"))
         let tr = NSMenu()
         tr.autoenablesItems = false
         tr.addItem(action("Refresh Now", #selector(refreshNow), key: "r"))
@@ -489,7 +550,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         tr.addItem(action("Copy Diagnostics", #selector(diagnostics)))
         m.addItem(submenu("Troubleshoot", tr))
         m.addItem(.separator())
-        m.addItem(label("Meshy \(appVersion) · ENSv2 on Sepolia · Arkiv"))
+        m.addItem(label("Meshy \(appVersion) · \(Settings.host)"))
         return m
     }
 
@@ -540,12 +601,6 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         return it
     }
 
-    private func favItem(_ name: String) -> NSMenuItem {
-        let it = action(store.isFavorite(name) ? "Remove from Favorites" : "Add to Favorites", #selector(toggleFav(_:)))
-        it.representedObject = name
-        return it
-    }
-
     private func short(_ name: String) -> String { org.isEmpty ? name : name.replacingOccurrences(of: ".\(org)", with: "") }
     private func tilde(_ p: String) -> String {
         p.replacingOccurrences(of: "^/Users/[^/]+", with: "~", options: .regularExpression).replacingOccurrences(of: "^/home/[^/]+", with: "~", options: .regularExpression)
@@ -556,269 +611,209 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     @objc func toggleLive(_ s: NSSwitch) { store.live = s.state == .on }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func refreshNow() { store.refresh(force: true); dev.poll() }
-    @objc func copyValue(_ s: NSMenuItem) {
-        guard let v = s.representedObject as? String else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(v, forType: .string)
-    }
+    @objc func copyValue(_ s: NSMenuItem) { if let v = s.representedObject as? String { UI.copy(v) } }
     @objc func openPath(_ s: NSMenuItem) { if let p = s.representedObject as? String { openDashboard(p) } }
-    @objc func openURL(_ s: NSMenuItem) { if let u = (s.representedObject as? String).flatMap(URL.init(string:)) { NSWorkspace.shared.open(u) } }
-    @objc func toggleFav(_ s: NSMenuItem) { if let n = s.representedObject as? String { store.toggleFavorite(n) } }
+    @objc func openURL(_ s: NSMenuItem) { if let u = (s.representedObject as? String).flatMap(URL.init(string:)) { UI.open(u) } }
     @objc func pickOrg(_ s: NSMenuItem) { if let o = s.representedObject as? String { store.switchOrg(o) } }
-    @objc func removeOrg() { if let o = store.org { store.removeOrg(o) } }
     @objc func toggleNotifications() { store.notificationsOn.toggle() }
     @objc func cancelJoin() { dev.cancelJoin() }
+    @objc func emailRequest(_ s: NSMenuItem) { if let l = s.representedObject as? String { emailLink(l) } }
+    @objc func withdraw(_ s: NSMenuItem) { store.dropRequest(at: s.tag) }
 
-    @objc func signIn() {
-        guard let u = store.beginSignIn() else { return }
-        NSWorkspace.shared.open(u) // MetaMask lives in the browser; the page comes back via meshy://auth
+    @objc func removeOrg() {
+        guard let o = store.org, UI.confirm("Remove \(o) from this Mac?", info: "Nothing changes on-chain. You can add it again later.", ok: "Remove") else { return }
+        store.removeOrg(o)
     }
 
-    @objc func signOut() {
-        guard confirm("Sign out of Meshy?", info: "Your orgs stay saved for when you sign in again. A shared device keeps running.", ok: "Sign Out") else { return }
-        store.signOut()
-    }
-
-    /// After a successful meshy://auth callback.
-    func signedIn(_ addr: String) {
-        store.notify(title: "Signed in to Meshy", body: "as \(shortAddr(addr))")
-        if store.orgs.isEmpty {
-            addOrgPrompt()
-        } else {
-            DispatchQueue.main.async { self.item.button?.performClick(nil) }
+    @objc func recheckRole() {
+        guard let o = store.org else { return }
+        store.checkRole(o) { [weak self] r in
+            if case .failure(let e) = r { self?.later { UI.alert("Couldn't check your role in \(o)", info: e.message) } }
         }
     }
 
+    @objc func signIn() {
+        guard let u = store.beginSignIn() else { return UI.alert("Couldn't start sign-in.") }
+        UI.open(u) // MetaMask lives in the browser; the page comes back once through meshy://auth
+    }
+
+    @objc func signOut() {
+        guard UI.confirm("Sign out of Meshy?", info: "Your orgs stay saved for when you sign in again. A shared device keeps running.", ok: "Sign Out") else { return }
+        store.signOut()
+    }
+
+    /// After a successful meshy://auth callback (the menu is closed: the browser had focus).
+    func signedIn(_ addr: String) {
+        store.notify(title: "Signed in to Meshy", body: "as \(shortAddr(addr))")
+        if store.orgs.isEmpty { later { self.addOrgPrompt() } }
+    }
+
     @objc func addOrgPrompt() {
-        guard checking == nil, let o = prompt("Add your organization", info: "Type the org's ENS name. Meshy reads your role in it from ENS on Sepolia.", placeholder: "your-org.eth") else { return }
+        guard checking == nil else { return }
+        guard let o = UI.prompt("Add your organization", info: "Type the org's ENS name. Meshy reads your role in it from ENS on Sepolia.", placeholder: "your-org.eth") else { return }
         addOrg(named: o)
     }
 
     func addOrg(named raw: String) {
         let o = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard o.range(of: "^([a-z0-9-]+\\.)+eth$", options: .regularExpression) != nil else { return alert("“\(raw)” isn't an ENS name. Try something like acme.eth.") }
-        guard store.address != nil else { return alert("Sign in first, then add \(o).") }
+        guard o.range(of: "^([a-z0-9-]+\\.)+eth$", options: .regularExpression) != nil else { return UI.alert("“\(raw)” isn't an ENS name.", info: "Try something like acme.eth.") }
+        guard store.address != nil else { return UI.alert("Sign in first, then add \(o).") }
         checking = o
-        rebuild()
+        if !isOpen { rebuild() }
         store.addOrg(o) { [weak self] r in
             guard let self else { return }
             self.checking = nil
-            self.rebuild()
+            if !self.isOpen { self.rebuild() }
             switch r {
             case .success(let info?):
-                let what = info.role == "owner" ? "You own it, so you can give and revoke access."
+                let what = info.role == "owner" ? "You own it: the menu shows its devices and access, and you can give and revoke."
                     : info.role == "admin" ? "You're a delegated admin of \(info.adminOf.map { $0.replacingOccurrences(of: ".\(o)", with: "") }.joined(separator: ", "))."
-                    : "You can browse it and request access. An owner or admin signs grants."
+                    : "You're a member: request access to its devices from the menu. An owner or admin signs."
                 self.store.notify(title: "Added \(o)", body: what)
-                self.item.button?.performClick(nil)
+                UI.log("ADDED: \(o) role=\(info.role)")
             case .success(nil):
-                self.alert("\(o) isn't a Meshy org on Sepolia ENS. Check the spelling, or create it in the dashboard.")
+                self.later { UI.alert("\(o) isn't a Meshy org", info: "Nothing called \(o) is registered with Meshy on Sepolia ENS. Check the spelling, or create the org in the dashboard.") }
             case .failure(let e):
-                self.alert("Couldn't check \(o): \(e.message)")
+                self.later { UI.alert("Couldn't check \(o)", info: e.message) }
             }
         }
     }
 
     @objc func joinPrompt() {
-        guard let link = prompt("Join with an invite link", info: "Paste the link an admin sent you. Meshy creates this Mac's agent keys, opens the approval page in your browser, and joins the mesh once it's approved.", placeholder: "https://meshy.live/approve?org=…&agent=…") else { return }
-        let l = link.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let c = URLComponents(string: l), c.scheme?.hasPrefix("http") == true, c.queryItems?.contains(where: { $0.name == "org" }) == true, c.queryItems?.contains(where: { $0.name == "agent" }) == true else {
-            return alert("That isn't a Meshy invite link. It should contain org= and agent=.")
+        guard let link = UI.prompt("Join with an invite link", info: "Paste the link an admin sent you. Meshy makes this Mac's agent keys, opens the approval page in your browser, and joins the mesh once you're approved.", placeholder: "\(Settings.base)/approve?org=…&agent=…") else { return }
+        guard let c = URLComponents(string: link), c.scheme?.hasPrefix("http") == true,
+              let org = c.queryItems?.first(where: { $0.name == "org" })?.value, !org.isEmpty,
+              let agent = c.queryItems?.first(where: { $0.name == "agent" })?.value, !agent.isEmpty else {
+            return UI.alert("That isn't a Meshy invite link.", info: "It should look like \(Settings.base)/approve?org=acme.eth&agent=claude-1.")
         }
-        let org = c.queryItems?.first { $0.name == "org" }?.value ?? ""
-        dev.join(link: l, provider: store.syncURL) { [weak self] r in
+        dev.join(link: link, provider: store.syncURL) { [weak self] r in
             guard let self else { return }
             switch r {
             case .success(let name):
-                if self.store.address != nil, !self.store.orgs.contains(org) { self.store.addOrg(org) { _ in } }
+                if self.store.address != nil, !self.store.orgs.contains(org) { self.store.addOrgUnchecked(org) }
                 self.store.notify(title: "Joined \(org)", body: "\(name) is approved and on the mesh.")
+                UI.log("JOINED: \(name)")
             case .failure(let e):
-                self.alert("Joining didn't finish: \(e.message)")
+                self.later { UI.alert("Joining didn't finish", info: e.message) }
             }
         }
     }
 
     @objc func shareThisMac() {
-        guard let org = store.org, let map = store.map else { return alert("Add your org first.") }
+        guard let org = store.org else { return UI.alert("Add your org first.") }
+        guard let map = store.map else { return UI.alert("Still loading \(org).", info: "Try again in a moment.") }
         let nets = map.allNetworks
         guard !nets.isEmpty else {
-            alert("\(org) has no networks yet. Create one in the dashboard (Directory › Add › Network), then come back.")
-            return openDashboard(dirPath())
+            UI.alert("\(org) has no networks yet.", info: "An owner creates one in the dashboard (Directory › Add › Network).")
+            return
         }
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = true
-        panel.prompt = "Share"
-        panel.message = "Choose the folders agents may be granted. Each agent still needs a grant, folder by folder, with an expiry."
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
-        let roots = panel.urls.map(\.path)
-        guard !roots.contains(where: { $0 == "/" || $0 == Bins.home }) else { return alert("Pick specific folders, not your whole disk or home folder.") }
-
-        let a = NSAlert()
-        a.messageText = "Share this Mac in \(org)"
-        a.informativeText = "Folders: " + roots.map(tilde).joined(separator: ", ")
-        let name = NSTextField(string: defaultDeviceLabel())
-        let net = NSPopUpButton()
-        net.addItems(withTitles: nets.map(\.name))
-        let grid = NSGridView(views: [[NSTextField(labelWithString: "Device name"), name], [NSTextField(labelWithString: "Network"), net]])
-        grid.column(at: 0).xPlacement = .trailing
-        grid.rowSpacing = 8
-        name.widthAnchor.constraint(equalToConstant: 200).isActive = true
-        grid.frame = NSRect(x: 0, y: 0, width: 300, height: 56)
-        a.accessoryView = grid
-        a.addButton(withTitle: "Continue")
-        a.addButton(withTitle: "Cancel")
-        a.window.initialFirstResponder = name
-        guard a.runModal() == .alertFirstButtonReturn else { return }
-        let label = name.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
-        guard label.range(of: "^[a-z0-9][a-z0-9-]{0,40}$", options: .regularExpression) != nil else { return alert("Use lowercase letters, digits and dashes for the device name.") }
-        let network = nets[max(0, net.indexOfSelectedItem)]
+        guard let roots = UI.chooseFolders(message: "Choose the folders agents may be granted. Each agent still needs a grant, folder by folder, with an expiry.") else { return }
+        guard !roots.isEmpty, !roots.contains(where: { $0 == "/" || $0 == Bins.home }) else { return UI.alert("Pick specific folders, not your whole disk or home folder.") }
+        guard let v = UI.form("Share this Mac in \(org)", info: "Folders: " + roots.map(tilde).joined(separator: ", "),
+                              fields: [.text("Device name", value: defaultDeviceLabel(), placeholder: "my-mac", options: []), .popup("Network", options: nets.map(\.name), selected: 0)], ok: "Continue"),
+              v.count == 2 else { return }
+        let label = v[0].lowercased()
+        guard label.range(of: "^[a-z0-9][a-z0-9-]{0,40}$", options: .regularExpression) != nil else { return UI.alert("Use lowercase letters, digits and dashes for the device name.") }
+        let network = nets[min(max(0, Int(v[1]) ?? 0), nets.count - 1)]
         let full = "\(label).\(network.fullName)"
-        if map.devices.contains(where: { $0.fullName == full }) { return alert("\(full) already exists. Pick another name.") }
+        if map.devices.contains(where: { $0.fullName == full }) { return UI.alert("\(full) already exists.", info: "Pick another name.") }
         switch dev.share(name: full, org: org, roots: roots) {
         case .success:
-            if let l = dev.addDeviceLink { openDashboard(l) }
-            alert("Finish in your browser", info: "The dashboard opened with this Mac's join code filled in. An owner or admin of \(network.name) signs 3 transactions. Meshy starts sharing by itself once \(label) shows up on ENS.\n\nNot an admin? Copy the link from This Mac › Finish Adding and send it to one.")
+            if let l = dev.addDeviceLink {
+                if manages { openDashboard(l) } else { UI.copy(Settings.base + l) }
+            }
+            UI.alert(manages ? "Finish in your browser" : "Send the link to an admin",
+                     info: manages
+                        ? "The dashboard opened with this Mac's join code filled in. Sign the 3 transactions. Meshy starts sharing by itself once \(label) is on ENS."
+                        : "The link to add \(label) is on your clipboard. An owner or admin of \(network.name) opens it and signs. Meshy starts sharing by itself once \(label) is on ENS.")
         case .failure(let e):
-            alert("Couldn't prepare this Mac: \(e.message)")
+            UI.alert("Couldn't prepare this Mac", info: e.message)
         }
     }
 
     private func defaultDeviceLabel() -> String {
         let host = (Host.current().localizedName ?? "mac").lowercased()
         let s = host.replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression).trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return String(s.prefix(30)).isEmpty ? "mac" : String(s.prefix(30))
+        return s.isEmpty ? "mac" : String(s.prefix(30))
     }
 
-    @objc func startSharing() { if let e = dev.startDaemons() { alert(e) } }
+    @objc func startSharing() { dev.startDaemonsAsync { [weak self] e in if let e { self?.later { UI.alert("Couldn't start sharing", info: e) } } } }
     @objc func stopSharing() { dev.stopDaemons() }
     @objc func forgetDevice() {
-        guard let d = dev.device, confirm("Forget \(d.name)?", info: "Meshy stops the daemon and forgets this device here. Its keys stay in ~/.meshy/meshyd, and the ENS name stays until an admin removes it.", ok: "Forget") else { return }
+        guard let d = dev.device, UI.confirm("Forget \(d.name)?", info: "Meshy stops the daemon and forgets this device here. Its keys stay in ~/.meshy/meshyd, and the ENS name stays until an admin removes it.", ok: "Forget") else { return }
         dev.forgetDevice()
     }
 
-    @objc func installTools() { alert("Command-line tools", info: dev.installTools()) }
+    @objc func installTools() { UI.alert("Command-line tools", info: dev.installTools()) }
 
-    // Request access: builds a dashboard link with the Give access sheet prefilled for an admin to sign.
+    /// Request Access: a link that opens the Give access sheet, prefilled, for an admin to sign.
     @objc func requestAccess(_ s: NSMenuItem) {
         guard let target = s.representedObject as? String, let map = store.map else { return }
         let d = map.devices.first { $0.fullName == target }
         let svc = map.services.first { $0.fullName == target }
-        guard d != nil || svc != nil else { return }
-        NSApp.activate(ignoringOtherApps: true)
-        let a = NSAlert()
-        a.messageText = "Request access to \(short(target))"
-        a.informativeText = "Meshy makes a link that opens the Give access sheet, filled in, for an admin of \(org) to sign."
-        let who = NSComboBox()
-        who.addItems(withObjectValues: store.agentsHere.map(\.agent))
-        who.stringValue = store.agentsHere.first?.agent ?? ""
-        who.placeholderString = "agent name, e.g. claude-1"
-        var rows: [[NSView]] = [[NSTextField(labelWithString: "For"), who]]
-        let folder = NSComboBox()
-        let mode = NSPopUpButton()
+        guard d != nil || svc != nil else { return UI.alert("\(short(target)) isn't in \(org) any more.") }
+        let agents = store.agentsHere.map(\.agent)
+        var fields: [Field] = [.text("For agent", value: agents.first ?? "", placeholder: "agent name, e.g. claude-1", options: agents)]
         if let d {
-            folder.addItems(withObjectValues: d.rootList)
-            folder.stringValue = d.rootList.first ?? ""
-            folder.placeholderString = "/path/on/\(d.name)"
-            mode.addItems(withTitles: ["Read", "Read and write"])
-            rows.append([NSTextField(labelWithString: "Folder"), folder])
-            rows.append([NSTextField(labelWithString: "Access"), mode])
+            fields.append(.text("Folder", value: d.rootList.first ?? "", placeholder: "a folder \(d.name) shares", options: d.rootList))
+            fields.append(.popup("Access", options: ["Read", "Read and write"], selected: 0))
         }
         let durs: [(String, Int)] = [("15 minutes", 900), ("1 hour", 3600), ("4 hours", 14400), ("1 day", 86400)]
-        let dur = NSPopUpButton()
-        dur.addItems(withTitles: durs.map(\.0))
-        dur.selectItem(at: 1)
-        rows.append([NSTextField(labelWithString: "For how long"), dur])
-        let grid = NSGridView(views: rows)
-        grid.column(at: 0).xPlacement = .trailing
-        grid.rowSpacing = 8
-        who.widthAnchor.constraint(equalToConstant: 220).isActive = true
-        grid.frame = NSRect(x: 0, y: 0, width: 320, height: CGFloat(rows.count) * 30)
-        a.accessoryView = grid
-        a.addButton(withTitle: "Create Request")
-        a.addButton(withTitle: "Cancel")
-        guard a.runModal() == .alertFirstButtonReturn else { return }
-        let agent = who.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !agent.isEmpty else { return alert("Say which agent the access is for.") }
-        let seconds = durs[max(0, dur.indexOfSelectedItem)].1
+        fields.append(.popup("For how long", options: durs.map(\.0), selected: 1))
+        let info = agents.isEmpty ? "Access goes to an agent identity. If this Mac has none yet, use This Mac › Join with an Invite Link first, or type the agent's name." : "An admin of \(org) opens the link and signs."
+        guard let v = UI.form("Request access to \(short(target))", info: info, fields: fields, ok: "Create Request"), v.count == fields.count else { return }
+        let agent = v[0].lowercased()
+        guard agent.range(of: "^[a-z0-9][a-z0-9-]*$", options: .regularExpression) != nil else { return UI.alert("Type the agent's name, like claude-1.") }
+        let seconds = durs[min(max(0, Int(v.last!) ?? 1), durs.count - 1)].1
         var path = "/org/\(org)?give=\(q(agent))&target=\(q(target))&dur=\(seconds)"
         var p: String?, m: String?
         if d != nil {
-            p = folder.stringValue.trimmingCharacters(in: .whitespaces)
-            guard p?.hasPrefix("/") == true, p != "/" else { return alert("Pick a folder the device shares.") }
-            m = mode.indexOfSelectedItem == 1 ? "rw" : "ro"
-            path += "&path=\(q(p!))&mode=\(m!)"
+            p = v[1]
+            guard let folder = p, folder.hasPrefix("/"), folder != "/" else { return UI.alert("Pick a folder the device shares.") }
+            m = v[2] == "1" ? "rw" : "ro"
+            path += "&path=\(q(folder))&mode=\(m!)"
         }
         let link = Settings.base + path
         store.addRequest(AccessRequest(agent: agent, target: target, path: p, mode: m, dur: seconds, at: Date().timeIntervalSince1970, link: link))
-
-        let r = NSAlert()
-        r.messageText = canSign ? "Ready to sign" : "Send this to an admin of \(org)"
-        r.informativeText = link
-        if canSign {
-            r.addButton(withTitle: "Open and Sign")
-            r.addButton(withTitle: "Copy Link")
-        } else {
-            r.addButton(withTitle: "Copy Link")
-            r.addButton(withTitle: "Email…")
-        }
-        r.addButton(withTitle: "Done")
-        let res = r.runModal()
-        if canSign {
-            if res == .alertFirstButtonReturn { openDashboard(path) } else if res == .alertSecondButtonReturn { copy(link) }
-        } else {
-            if res == .alertFirstButtonReturn { copy(link) } else if res == .alertSecondButtonReturn { email(link) }
+        switch UI.choose("Send this to an admin of \(org)", info: link, buttons: ["Copy Link", "Email…", "Done"]) {
+        case 0: UI.copy(link)
+        case 1: emailLink(link)
+        default: break
         }
     }
 
-    @objc func emailRequest(_ s: NSMenuItem) { if let l = s.representedObject as? String { email(l) } }
-    @objc func withdraw(_ s: NSMenuItem) { store.dropRequest(at: s.tag) }
-
-    private func copy(_ s: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(s, forType: .string)
-    }
-
-    private func email(_ link: String) {
-        let body = "Could you give me access on Meshy? Open this link and sign:\n\n\(link)\n"
-        if let svc = NSSharingService(named: .composeEmail) {
-            svc.subject = "Meshy access request"
-            svc.perform(withItems: [body])
-        } else {
-            copy(link)
-        }
+    private func emailLink(_ link: String) {
+        UI.email(subject: "Meshy access request", body: "Could you give me access on Meshy? Open this link and sign:\n\n\(link)\n")
     }
 
     @objc func toggleLogin() {
+        if isTest { return UI.log("LOGIN-ITEM: toggled") }
         let svc = SMAppService.mainApp
         do {
             if svc.status == .enabled { try svc.unregister() } else { try svc.register() }
         } catch {
-            alert("Couldn't change Start at Login: \(error.localizedDescription). Move Meshy to /Applications and try again.")
+            UI.alert("Couldn't change Start at Login", info: "\(error.localizedDescription). Move Meshy to /Applications and try again.")
         }
     }
 
     @objc func doctor() {
-        guard let bin = Bins.path("meshyd") else { return alert("meshyd is missing from Meshy.app. Reinstall Meshy.") }
+        guard let bin = Bins.path("meshyd") else { return UI.alert("meshyd is missing from Meshy.app.", info: "Reinstall Meshy.") }
         let script = FileManager.default.temporaryDirectory.appendingPathComponent("meshy-doctor.command")
-        let name = dev.device.map { " --name '\($0.name)'" } ?? ""
-        let body = "#!/bin/zsh\nclear\necho '› meshyd doctor'\n'\(bin)' doctor --control '\(Bins.controlSocket)'\(name)\necho\nread -k1 '?Press any key to close'\n"
+        let name = dev.device.map { " --name '\($0.name)' --state '\(Bins.stateDir)'" } ?? ""
+        let body = "#!/bin/zsh\nclear\necho '› meshyd doctor'\n'\(bin)' doctor --control '\(Bins.controlSocket)' --sepolia '\(Settings.sepoliaWS)'\(name)\necho\nread -k1 '?Press any key to close'\n"
         do {
             try body.write(to: script, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
-            NSWorkspace.shared.open(script)
+            UI.open(script)
         } catch {
-            alert(error.localizedDescription)
+            UI.alert("Couldn't open Terminal", info: error.localizedDescription)
         }
     }
 
     @objc func showLogs() {
         let dir = Bins.home + "/Library/Logs/Meshy"
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        NSWorkspace.shared.open(URL(fileURLWithPath: dir))
+        UI.open(URL(fileURLWithPath: dir))
     }
 
     @objc func diagnostics() {
@@ -838,10 +833,11 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             "shared device: \(dev.device?.name ?? "none"), running: \(dev.device?.running ?? false), daemon: \(s.reachable ? (s.healthy ? "healthy" : "unhealthy") : "not reachable"), mesh: \(s.meshRunning ? "running" : "not running")",
             "tools: \(Bins.dir ?? "-")",
         ]
-        copy(lines.joined(separator: "\n"))
+        UI.copy(lines.joined(separator: "\n"))
     }
 
     @objc func openSettings() {
+        if isTest { return UI.log("WINDOW: Settings (provider \(store.syncURL), dashboard \(Settings.baseURL))") }
         if let w = settingsWindow { NSApp.activate(ignoringOtherApps: true); w.makeKeyAndOrderFront(nil); return }
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 170), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = "Meshy Settings"
@@ -871,9 +867,9 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         let handler = ClosureTarget { [weak self, weak w] in
             guard let self else { return }
             let s = sync.stringValue.trimmingCharacters(in: .whitespaces)
-            if s.hasPrefix("http") { self.store.syncURL = s }
+            if s.hasPrefix("https://") || s.hasPrefix("http://localhost") { self.store.syncURL = s }
             let d = dash.stringValue.trimmingCharacters(in: .whitespaces)
-            if d.hasPrefix("http") { Settings.baseURL = d }
+            if d.hasPrefix("https://") || d.hasPrefix("http://localhost") { Settings.baseURL = d }
             self.store.refreshSeconds = secs[max(0, every.indexOfSelectedItem)]
             self.store.refresh(force: true)
             w?.close()
@@ -887,39 +883,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         w.makeKeyAndOrderFront(nil)
     }
 
-    private func prompt(_ title: String, info: String, placeholder: String) -> String? {
-        NSApp.activate(ignoringOtherApps: true)
-        let a = NSAlert()
-        a.messageText = title
-        a.informativeText = info
-        let f = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
-        f.placeholderString = placeholder
-        a.accessoryView = f
-        a.addButton(withTitle: "OK")
-        a.addButton(withTitle: "Cancel")
-        a.window.initialFirstResponder = f
-        return a.runModal() == .alertFirstButtonReturn && !f.stringValue.isEmpty ? f.stringValue : nil
-    }
-
-    private func confirm(_ title: String, info: String, ok: String) -> Bool {
-        NSApp.activate(ignoringOtherApps: true)
-        let a = NSAlert()
-        a.messageText = title
-        a.informativeText = info
-        a.addButton(withTitle: ok)
-        a.addButton(withTitle: "Cancel")
-        return a.runModal() == .alertFirstButtonReturn
-    }
-
-    private func alert(_ text: String, info: String = "") {
-        NSApp.activate(ignoringOtherApps: true)
-        let a = NSAlert()
-        a.messageText = text
-        a.informativeText = info
-        a.runModal()
-    }
-
-    // MARK: headless test: print the menu tree
+    // MARK: headless tests: print the menu tree, click items
 
     func dump() -> String {
         rebuild()
@@ -944,6 +908,32 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         }
         walk(root, 0)
         return out.joined(separator: "\n")
+    }
+
+    /// Every clickable item as a "Top › Sub › Item" path.
+    func actionPaths() -> [(path: String, item: NSMenuItem)] {
+        rebuild()
+        var out: [(String, NSMenuItem)] = []
+        func walk(_ m: NSMenu, _ prefix: [String]) {
+            for it in m.items where !it.isSeparatorItem && it.view == nil {
+                let p = prefix + [it.title]
+                if let s = it.submenu { walk(s, p) } else if it.isEnabled, it.action != nil { out.append((p.joined(separator: " › "), it)) }
+            }
+        }
+        walk(root, [])
+        return out
+    }
+
+    /// Clicks the item at a "Top › Sub › Item" path (titles may be prefixes). Returns false if not found.
+    func click(_ path: String) -> Bool {
+        let want = path.components(separatedBy: " › ")
+        guard let hit = actionPaths().first(where: { p in
+            let got = p.path.components(separatedBy: " › ")
+            return got.count == want.count && zip(got, want).allSatisfy { $0.hasPrefix($1) }
+        }) else { return false }
+        guard let menu = hit.item.menu, let i = Optional(menu.index(of: hit.item)), i >= 0 else { return false }
+        menu.performActionForItem(at: i)
+        return true
     }
 }
 

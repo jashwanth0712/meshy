@@ -21,7 +21,7 @@ export const ARKIV_EXPLORER = "https://rabdi.explorer.arkiv.network";
 export const FROM_BLOCK = BigInt(process.env.NEXT_PUBLIC_FROM_BLOCK ?? "12072900");
 
 /** meshy-sync (provider API). */
-export const PROVIDER_API = process.env.NEXT_PUBLIC_MESHY_SYNC ?? "http://localhost:8787";
+export const PROVIDER_API = process.env.NEXT_PUBLIC_MESHY_SYNC ?? "https://api.meshy.live";
 
 /** The public demo org, offered as an explicit link on the home page (never a silent default). */
 export const DEMO_ORG = process.env.NEXT_PUBLIC_DEMO_ORG ?? "meshydemo.eth";

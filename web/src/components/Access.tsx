@@ -180,7 +180,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
                     <Seg value={p.m} onChange={(m) => setPaths(paths.map((x, j) => (j === i ? { ...x, m } : x)))} options={[{ v: "ro", label: "Read" }, { v: "rw", label: "Read and write" }]} />
                   </div>
                 ))}
-                <button onClick={() => setPaths([...paths, { p: res?.roots[0] ?? "/srv", m: "ro" }])} className="text-[13px] font-medium text-accent hover:underline">
+                <button onClick={() => setPaths([...paths, { p: res?.roots[0] ?? "", m: "ro" }])} className="text-[13px] font-medium text-accent hover:underline">
                   Add another folder
                 </button>
               </div>

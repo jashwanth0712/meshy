@@ -27,7 +27,7 @@ export type AddMode = "resource" | "service" | "network";
 export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { onClose: () => void; initial?: AddMode; initialCode?: string }) {
   const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
   const [mode, setMode] = useState<AddMode>(initial);
-  const [svcForm, setSvcForm] = useState({ device: tree?.networks[0]?.resources[0]?.name ?? "", name: "camera", target: "127.0.0.1:8001", proto: "http", desc: "" });
+  const [svcForm, setSvcForm] = useState({ device: tree?.networks[0]?.resources[0]?.name ?? "", name: "", target: "", proto: "http", desc: "" });
   const [netLabel, setNetLabel] = useState("");
   const [code, setCode] = useState(initialCode);
   const [devKind, setDevKind] = useState("server");
@@ -169,7 +169,7 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
               ) : (
                 <div>
                   <p className="text-[14px] text-muted">In Meshy for Mac choose This Mac › Share this Mac…, or on the device run this and paste the code it prints:</p>
-                  <pre className="mono mt-2 overflow-x-auto rounded-xl bg-panel-2 px-4 py-3 text-[13px]">meshyd init --name db2.{tree.networks[0]?.label ?? "prod"}.{org} --roots /srv</pre>
+                  <pre className="mono mt-2 overflow-x-auto rounded-xl bg-panel-2 px-4 py-3 text-[13px]">meshyd init --name &lt;device&gt;.{tree.networks[0]?.label ?? "<network>"}.{org} --roots ~/shared</pre>
                 </div>
               )}
               <Field label="Join code">
@@ -200,11 +200,11 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
                 </select>
               </Field>
               <Field label="Name">
-                <input className={inputCls} value={svcForm.name} onChange={(e) => setSvcForm({ ...svcForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
+                <input className={inputCls} value={svcForm.name} placeholder="e.g. camera" onChange={(e) => setSvcForm({ ...svcForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
               </Field>
               <div className="grid grid-cols-[1fr_120px] gap-3">
                 <Field label="Target (host:port)">
-                  <input className={inputCls} value={svcForm.target} onChange={(e) => setSvcForm({ ...svcForm, target: e.target.value })} />
+                  <input className={inputCls} value={svcForm.target} placeholder="127.0.0.1:8080 on that device" onChange={(e) => setSvcForm({ ...svcForm, target: e.target.value })} />
                 </Field>
                 <Field label="Protocol">
                   <select className={inputCls} value={svcForm.proto} onChange={(e) => setSvcForm({ ...svcForm, proto: e.target.value })}>

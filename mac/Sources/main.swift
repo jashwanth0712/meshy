@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = StatusMenu()
 
         let args = CommandLine.arguments
-        if args.contains("--dump-menu") || args.contains("--callback") || args.contains("--begin-signin") || args.contains("--sign-out") {
+        if ["--dump-menu", "--callback", "--begin-signin", "--sign-out", "--add-org", "--list-actions", "--click", "--click-all"].contains(where: args.contains) {
             return runTestCommand(args)
         }
         MeshyStore.shared.start()
@@ -58,15 +58,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Headless commands for mac/test.sh (always with MESHY_TEST=1):
-    ///   --sign-out                      clear the session and orgs
+    ///   --sign-out                      clear the session
     ///   --begin-signin                  print the browser URL with a fresh nonce
     ///   --callback <meshy://auth?…>     handle a sign-in callback, print accepted/rejected
-    ///   --add-org <name>                add an org without the network role check
+    ///   --add-org <name> [--role r]     add an org without the network check (role: owner|admin|member)
     ///   --fixture <map.json>            use a map instead of the provider
     ///   --dump-menu                     print the menu tree
+    ///   --list-actions                  print every clickable item path
+    ///   --click "A › B › C"             click one item (repeatable), then wait --wait seconds
+    ///   --click-all                     click every item except Quit; dialogs answer Cancel
     private func runTestCommand(_ args: [String]) {
         let store = MeshyStore.shared
         func arg(_ k: String) -> String? { args.firstIndex(of: k).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
+        func all(_ k: String) -> [String] { args.indices.filter { args[$0] == k && $0 + 1 < args.count }.map { args[$0 + 1] } }
         if args.contains("--sign-out") { store.signOut(); print("signed out") }
         if args.contains("--begin-signin"), let u = store.beginSignIn() { print("signin-url: \(u.absoluteString)") }
         if let c = arg("--callback"), let u = URL(string: c) {
@@ -75,23 +79,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .failure(let e): print("signin: rejected (\(e.message))")
             }
         }
-        if let o = arg("--add-org") { store.addOrgUnchecked(o) }
-        if let f = arg("--fixture") {
-            guard store.loadFixture(f) else { print("fixture unreadable"); exit(2) }
-            if args.contains("--dump-menu") { print(status.dump()) }
-            exit(0)
+        if let o = arg("--add-org") {
+            store.addOrgUnchecked(o)
+            if let r = arg("--role") { store.saveRole(o, RoleInfo(role: r, adminOf: r == "admin" ? ["prod.\(o)"] : [], checkedAt: Date().timeIntervalSince1970)) }
         }
-        guard args.contains("--dump-menu") else { exit(0) }
-        guard store.org != nil else { print(status.dump()); exit(0) }
+        let fixture = arg("--fixture")
+        if let f = fixture, !store.loadFixture(f) { print("fixture unreadable"); exit(2) }
+        let wantsMenu = args.contains("--dump-menu") || args.contains("--list-actions") || args.contains("--click") || args.contains("--click-all")
+        guard wantsMenu else { exit(0) }
+
+        let finish = { [weak self] in
+            guard let self else { return }
+            if args.contains("--list-actions") { for p in self.status.actionPaths() { print("ACTION: \(p.path)") } }
+            let clicks = all("--click")
+            for c in clicks { print(self.status.click(c) ? "CLICKED: \(c)" : "NOT FOUND: \(c)") }
+            if args.contains("--click-all") {
+                let skip = ["Quit Meshy"]
+                let paths = self.status.actionPaths().map(\.path).filter { p in !skip.contains { p.hasSuffix($0) } }
+                var n = 0
+                for p in paths where self.status.click(p) { print("CLICKED: \(p)"); n += 1 }
+                print("clicked \(n) of \(paths.count)")
+            }
+            let wait = Double(arg("--wait") ?? "") ?? (clicks.isEmpty && !args.contains("--click-all") ? 0 : 1)
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                if args.contains("--dump-menu") { print(self.status.dump()) }
+                exit(0)
+            }
+        }
+        // With a fixture (or no org) the menu is ready now; otherwise wait for the provider.
+        if fixture != nil || store.org == nil { return finish() }
         store.refresh(force: true)
         let started = Date()
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] t in
-            guard let self else { return }
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
             let waited = Date().timeIntervalSince(started) > 6 || !store.events.isEmpty
             if (!store.fetching && store.mapAt != nil && waited) || Date().timeIntervalSince(started) > 40 {
                 t.invalidate()
-                print(self.status.dump())
-                exit(store.map == nil ? 1 : 0)
+                if store.map == nil { print("no map: \(store.mapError ?? "timeout")") }
+                finish()
             }
         }
     }
@@ -138,7 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 /// Opens a dashboard path (e.g. "/org/acme.eth/directory?n=…") in the default browser.
 func openDashboard(_ path: String) {
-    if let u = URL(string: Settings.base + path) { NSWorkspace.shared.open(u) }
+    if let u = URL(string: Settings.base + path) { UI.open(u) }
 }
 
 /// Percent-encodes a query value (ENS names, paths, join codes).
