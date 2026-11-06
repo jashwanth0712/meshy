@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import { useCallback, useEffect, useState } from "react";
 import { type Address, isAddress, keccak256, toBytes } from "viem";
 import { Badge, Button, Field, PageHeader, Seg, Sheet, Short, inputCls } from "@/components/ui";
-import { childLabels } from "@/lib/ens";
+import { childLabels, labelId, registryAbi, send } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 import {
   INVITES,
@@ -29,6 +29,23 @@ export default function PeoplePage() {
   const [regs, setRegs] = useState<OrgRegs | null>();
   const [people, setPeople] = useState<Person[]>();
   const [inviting, setInviting] = useState(false);
+  const [removing, setRemoving] = useState<string>();
+  const isOwner = !!account && !!regs && regs.owner.toLowerCase() === account.toLowerCase();
+
+  async function remove(p: Person) {
+    if (!wallet || !regs) return connect();
+    if (!window.confirm(`Remove ${p.name}? They lose every grant and their seat is freed. This takes one transaction.`)) return;
+    setRemoving(p.name);
+    try {
+      await send(wallet, client, { address: p.kind === "member" ? regs.peopleRegistry : regs.agentsRegistry, abi: registryAbi, functionName: "unregister", args: [labelId(p.label)] });
+      toast(`Removed ${p.label}`, "ok");
+      await load();
+    } catch (e) {
+      toast(e instanceof Error ? e.message.split("\n")[0] : String(e), "err");
+    } finally {
+      setRemoving(undefined);
+    }
+  }
   const factoryOrg = org.endsWith(`.${ORG_PARENT}`) && org.split(".").length === 3;
 
   const load = useCallback(async () => {
@@ -86,7 +103,14 @@ export default function PeoplePage() {
                 <div className="text-[15px] font-semibold">{p.label}</div>
                 <div className="mono text-[12px] text-muted">{p.name}</div>
               </div>
-              <Badge tone={p.kind === "agent" ? "info" : "muted"}>{p.kind}</Badge>
+              <div className="flex items-center gap-3">
+                <Badge tone={p.kind === "agent" ? "info" : "muted"}>{p.kind}</Badge>
+                {isOwner && (
+                  <Button kind="danger" className="h-8 px-3.5" disabled={!!removing} onClick={() => remove(p)}>
+                    {removing === p.name ? "Removing…" : "Remove"}
+                  </Button>
+                )}
+              </div>
             </div>
           ))
         )}

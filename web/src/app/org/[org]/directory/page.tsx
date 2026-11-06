@@ -4,7 +4,7 @@ import { GrantDrawer } from "@/components/Access";
 import { InviteSheet } from "@/components/Agents";
 import { AddSheet } from "@/components/Devices";
 import { Badge, Button, Card, Name, OnChain, PageHeader, Row, Short, cx, useNow } from "@/components/ui";
-import type { AgentNode, GrantNode, ResourceNode, ServiceNode } from "@/lib/ens";
+import { type AgentNode, type GrantNode, type ResourceNode, type ServiceNode, labelId, registryAbi, send } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 type Sel = { kind: "device"; d: ResourceNode } | { kind: "service"; s: ServiceNode } | { kind: "agent"; a: AgentNode };
@@ -12,7 +12,22 @@ type Sel = { kind: "device"; d: ResourceNode } | { kind: "service"; s: ServiceNo
 const tilde = (p: string) => p.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~");
 
 export default function DirectoryPage() {
-  const { tree, org, account } = useMeshy();
+  const { tree, org, account, wallet, client, refresh, toast } = useMeshy();
+  const [removingDev, setRemovingDev] = useState(false);
+  async function removeDevice(d: ResourceNode) {
+    if (!wallet) return;
+    if (!window.confirm(`Remove ${d.name}? Every grant on it stops working and its seat is freed. This takes one transaction.`)) return;
+    setRemovingDev(true);
+    try {
+      await send(wallet, client, { address: d.parentRegistry, abi: registryAbi, functionName: "unregister", args: [labelId(d.label)] });
+      toast(`Removed ${d.label}`, "ok");
+      refresh();
+    } catch (e) {
+      toast(e instanceof Error ? e.message.split("\n")[0] : String(e), "err");
+    } finally {
+      setRemovingDev(false);
+    }
+  }
   const now = useNow(10000) / 1000;
   // ?n=<full ENS name> (from the Mac menu bar) selects that item
   const [sel, setSel] = useState<string | undefined>(() => (typeof window === "undefined" ? undefined : new URLSearchParams(window.location.search).get("n") ?? undefined));
@@ -86,7 +101,16 @@ export default function DirectoryPage() {
               <Head
                 name={cur.d.name}
                 sub={[cur.d.kind, cur.d.meta.model, cur.d.meta.location].filter(Boolean).join(" · ") || "Device"}
-                right={account && <Button className="h-8 px-3.5" onClick={() => setGiving({ resource: cur.d.name })}>Give access</Button>}
+                right={
+                  account && (
+                    <div className="flex gap-2">
+                      <Button className="h-8 px-3.5" onClick={() => setGiving({ resource: cur.d.name })}>Give access</Button>
+                      <Button kind="danger" className="h-8 px-3.5" disabled={removingDev} onClick={() => removeDevice(cur.d)}>
+                        {removingDev ? "Removing…" : "Remove"}
+                      </Button>
+                    </div>
+                  )
+                }
               />
               <Command text={`meshy ssh ${cur.d.name}`} />
               <Card>

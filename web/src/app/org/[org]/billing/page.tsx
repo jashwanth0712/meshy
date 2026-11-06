@@ -5,6 +5,7 @@ import { type Step, Steps } from "@/components/Steps";
 import { Badge, Button, Ext, PageHeader, Seg, cx, dateFmt, inputCls, links } from "@/components/ui";
 import { send } from "@/lib/ens";
 import { type Provider, SUBSCRIPTION, USDC, erc20Abi, registryAbi, REGISTRY, subscriptionAbi, usdc } from "@/lib/contracts";
+import { PROVIDER_API } from "@/lib/config";
 import { useMeshy } from "@/lib/store";
 
 export default function BillingPage() {
@@ -16,6 +17,10 @@ export default function BillingPage() {
   const [extra, setExtra] = useState(5);
   const [months, setMonths] = useState(1);
   const [steps, setSteps] = useState<Step[]>();
+  // What the provider enforces when you join the mesh: a free trial (3 seats) until you subscribe.
+  const [enforced, setEnforced] = useState<{ seats: number; used: number; trial?: boolean; providerId: number }>();
+  const [subSeats, setSubSeats] = useState(10);
+  const [defaultProv, setDefaultProv] = useState<Provider>();
   const load = useCallback(async () => {
     const [seats, paidUntil, providerId] = (await client.readContract({ address: SUBSCRIPTION, abi: subscriptionAbi, functionName: "seatsOf", args: [node] })) as [number, bigint, bigint];
     setSub({ seats: Number(seats), paidUntil: Number(paidUntil), providerId });
@@ -24,10 +29,50 @@ export default function BillingPage() {
   useEffect(() => {
     load().catch((e) => toast(String(e), "err"));
   }, [load, toast]);
+  useEffect(() => {
+    fetch(`${PROVIDER_API}/v1/seats?org=${encodeURIComponent(org)}`)
+      .then((r) => r.json())
+      .then((j: { seats: number; used: number; trial?: boolean; providerId: number }) => setEnforced(j))
+      .catch(() => {});
+  }, [org]);
+  useEffect(() => {
+    const pid = BigInt(enforced?.providerId || 1); // the hosted provider is #1
+    client
+      .readContract({ address: REGISTRY, abi: registryAbi, functionName: "getProvider", args: [pid] })
+      .then((p) => setDefaultProv(p as Provider))
+      .catch(() => {});
+  }, [client, enforced?.providerId]);
+
+  async function subscribe() {
+    if (!wallet || !account || !defaultProv) return;
+    const pid = BigInt(enforced?.providerId || 1);
+    const total = defaultProv.pricePerSeatPerMonth * BigInt(subSeats);
+    const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
+    setSteps([
+      { label: `Mint ${usdc(total)} test USDC`, state: "doing" },
+      { label: `Approve ${usdc(total)} USDC`, state: "todo" },
+      { label: `Subscribe: ${subSeats} seats for 1 month`, state: "todo" },
+    ]);
+    try {
+      await send(wallet, client, { address: USDC, abi: erc20Abi, functionName: "mint", args: [account, total] }, (h) => up(0, { tx: h }));
+      up(0, { state: "done" });
+      up(1, { state: "doing" });
+      await send(wallet, client, { address: USDC, abi: erc20Abi, functionName: "approve", args: [SUBSCRIPTION, total] }, (h) => up(1, { tx: h }));
+      up(1, { state: "done" });
+      up(2, { state: "doing" });
+      await send(wallet, client, { address: SUBSCRIPTION, abi: subscriptionAbi, functionName: "subscribe", args: [node, pid, subSeats, 1] }, (h) => up(2, { tx: h }));
+      up(2, { state: "done" });
+      toast(`Subscribed: ${subSeats} seats`, "ok");
+      load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
+      setSteps((s) => s?.map((x) => (x.state === "doing" ? { ...x, state: "fail", detail: msg } : x)));
+    }
+  }
 
   const devices = tree ? tree.networks.reduce((n, x) => n + x.resources.length, 0) : 0;
   const agents = tree?.agents.length ?? 0;
-  const used = devices + agents;
+  const used = enforced?.used ?? devices + agents;
   const active = sub && sub.paidUntil > Date.now() / 1000;
   const isOwner = !!account && !!tree && tree.owner.toLowerCase() === account.toLowerCase();
   const daysLeft = sub ? Math.max(0, Math.round((sub.paidUntil - Date.now() / 1000) / 86400)) : 0;
@@ -73,7 +118,48 @@ export default function BillingPage() {
         {!sub ? (
           <p className="text-[14px] text-muted">Reading the subscription…</p>
         ) : sub.providerId === 0n ? (
-          <p className="text-[14px] text-muted">No subscription. Self-hosting a provider is free.</p>
+          <>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-[20px] font-semibold tracking-[-0.015em]">{enforced?.trial ? "Free trial" : "No subscription"}</h2>
+              {enforced && (enforced.used > enforced.seats ? <Badge tone="bad">Over the limit</Badge> : <Badge tone="ok">Within the trial</Badge>)}
+            </div>
+            <p className="mt-1 text-[14px] text-muted">
+              The hosted provider (api.meshy.live) lets {enforced ? enforced.seats : 3} seats join the mesh for free. Every device, member and agent is a seat. Self-hosting your own provider is free and has no limit.
+            </p>
+            {enforced && (
+              <>
+                <div className="mt-6 flex items-baseline justify-between text-[14px]">
+                  <span>Seats</span>
+                  <span>
+                    <b>{enforced.used}</b> <span className="text-muted">of {enforced.seats}</span>
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-panel-2">
+                  <div className={cx("h-full rounded-full", enforced.used > enforced.seats ? "bg-bad" : "bg-accent")} style={{ width: `${Math.min(100, (enforced.used / Math.max(1, enforced.seats)) * 100)}%` }} />
+                </div>
+                {enforced.used > enforced.seats && (
+                  <p className="mt-2 text-[13px] text-bad">Over the limit: no Mac in this org can join the mesh until you subscribe or remove devices or people.</p>
+                )}
+              </>
+            )}
+            {steps ? (
+              <div className="mt-6 space-y-4">
+                <Steps steps={steps} />
+                {!steps.some((s) => s.state === "doing") && <Button onClick={() => setSteps(undefined)}>Done</Button>}
+              </div>
+            ) : (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input type="number" min={1} className={cx(inputCls, "w-24 text-center")} value={subSeats} onChange={(e) => setSubSeats(Math.max(1, +e.target.value))} />
+                  <span className="text-[14px] text-muted">seats for 1 month{defaultProv ? ` · ${usdc(defaultProv.pricePerSeatPerMonth * BigInt(subSeats))} test USDC (minted for you, free)` : ""}</span>
+                </div>
+                <Button kind="primary" disabled={!isOwner || !defaultProv} onClick={subscribe}>
+                  Subscribe
+                </Button>
+                {!isOwner && <p className="text-[13px] text-muted">Only the org owner can subscribe.</p>}
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div className="flex items-baseline justify-between gap-3">
