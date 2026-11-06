@@ -3,6 +3,8 @@
 #
 #   e2e/run-local.sh                 # 12s blocks (Sepolia cadence), 5 revoke runs
 #   BLOCK_TIME=2 RUNS=3 e2e/run-local.sh
+#   ARKIV_RPC=https://rpc.rabdi.db-chain.testnet.arkiv.network/<access-key> \
+#   MESHYD_STATE=~/.meshy/meshyd-demo e2e/run-local.sh   # live Arkiv writes (funded key)
 #
 # Flow: org -> network -> resource (meshyd init join code) -> meshyd run ->
 # agent join + approve (dev World ID attestation) -> grant -> allowed read ->
@@ -13,11 +15,13 @@ BLOCK_TIME=${BLOCK_TIME:-12}
 RUNS=${RUNS:-5}
 FORK_RPC=${FORK_RPC:-https://ethereum-sepolia-rpc.publicnode.com}
 PORT=${PORT:-8545}
+ARKIV_RPC=${ARKIV_RPC:-}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${WORK:-$(mktemp -d /tmp/meshy-e2e.XXXX)}
 BIN=$WORK/bin
 RPC=http://127.0.0.1:$PORT
 SOCK=/tmp/meshyd-e2e-$$.sock
+MESHYD_STATE=${MESHYD_STATE:-$WORK/meshyd}
 
 say() { printf '\n\033[1;36m## %s\033[0m\n' "$*"; }
 ok() { printf '  \033[32m✓\033[0m %s\n' "$*"; }
@@ -58,12 +62,12 @@ SRV=$(cd "$WORK/srv" && pwd -P)
 say "ENSv2 namespace for $ORG"
 "$BIN/meshy-admin" org init --label "$LABEL" --attestor "$ATT_ADDR"
 "$BIN/meshy-admin" network add --org "$ORG" --name prod
-JOIN=$("$BIN/meshyd" init --name "$RES" --roots "$SRV" --state "$WORK/meshyd" --endpoint 127.0.0.1:2222 | awk '/^  meshy-join:/{print $1}')
+JOIN=$("$BIN/meshyd" init --name "$RES" --roots "$SRV" --state "$MESHYD_STATE" --endpoint 127.0.0.1:2222 | awk '/^  meshy-join:/{print $1}')
 "$BIN/meshy-admin" resource add --org "$ORG" --network prod --join "$JOIN"
 
 say "meshyd"
-"$BIN/meshyd" run --name "$RES" --roots "$SRV" --state "$WORK/meshyd" --sepolia "ws://127.0.0.1:$PORT" \
-  --listen 127.0.0.1:2222 --arkiv "" --control "$SOCK" >"$WORK/meshyd.log" 2>&1 &
+"$BIN/meshyd" run --name "$RES" --roots "$SRV" --state "$MESHYD_STATE" --sepolia "ws://127.0.0.1:$PORT" \
+  --listen 127.0.0.1:2222 --arkiv "$ARKIV_RPC" --control "$SOCK" >"$WORK/meshyd.log" 2>&1 &
 PIDS+=($!)
 for _ in $(seq 1 30); do grep -q "meshyd ready" "$WORK/meshyd.log" && break; sleep 1; done
 grep -q "meshyd ready" "$WORK/meshyd.log" && ok "ready ($(grep -o 'sandbox=[^ ]*' "$WORK/meshyd.log" | head -1))" || { fail "meshyd did not start"; cat "$WORK/meshyd.log"; exit 1; }
@@ -119,6 +123,15 @@ v = sorted(float(x) for x in sys.argv[1:])
 p95 = v[min(len(v)-1, round(0.95*(len(v)-1)))]
 print(f"  latency tx-sent -> killed: p50 {s.median(v):.2f}s  p95 {p95:.2f}s  max {v[-1]:.2f}s  (n={len(v)})")
 EOF
+fi
+
+if [[ -n $ARKIV_RPC ]]; then
+  say "Arkiv (live)"
+  sleep 8   # let the batcher flush
+  { grep -o 'arkiv batch written" tx=[^ ]* entities=[0-9]*' "$WORK/meshyd.log" || true; } | head -20 | sed 's/^/  /'
+  N=$(grep -c 'arkiv batch written' "$WORK/meshyd.log" || true)
+  [[ $N -gt 0 ]] && ok "$N Arkiv transactions written by $(grep -o 'writer=[^ ]*' "$WORK/meshyd.log" | head -1)" || fail "no Arkiv batches written"
+  echo "  org for queries: $ORG"
 fi
 
 say "meshyd audit (last events)"

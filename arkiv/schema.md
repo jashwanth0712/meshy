@@ -54,4 +54,19 @@ Runnable (judges), on the public RPC:
 curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d \
  '{"jsonrpc":"2.0","id":1,"method":"arkiv_query","params":["arkiv.schema = str('"'"'meshy.blocked'"'"') ORDER BY ts:u64 DESC",{"select":{"key":true,"attributes":true},"limit":"0x14"}]}'
 ```
-_The writer addresses and a demo org name will be filled in after the live Rabdi run._
+## Live data (Rabdi)
+These came from `e2e/run-local.sh` with live Arkiv writes. ENS ran on a Sepolia fork; Arkiv was the real Rabdi testnet.
+
+- **Writer (resource daemon):** `0x7Dec34A86907eeF26c70A6578df7bAaE7F223384`, [explorer](https://rabdi.explorer.arkiv.network/address/0x7Dec34A86907eeF26c70A6578df7bAaE7F223384)
+- **Demo org:** `meshy923891.eth`, resource `db1.prod.meshy923891.eth`, agent `claude-1`
+- **Batches:**
+  - `0xea43f4252dae32f62325a693d6311124b42b8a6dde229ebe593df6ec83e9b351` (15 entities)
+  - `0xfb0efb2123d29afba8263173630fa21a25b460c8411e54044440f43f328647a3` (3)
+  - `0xb442321a2c160b8a10e51a75ce98b47ea2be94aaba46b7ea8a86dc462d78c557` (3)
+- **Result:** the blocks query returns 5 entities (4 blocked file accesses, 1 denied login). The revocations query returns 2, with Sepolia blocks 12072955 and 12072958.
+
+Runnable query for these:
+```bash
+curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d \
+ '{"jsonrpc":"2.0","id":1,"method":"arkiv_query","params":["arkiv.schema = str('"'"'meshy.blocked'"'"') AND org = str('"'"'meshy923891.eth'"'"') ORDER BY ts:u64 DESC",{"select":{"key":true,"attributes":true},"limit":"0x14"}]}'
+```
