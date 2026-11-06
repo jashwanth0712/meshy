@@ -20,6 +20,19 @@
 
 Timing starts when the `unregister()` tx is sent and stops when the agent's SSH session is dead (`MESHY_REVOKED block=N`, exit 137). meshyd kills the session in the same block that carries the revocation. The same run also checks, against real ENSv2 state: the join flow, `MESHY_NO_GRANT` before any grant, the granted read, blocks on sibling, `..` and read-only writes, no network inside the sandbox, and reconnect refused after revoke.
 
+### Live on Sepolia (real network)
+`e2e/live-demo.sh` runs against `db1.prod.meshydemo.eth` on Sepolia ENSv2, with meshyd auditing to live Arkiv.
+
+| Revoke | tx mined after | session dead after | meshyd: block seen → killed |
+|---|---|---|---|
+| block 12073043 | 7.8 s | 9.46 s | 120 ms |
+| block 12073047 | 12.9 s | 15.75 s | 192 ms |
+| block 12073050 | 4.4 s | 6.82 s | 132 ms |
+
+meshyd reacts in about 150 ms once it sees the block. The rest of the total is Sepolia block inclusion (one run missed the next block) plus head delivery from the RPC. The 120–192 ms figures are read back from the `latencyMs` attribute of the `meshy.session` revoke entities on Arkiv.
+
+- **On-chain names:** `meshydemo.eth`, `prod.meshydemo.eth`, `db1.prod.meshydemo.eth`, `claude-1.agents.meshydemo.eth`, and grants as `claude-1.db1.prod.meshydemo.eth`. Admin: `0x45e8747861B2E5B59b651A7d80Bc14d9B7A1E0EA`.
+
 ## Repo layout
 | Path | What |
 |---|---|

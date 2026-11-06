@@ -54,7 +54,18 @@ Runnable (judges), on the public RPC:
 curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d \
  '{"jsonrpc":"2.0","id":1,"method":"arkiv_query","params":["arkiv.schema = str('"'"'meshy.blocked'"'"') ORDER BY ts:u64 DESC",{"select":{"key":true,"attributes":true},"limit":"0x14"}]}'
 ```
-## Live data (Rabdi)
+## Live data: real Sepolia demo (`meshydemo.eth`)
+Same writer, `0x7Dec34A86907eeF26c70A6578df7bAaE7F223384`. The run made 12 batches with no failures. Two queries return its data:
+
+- **Blocks** (`org = str('meshydemo.eth')`): 5 entities, from denied logins and outside-grant and read-only blocks.
+- **Revocations:** 3 entities, at Sepolia blocks 12073043, 12073047 and 12073050, with `latencyMs` 120, 192 and 132.
+
+```bash
+curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' -d \
+ '{"jsonrpc":"2.0","id":1,"method":"arkiv_query","params":["arkiv.schema = str('"'"'meshy.session'"'"') AND kind = str('"'"'session.revoke'"'"') AND org = str('"'"'meshydemo.eth'"'"') ORDER BY ts:u64 DESC",{"select":{"key":true,"attributes":true},"limit":"0x14"}]}'
+```
+
+## Live data (Rabdi, fork run)
 These came from `e2e/run-local.sh` with live Arkiv writes. ENS ran on a Sepolia fork; Arkiv was the real Rabdi testnet.
 
 - **Writer (resource daemon):** `0x7Dec34A86907eeF26c70A6578df7bAaE7F223384`, [explorer](https://rabdi.explorer.arkiv.network/address/0x7Dec34A86907eeF26c70A6578df7bAaE7F223384)
