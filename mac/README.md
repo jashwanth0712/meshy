@@ -1,8 +1,8 @@
 # Meshy for macOS
 
-A native window around the live Meshy dashboard (AppKit + WKWebView, no dependencies). It opens <https://meshy-next.vercel.app>, which runs the redesigned `web/` app from the `ui-revamp-plan` branch, for one org (default `meshydemo.eth`). Every screen reads ENSv2 on Sepolia and Arkiv live; nothing is bundled or hardcoded. The app follows macOS light and dark mode.
+A native window around the live Meshy dashboard (AppKit + WKWebView, no dependencies). It opens <https://meshy-bay.vercel.app>, production of `main` (Vercel redeploys it on every push), for one org (default `meshydemo.eth`). Every screen reads ENSv2 on Sepolia and Arkiv live; nothing is bundled or hardcoded. The app follows macOS light and dark mode.
 
-Develop › Classic UI switches to the old dashboard at <https://meshy-bay.vercel.app> (production of `main`).
+Develop also offers the redesign's branch build at <https://meshy-next.vercel.app>, `localhost:3000`, or a custom URL.
 
 ## Build
 ```bash

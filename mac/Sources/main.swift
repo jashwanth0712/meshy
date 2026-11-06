@@ -1,6 +1,6 @@
 // Meshy for macOS: a native window around the Meshy dashboard (WKWebView).
 //
-// - Loads the live dashboard (https://meshy-next.vercel.app, the redesigned web app) for one org.
+// - Loads the live dashboard (https://meshy-bay.vercel.app, production of main) for one org.
 //   Every screen reads ENSv2 on Sepolia and Arkiv; nothing is bundled or hardcoded.
 // - Same-site links stay in the app; Etherscan, ENS, Arkiv, World ID open in your browser.
 // - Wallet signing needs a browser extension (MetaMask), which WebKit apps can't host, so
@@ -15,8 +15,8 @@ import WebKit
 
 enum Settings {
     static let defaults = UserDefaults.standard
-    static let productionURL = "https://meshy-next.vercel.app" // redesigned dashboard
-    static let classicURL = "https://meshy-bay.vercel.app" // previous UI (production of main)
+    static let productionURL = "https://meshy-bay.vercel.app" // production, deployed from main
+    static let classicURL = "https://meshy-next.vercel.app" // the branch build of the redesign
     static let localURL = "http://localhost:3000"
 
     static var baseURL: String {
@@ -425,8 +425,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         main.addItem(withTitle: "Go", action: nil, keyEquivalent: "").submenu = go
 
         let dev = NSMenu(title: "Develop")
-        dev.addItem(item("Meshy (meshy-next.vercel.app)", #selector(BrowserController.useProduction(_:)), target: c))
-        dev.addItem(item("Classic UI (meshy-bay.vercel.app)", #selector(BrowserController.useClassic(_:)), target: c))
+        dev.addItem(item("Production (meshy-bay.vercel.app)", #selector(BrowserController.useProduction(_:)), target: c))
+        dev.addItem(item("Redesign branch build (meshy-next.vercel.app)", #selector(BrowserController.useClassic(_:)), target: c))
         dev.addItem(item("Local Dev Server (localhost:3000)", #selector(BrowserController.useLocal(_:)), target: c))
         dev.addItem(item("Custom URL…", #selector(BrowserController.useCustom(_:)), target: c))
         main.addItem(withTitle: "Develop", action: nil, keyEquivalent: "").submenu = dev
