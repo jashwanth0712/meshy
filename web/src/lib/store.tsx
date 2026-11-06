@@ -45,7 +45,7 @@ export function MeshyProvider({ org: initialOrg, children }: { org: string; chil
   const [chainOk, setChainOk] = useState(false);
   const [org, setOrg] = useState(initialOrg);
   const [tree, setTree] = useState<OrgTree>();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [orgKey, setOrgKeyState] = useState<string>();
   const [toasts, setToasts] = useState<{ id: number; msg: string; kind: string }[]>([]);
@@ -73,7 +73,9 @@ export function MeshyProvider({ org: initialOrg, children }: { org: string; chil
     setLoading(true);
     setError(undefined);
     try {
-      setTree(await loadOrg(client, org));
+      const t = await loadOrg(client, org);
+      setTree(t);
+      sessionStorage.setItem(`meshy.tree.${org}`, JSON.stringify(t, (_, v) => (typeof v === "bigint" ? { $big: v.toString() } : v)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -82,8 +84,15 @@ export function MeshyProvider({ org: initialOrg, children }: { org: string; chil
   }, [client, org]);
 
   useEffect(() => {
+    // Paint the last known tree instantly, then refresh from chain.
+    const cached = sessionStorage.getItem(`meshy.tree.${org}`);
+    if (cached) {
+      try {
+        setTree(JSON.parse(cached, (_, v) => (v && typeof v === "object" && "$big" in v ? BigInt(v.$big) : v)) as OrgTree);
+      } catch {}
+    }
     refresh();
-  }, [refresh]);
+  }, [org, refresh]);
 
   const syncChain = useCallback(async () => {
     if (!window.ethereum) return;
