@@ -13,6 +13,7 @@ If you're an agent picking this up, read in this order: **STATUS â†’ LEARNINGS â
 | [RUNBOOK.md](RUNBOOK.md) | How to run everything locally and live on Sepolia: processes, ports, state dirs, demo scripts, troubleshooting |
 | [AUDIT.md](AUDIT.md) | Honest plan-vs-built and prize-depth audit (ENS / World / Arkiv), with the fix list |
 | [PLAN.md](PLAN.md) | The original build plan: architecture, UI/UX, demo script, test plan. Partly superseded; see STATUS |
+| [mac/PLAN.md](mac/PLAN.md) | Meshy for macOS menu-bar menu: menu tree, data refresh, browser sign-in (`meshy://signin`), edge cases, tests |
 | [ui-revamp/PLAN.md](ui-revamp/PLAN.md) | Planned web UI revamp (Electric palette, ASCII horizon hero, shadcn/ui, new logo): audit, tokens, component map, step plan, innovations; [mockups](ui-revamp/mockups/index.html) |
 | [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md) | Accounts, keys and funds that need a human (faucets, World sandbox, VPS, repo visibility) |
 | [AI_USAGE.md](AI_USAGE.md) | AI-use disclosure required by ETHGlobal and Arkiv |

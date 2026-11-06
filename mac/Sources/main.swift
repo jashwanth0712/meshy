@@ -6,6 +6,7 @@
 // - Wallet signing needs a browser extension (MetaMask), which WebKit apps can't host, so
 //   "Connect wallet" offers to open the current page in your default browser instead.
 // - ⌘1–⌘6 jump between pages, ⇧⌘O switches org, ⇧⌘B opens the page in your browser.
+// - Lives in the menu bar (StatusMenu.swift); this window is the "Admin Console".
 //
 // Build: mac/build.sh  →  mac/build/Meshy.app
 import AppKit
@@ -13,8 +14,11 @@ import WebKit
 
 // MARK: - Settings
 
+/// MESHY_TEST=1 keeps tests out of your real settings and sign-in.
+let appDefaults: UserDefaults = ProcessInfo.processInfo.environment["MESHY_TEST"] != nil ? UserDefaults(suiteName: "eth.meshydemo.mac.tests")! : .standard
+
 enum Settings {
-    static let defaults = UserDefaults.standard
+    static let defaults = appDefaults
     static let productionURL = "https://meshy-bay.vercel.app" // production, deployed from main
     static let classicURL = "https://meshy-next.vercel.app" // the branch build of the redesign
     static let localURL = "http://localhost:3000"
@@ -137,6 +141,7 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
     // MARK: navigation helpers
 
     func load(path: String) {
+        if Settings.lastPath == nil { Settings.lastPath = path }
         let base = Settings.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + path) else { return }
         webView.load(URLRequest(url: url))
@@ -165,6 +170,10 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
         if isInternal(url) { return decisionHandler(.allow) }
         if ["http", "https", "mailto"].contains(url.scheme ?? "") { NSWorkspace.shared.open(url) }
         decisionHandler(.cancel)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory) // back to menu-bar only
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -286,8 +295,7 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
         guard a.runModal() == .alertFirstButtonReturn else { return }
         let org = field.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
         guard org.contains("."), !org.contains("/") else { return }
-        Settings.org = org
-        openOrgPage("")
+        MeshyStore.shared.addOrg(org) // the menu bar follows; the console reloads via .meshyOrgChanged
     }
 
     @objc func useProduction(_ sender: Any?) { Settings.baseURL = Settings.productionURL; restoreOrHome() }
@@ -333,34 +341,109 @@ final class WeakHandler: NSObject, WKScriptMessageHandler {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var controller: BrowserController!
+    var status: StatusMenu!
+    private var consoleLoaded = false
 
     func applicationDidFinishLaunching(_ note: Notification) {
         controller = BrowserController()
         NSApp.mainMenu = buildMenu()
+        status = StatusMenu()
+        status.showConsole = { [weak self] in self?.showConsole() }
+        status.openDashboard = { [weak self] p in self?.openDashboard(p) }
+        NotificationCenter.default.addObserver(forName: .meshyOrgChanged, object: nil, queue: .main) { [weak self] _ in
+            guard let self, self.controller.window?.isVisible == true else { return }
+            self.controller.openOrgPage("")
+        }
+
+        let args = CommandLine.arguments
+        if args.contains("--dump-menu") { return dumpMenuAndExit(args) }
+
+        MeshyStore.shared.start()
+        if MeshyStore.shared.notificationsOn { MeshyStore.shared.requestNotificationAuth() }
+        let first = !UserDefaults.standard.bool(forKey: "launchedBefore")
+        UserDefaults.standard.set(true, forKey: "launchedBefore")
+        if first || args.contains("--snapshot") || args.contains("--console") { showConsole() }
+    }
+
+    /// The Admin Console window. Showing it adds a Dock icon; closing it returns to the menu bar.
+    func showConsole() {
+        NSApp.setActivationPolicy(.regular)
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
-        controller.restoreOrHome()
+        if !consoleLoaded {
+            consoleLoaded = true
+            controller.restoreOrHome()
+        }
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func openDashboard(_ path: String) {
+        if MeshyStore.shared.openInBrowser {
+            let base = Settings.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            if let u = URL(string: base + path) { NSWorkspace.shared.open(u) }
+            return
+        }
+        consoleLoaded = true
+        showConsole()
+        controller.load(path: path)
+    }
+
+    /// `Meshy --dump-menu [--fixture map.json]`: build the menu from live data (or a fixture), print it, quit.
+    private func dumpMenuAndExit(_ args: [String]) {
+        let store = MeshyStore.shared
+        // --begin-signin prints the URL the browser would open; --callback feeds a meshy://signin link.
+        if args.contains("--begin-signin"), let u = store.beginSignIn(dashboard: Settings.baseURL) { print("signin-url: \(u.absoluteString)") }
+        if let i = args.firstIndex(of: "--callback"), i + 1 < args.count, let u = URL(string: args[i + 1]) {
+            print("signin: \(store.completeSignIn(u) ? "accepted" : "rejected")")
+        }
+        if let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
+            guard store.loadFixture(args[i + 1]) else { print("fixture unreadable"); exit(2) }
+            print(status.dump())
+            exit(0)
+        }
+        store.refresh(force: true)
+        let started = Date()
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] t in
+            guard let self else { return }
+            let waitedEvents = Date().timeIntervalSince(started) > 6 || !store.events.isEmpty
+            if (!store.fetching && store.mapAt != nil && waitedEvents) || Date().timeIntervalSince(started) > 40 {
+                t.invalidate()
+                print(self.status.dump())
+                exit(store.map == nil ? 1 : 0)
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { false }
 
     func applicationShouldHandleReopen(_ app: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        if !hasVisibleWindows { controller.window?.makeKeyAndOrderFront(nil) }
+        if !hasVisibleWindows { showConsole() }
         return true
     }
 
-    // meshy://org/<name>[/page] deep links
+    // meshy://signin?… (browser sign-in callback) and meshy://org/<name>[/page] deep links
     func application(_ app: NSApplication, open urls: [URL]) {
         guard let u = urls.first, u.scheme == "meshy" else { return }
+        if u.host == "signin" {
+            if MeshyStore.shared.completeSignIn(u) {
+                status.item.button?.performClick(nil) // show who you are now
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+                let a = NSAlert()
+                a.messageText = "That sign-in link has expired or wasn't started from this Mac."
+                a.informativeText = "Choose Sign In… in the Meshy menu and try again."
+                a.runModal()
+            }
+            return
+        }
         let parts = ([u.host ?? ""] + u.pathComponents.filter { $0 != "/" }).filter { !$0.isEmpty }
         if parts.first == "org", parts.count >= 2 {
-            Settings.org = parts[1]
+            MeshyStore.shared.addOrg(parts[1])
+            showConsole()
             controller.openOrgPage(parts.count > 2 ? "/" + parts[2...].joined(separator: "/") : "")
         } else {
-            controller.restoreOrHome()
+            showConsole()
         }
-        controller.window?.makeKeyAndOrderFront(nil)
     }
 
     private func item(_ title: String, _ action: Selector?, _ key: String = "", _ mods: NSEvent.ModifierFlags = .command, target: AnyObject? = nil) -> NSMenuItem {
@@ -444,5 +527,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.regular)
 app.run()

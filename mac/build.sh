@@ -13,7 +13,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$OUT/obj"
 echo "› compiling"
 for arch in arm64 x86_64; do
   swiftc -O -target "$arch-apple-macos13.0" -framework AppKit -framework WebKit \
-    Sources/main.swift -o "$OUT/obj/Meshy-$arch"
+    Sources/*.swift -o "$OUT/obj/Meshy-$arch"
 done
 lipo -create "$OUT/obj/Meshy-arm64" "$OUT/obj/Meshy-x86_64" -output "$APP/Contents/MacOS/Meshy"
 cp Info.plist "$APP/Contents/Info.plist"
@@ -29,6 +29,10 @@ for s in 16 32 128 256 512; do
   sips -z $((s*2)) $((s*2)) "$OUT/obj/icon-1024.png" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+
+# menu-bar icon: the mark as a template image (alpha only, tinted by macOS)
+sips -z 18 18 ../brand/png/meshy-mark-1024.png --out "$APP/Contents/Resources/StatusIconTemplate.png" >/dev/null
+sips -z 36 36 ../brand/png/meshy-mark-1024.png --out "$APP/Contents/Resources/StatusIconTemplate@2x.png" >/dev/null
 
 echo "› signing (ad-hoc)"
 codesign --force --deep --sign - "$APP"

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GrantDrawer, RevokeTimeline } from "@/components/Access";
 import { Button, Card, Empty, Modal, PageHeader, Ring, Row, Tabs, ago, fmtLeft, useNow } from "@/components/ui";
 import { type Row as Ev, orgFeed } from "@/lib/arkiv";
@@ -94,11 +94,25 @@ export default function AccessPage() {
     return () => clearInterval(t);
   }, [load, writers.length]);
 
-  // ?give=<agent> (from Approve and the agent page) opens the sheet
+  // Deep links (Approve, the Mac menu bar): ?give=<agent>[&target=<name>] opens the sheet,
+  // ?revoke=<grant full name> opens the confirm dialog for that live grant.
+  const deepLinked = useRef(false);
   useEffect(() => {
-    const a = new URLSearchParams(window.location.search).get("give");
-    if (a && tree) setDrawer({ agent: a });
-  }, [tree]);
+    if (!tree || deepLinked.current) return;
+    const q = new URLSearchParams(window.location.search);
+    const give = q.get("give");
+    const revoke = q.get("revoke");
+    if (give !== null) {
+      deepLinked.current = true;
+      setDrawer({ agent: give.replace(/\.agents\..*$/, "") || undefined, resource: q.get("target") ?? undefined });
+    } else if (revoke) {
+      const l = lines.find((x) => x.g.name === revoke);
+      if (l) {
+        deepLinked.current = true;
+        setConfirming(l);
+      }
+    }
+  }, [tree, lines]);
 
   const canWrite = !!account;
   if (error) return <p className="text-[14px] text-bad">{error}</p>;

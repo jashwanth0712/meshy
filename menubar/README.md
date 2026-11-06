@@ -1,3 +1,5 @@
+> **Deprecated.** Replaced by the native menu-bar app in [`mac/`](../mac/README.md) (Meshy for macOS 0.4+), which covers grants, local agents and Arkiv refusals and revocations, and adds orgs, search, sign-in and settings. Kept for reference. See [docs/mac/PLAN.md](../docs/mac/PLAN.md) §8.
+
 # Meshy menu-bar app (macOS)
 
 The menu-bar app shows the following at a glance:

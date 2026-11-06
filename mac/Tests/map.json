@@ -1,0 +1,92 @@
+{
+ "org": "meshydemo.eth",
+ "attestors": [
+  "0x6Aafef03Fbbbeb56ff4422f042b25f754F6e0EC4"
+ ],
+ "networks": [
+  {
+   "name": "prod",
+   "fullName": "prod.meshydemo.eth",
+   "resources": [
+    {
+     "name": "db1",
+     "fullName": "db1.prod.meshydemo.eth",
+     "addr": "0x7Dec34A86907eeF26c70A6578df7bAaE7F223384",
+     "sshHost": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKCT3VAuoKSwlpE9PSQyMUxho1G7fMO2OAnAeoyie1Rc",
+     "roots": "[\"/srv\"]",
+     "endpoint": "127.0.0.1:2222"
+    }
+   ]
+  },
+  {
+   "name": "home",
+   "fullName": "home.meshydemo.eth",
+   "resources": [
+    {
+     "name": "pi",
+     "fullName": "pi.home.meshydemo.eth",
+     "addr": "0x6E36ec35e3bbec78aC17d0e5bE66FEB829Cf5B7F",
+     "sshHost": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJG22phhhZFTUdsnLU3F7vX2io9V5SPH+U/WN6XUXZoC",
+     "roots": "[\"/srv\"]",
+     "endpoint": "127.0.0.1:2252",
+     "kind": "raspberry-pi",
+     "meta": "{\"model\":\"Raspberry Pi 5\",\"os\":\"Raspberry Pi OS\",\"location\":\"front door\"}",
+     "services": [
+      {
+       "name": "camera",
+       "fullName": "camera.pi.home.meshydemo.eth",
+       "device": "pi.home.meshydemo.eth",
+       "spec": "{\"desc\":\"front door camera (snapshots + motion)\",\"proto\":\"http\",\"target\":\"127.0.0.1:8001\"}"
+      }
+     ]
+    },
+    {
+     "name": "rig1",
+     "fullName": "rig1.home.meshydemo.eth",
+     "addr": "0x80F6667d74E28290bDa6592BfF436d170716CE6e",
+     "sshHost": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICX7PExWfaIm8amVukFht4bv7+2EvrJYuI11mL30aEbJ",
+     "roots": "[\"/srv\"]",
+     "endpoint": "127.0.0.1:2262",
+     "kind": "server"
+    }
+   ]
+  }
+ ],
+ "agents": [
+  {
+   "name": "claude-1",
+   "fullName": "claude-1.agents.meshydemo.eth",
+   "addr": "0x35e71aB63e046d8A05aa7d251B8E54947aFfA62f",
+   "ssh": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAB24JVMXPlrBCULv2IH0bYlCQouGgIjuYv08v2g6Ahf",
+   "owner": "0x45e8747861B2E5B59b651A7d80Bc14d9B7A1E0EA",
+   "worldIdValid": true,
+   "worldIdRecord": "eyJ2IjoxLCJhZ2VudCI6ImNsYXVkZS0xLmFnZW50cy5tZXNoeWRlbW8uZXRoIiwiYWRkciI6IjB4MzVlNzFhQjYzZTA0NmQ4QTA1YWE3ZDI1MUI4RTU0OTQ3YUZmQTYyZiIsImh1bWFuIjoiMHhkOWE4Y2M4MTE1OTdmMTVkMzEzNTkxNTAzZjVhZTIwZTc0YzJkN2JlNTQ3YTA0ZTdiN2JiZWFhNWNlNTg1ZGMwIiwiYWNyIjoiZGV2IiwiYXV0aFRpbWUiOjE3OTM5MjUwNjEsImlhdCI6MTc5MzkyNTA2MSwiZXhwIjoxNzk0NTI5ODYxLCJhdHRlc3RvciI6IjB4NkFhZmVmMDNGYmJiZWI1NmZmNDQyMmYwNDJiMjVmNzU0RjZlMEVDNCIsInNpZyI6IjB4NmU4MzA1ZGY5YzE5OTJhNWUxYWFlZjU3OTU0MjQ2ZWJjYTVjNDUwYTc3NzNiNjY5MzgxMGUxZDdjMzA1MDM1OTY4YTQ4MmQzZmE2NTE3YmU1MmZkODFmYTYyNDM1YmY1M2Q2YWVjOTM0ZTQ0MThmZWJhMWQ0ODc0ZjNiNjA2MjUxYyJ9"
+  }
+ ],
+ "grants": [
+  {
+   "name": "claude-1",
+   "fullName": "claude-1.camera.pi.home.meshydemo.eth",
+   "owner": "0x35e71aB63e046d8A05aa7d251B8E54947aFfA62f",
+   "expiry": 1793935474,
+   "status": "revoked",
+   "kind": "service",
+   "agent": "claude-1.agents.meshydemo.eth",
+   "target": "camera.pi.home.meshydemo.eth",
+   "device": "pi.home.meshydemo.eth"
+  },
+  {
+   "name": "claude-1",
+   "fullName": "claude-1.db1.prod.meshydemo.eth",
+   "owner": "0x35e71aB63e046d8A05aa7d251B8E54947aFfA62f",
+   "expiry": 4102444800,
+   "status": "live",
+   "kind": "device",
+   "agent": "claude-1.agents.meshydemo.eth",
+   "target": "db1.prod.meshydemo.eth",
+   "device": "db1.prod.meshydemo.eth"
+  }
+ ],
+ "generatedAt": "2026-11-06T10:27:05.884855779Z",
+ "block": 12075970
+}

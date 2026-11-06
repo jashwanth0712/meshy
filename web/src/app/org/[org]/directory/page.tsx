@@ -14,7 +14,8 @@ const tilde = (p: string) => p.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\
 export default function DirectoryPage() {
   const { tree, org, account } = useMeshy();
   const now = useNow(10000) / 1000;
-  const [sel, setSel] = useState<string>();
+  // ?n=<full ENS name> (from the Mac menu bar) selects that item
+  const [sel, setSel] = useState<string | undefined>(() => (typeof window === "undefined" ? undefined : new URLSearchParams(window.location.search).get("n") ?? undefined));
   const [adding, setAdding] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [giving, setGiving] = useState<{ resource?: string; agent?: string } | null>(null);
