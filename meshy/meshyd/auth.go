@@ -107,13 +107,24 @@ func (a *ENSAuthorizer) now() time.Time {
 }
 
 func (a *ENSAuthorizer) Authenticate(ctx context.Context, user string, key gossh.PublicKey) (*Identity, error) {
+	// An SSH user is an agent (U.agents.<org>) or, in orgs created with
+	// MeshyOrgFactory, a member (U.people.<org>). Labels are unique across both.
 	agentName, err := enskit.AgentName(user, a.Resource)
 	if err != nil {
 		return nil, deny("MESHY_BAD_USER", "user=%q: %v", user, err)
 	}
+	person := false
 	ag, err := a.ENS.Lookup(ctx, agentName)
 	if err != nil || ag.State.Status != enskit.Registered {
-		return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s", agentName)
+		pn, perr := enskit.PersonName(user, a.Resource)
+		if perr != nil {
+			return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s", agentName)
+		}
+		pr, perr := a.ENS.Lookup(ctx, pn)
+		if perr != nil || pr.State.Status != enskit.Registered {
+			return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s (and no member %s)", agentName, pn)
+		}
+		agentName, ag, person = pn, pr, true
 	}
 	if ag.Resolver == (common.Address{}) {
 		return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s has no resolver", agentName)
@@ -132,7 +143,9 @@ func (a *ENSAuthorizer) Authenticate(ctx context.Context, user string, key gossh
 	if agentAddr == (common.Address{}) {
 		return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s has no addr record", agentName)
 	}
-	if a.Human != nil {
+	// World ID backs agents (a human vouches for them); members are the humans,
+	// signed in with their own wallet when they claimed their name.
+	if a.Human != nil && !person {
 		att, err := a.ENS.Text(ctx, ag.Resolver, agentName, "meshy.worldid")
 		if err != nil {
 			return nil, fmt.Errorf("meshyd: ens: %w", err)

@@ -229,6 +229,8 @@ export type AgentNode = {
   owner: string;
   worldid: string;
   agentContext: string;
+  /** "person" for members (<label>.people.<org>); agents leave it unset. */
+  kind?: "person";
 };
 
 export type NetworkNode = { name: string; label: string; registry: Address; resources: ResourceNode[] };
@@ -264,9 +266,12 @@ async function grantsIn(c: PublicClient, registry: Address, parent: string, now:
 
 export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
   const label = firstLabel(org);
+  // acme.eth lives in the .eth registry; acme.meshy.eth (MeshyOrgFactory) in meshy.eth's.
+  const parent = org.split(".").length === 2 ? ENS.ethRegistry : await parentRegistry(c, org);
+  if (parent === zeroAddress) throw new Error(`${org} isn't registered`);
   const [orgRegistry, resolver, owner, block] = await Promise.all([
-    subregistryOf(c, ENS.ethRegistry, label),
-    resolverOf(c, ENS.ethRegistry, label),
+    subregistryOf(c, parent, label),
+    resolverOf(c, parent, label),
     exactOwner(c, org),
     c.getBlock(),
   ]);
@@ -292,11 +297,30 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
       const name = `${l}.${org}`;
       const { state: st, sub } = await nodeInfo(c, orgRegistry, l);
       if (st.status !== 2 || Number(st.expiry) <= now) return;
+      if (l === "people") {
+        // Members (orgs created with MeshyOrgFactory): they connect and get grants
+        // like agents, so they join tree.agents with kind "person".
+        if (sub === zeroAddress) return;
+        const ppl = await childLabels(c, sub);
+        const members = (
+          await Promise.all(
+            ppl.map(async ({ label: a }) => {
+              const an = `${a}.${name}`;
+              const { state: ast, resolver: res } = await nodeInfo(c, sub, a);
+              if (ast.status !== 2 || Number(ast.expiry) <= now) return null;
+              const [addr, ssh] = await Promise.all([addrRecord(c, res, an), text(c, res, an, "meshy.ssh")]);
+              return { name: an, label: a, addr, ssh, owner: ast.latestOwner, worldid: "", agentContext: "", kind: "person" } as AgentNode;
+            }),
+          )
+        ).filter(Boolean) as AgentNode[];
+        tree.agents.push(...members);
+        return;
+      }
       if (l === "agents") {
         tree.agentsRegistry = sub;
         if (sub === zeroAddress) return;
         const agents = await childLabels(c, sub);
-        tree.agents = (
+        const list = (
           await Promise.all(
             agents.map(async ({ label: a }) => {
               const an = `${a}.${name}`;
@@ -313,6 +337,7 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
             }),
           )
         ).filter(Boolean) as AgentNode[];
+        tree.agents.push(...list);
         return;
       }
       const net: NetworkNode = { name, label: l, registry: sub, resources: [] };

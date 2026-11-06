@@ -50,8 +50,11 @@ func env(k, def string) string {
 type Identity struct {
 	Agent string `json:"agent"` // label, e.g. claude-1
 	Org   string `json:"org"`   // acme.eth
-	Addr  string `json:"addr"`
-	SSH   string `json:"ssh"` // authorized_keys line
+	// Kind is "" (an agent, <label>.agents.<org>) or "person" (a member,
+	// <label>.people.<org>, joined with an invite from the People page).
+	Kind string `json:"kind,omitempty"`
+	Addr string `json:"addr"`
+	SSH  string `json:"ssh"` // authorized_keys line
 	// Mesh is the provider management URL once `meshy mesh-join` succeeded;
 	// resources are then dialled by ENS name over the WireGuard mesh.
 	Mesh string `json:"mesh,omitempty"`
@@ -60,7 +63,12 @@ type Identity struct {
 	eth  *ecdsa.PrivateKey
 }
 
-func (i *Identity) Name() enskit.Name { return enskit.Name(i.Agent + ".agents." + i.Org) }
+func (i *Identity) Name() enskit.Name {
+	if i.Kind == "person" {
+		return enskit.Name(i.Agent + ".people." + i.Org)
+	}
+	return enskit.Name(i.Agent + ".agents." + i.Org)
+}
 
 func home() string {
 	if d := os.Getenv("MESHY_HOME"); d != "" {
@@ -145,6 +153,8 @@ func main() {
 	switch os.Args[1] {
 	case "join":
 		err = cmdJoin(os.Args[2:])
+	case "join-org":
+		err = cmdJoinOrg(os.Args[2:])
 	case "whoami":
 		err = cmdWhoami()
 	case "top":
@@ -182,6 +192,8 @@ func usage() {
 	fmt.Fprint(os.Stderr, `meshy — agent access to Meshy resources (ENSv2-controlled)
 
   meshy join <invite-link>              set up this agent and wait for approval
+  meshy join-org <invite-link> [--name alice]
+                                        join an org as a person (People → Invite link)
   meshy whoami                          identity and ENS records
   meshy grants <resource>...            what you can access and for how long
   meshy ssh <resource> [--] <command>   run a command on a resource (folder sandbox)
@@ -292,6 +304,12 @@ func joined(ctx context.Context, ens *enskit.Client, id *Identity) (bool, string
 	ssh, _ := r.Text(ctx, ens, "meshy.ssh")
 	if strings.TrimSpace(ssh) != id.SSH {
 		return false, "meshy.ssh not set to our key yet"
+	}
+	if id.Kind == "person" {
+		if a, err := ens.Addr(ctx, r.Resolver, id.Name()); err != nil || !strings.EqualFold(a.Hex(), id.Addr) {
+			return false, "waiting for this device's key on the name (second step on the join page)"
+		}
+		return true, ""
 	}
 	if att, _ := r.Text(ctx, ens, "meshy.worldid"); att == "" {
 		return false, "waiting for World ID attestation"

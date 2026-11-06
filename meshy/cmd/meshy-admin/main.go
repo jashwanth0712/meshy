@@ -119,6 +119,8 @@ func main() {
 	switch os.Args[1] + " " + arg(2) {
 	case "org init":
 		err = orgInit(ctx, os.Args[3:])
+	case "org create":
+		err = orgCreate(ctx, os.Args[3:])
 	case "parent init":
 		err = parentInit(ctx, os.Args[3:])
 	case "network add":
@@ -160,6 +162,7 @@ func usage() {
 	fmt.Fprint(os.Stderr, `meshy-admin — manage a Meshy org in ENSv2
 
   org init      --label acme [--attestor 0x..]
+  org create    --label acme              (free acme.meshy.eth via MeshyOrgFactory, one tx)
   parent init   --label meshy [--years 1]   (parent for free org subnames, e.g. acme.meshy.eth)
   network add   --org acme.eth --name prod
   resource add  --org acme.eth --network prod --join meshy-join:...
@@ -485,6 +488,13 @@ func grant(ctx context.Context, args []string) error {
 	ens := enskit.NewClient(a.Eth, enskit.SepoliaUniversalHelper)
 	agentName, _ := enskit.AgentName(*agent, res)
 	ag, err := ens.Lookup(ctx, agentName)
+	if err != nil || ag.State.Status != enskit.Registered {
+		// Not an agent: maybe a member (<label>.people.<org>).
+		pn, _ := enskit.PersonName(*agent, res)
+		if pr, perr := ens.Lookup(ctx, pn); perr == nil && pr.State.Status == enskit.Registered {
+			agentName, ag, err = pn, pr, nil
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("agent %s: %w", agentName, err)
 	}

@@ -241,6 +241,18 @@ func (b *MapBuilder) build(ctx context.Context, org string) (*OrgMap, error) {
 		m.Grants = append(m.Grants, grants...)
 	}
 
+	// Grants held by members point at their people.<org> name, not agents.
+	if len(m.Members) > 0 {
+		isMember := map[string]bool{}
+		for _, n := range m.Members {
+			isMember[strings.SplitN(n, ".", 2)[0]] = true
+		}
+		for i := range m.Grants {
+			if l := strings.SplitN(m.Grants[i].Name, ".", 2)[0]; isMember[l] {
+				m.Grants[i].Agent = l + ".people." + org
+			}
+		}
+	}
 	return m, nil
 }
 
@@ -464,6 +476,8 @@ func (m *OrgMap) Snapshot() netbird.OrgSnapshot {
 	for _, a := range m.Agents {
 		s.Agents = append(s.Agents, a.FullName)
 	}
+	// Members connect like agents: their own mesh peer and group.
+	s.Agents = append(s.Agents, m.Members...)
 	for _, g := range m.Grants {
 		if g.Status == "live" {
 			s.Grants = append(s.Grants, netbird.GrantSnap{Name: g.FullName, Agent: g.Agent, Resource: g.Device})

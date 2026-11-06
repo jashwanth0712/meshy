@@ -369,12 +369,12 @@ func (s *Server) handleAdmit(w http.ResponseWriter, r *http.Request) {
 	org := orgFromName(req.Name)
 	var group string
 	switch {
-	case strings.HasSuffix(req.Name, ".agents."+org):
+	case strings.HasSuffix(req.Name, ".agents."+org), strings.HasSuffix(req.Name, ".people."+org):
 		group = netbird.AgentGroup(req.Name)
 	case name.Depth() == 2: // device.network.<org>
 		group = netbird.ResGroup(req.Name)
 	default:
-		jsonError(w, http.StatusBadRequest, "only devices (<device>.<network>.<org>) and agents (<agent>.agents.<org>) join the mesh")
+		jsonError(w, http.StatusBadRequest, "only devices (<device>.<network>.<org>), agents (<agent>.agents.<org>) and members (<name>.people.<org>) join the mesh")
 		return
 	}
 

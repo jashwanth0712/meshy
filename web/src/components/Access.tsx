@@ -126,12 +126,12 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
       ) : (
         <>
           <label className="block">
-            <span className="text-[13px] font-semibold">Agent</span>
+            <span className="text-[13px] font-semibold">Who</span>
             <select className={cx(inputCls, "mt-2")} value={agent} onChange={(e) => setAgent(e.target.value)}>
               {tree?.agents.map((a) => (
                 <option key={a.name} value={a.label}>
                   {a.label}
-                  {a.worldid ? "" : " (no World ID)"}
+                  {a.kind === "person" ? " (member)" : a.worldid ? "" : " (no World ID)"}
                 </option>
               ))}
             </select>

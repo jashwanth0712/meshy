@@ -124,6 +124,15 @@ func AgentName(agentLabel string, resource Name) (Name, error) {
 	return Name(agentLabel + ".agents." + string(resource.Org())), nil
 }
 
+// PersonName returns the member identity name of label in resource's org
+// (label.people.<org>, orgs created with MeshyOrgFactory).
+func PersonName(label string, resource Name) (Name, error) {
+	if err := validLabel(label); err != nil {
+		return "", err
+	}
+	return Name(label + ".people." + string(resource.Org())), nil
+}
+
 func validLabel(l string) error {
 	if l == "" || len(l) > 63 {
 		return fmt.Errorf("%w: label %q", ErrBadName, l)
