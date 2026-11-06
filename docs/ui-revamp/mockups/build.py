@@ -82,25 +82,18 @@ def topnav(active: str) -> str:
     cur = ' aria-current="page"'
     links = "\n".join(f'<a class="navlink" href="{HREF[k]}"{cur if k == active else ""}>{label}</a>' for k, label in NAV)
     return f"""
-<header class="on-dark topbar sticky top-0 z-40">
+<header class="topbar sticky top-0 z-40">
   <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-6 lg:px-8">
     <a href="index.html" class="shrink-0 text-foreground" title="All mockups">{lockup("h-7 w-auto")}</a>
-    <button class="ml-1 hidden items-center gap-2 rounded-full border border-border bg-card py-1 pl-1.5 pr-3 text-sm font-medium hover:border-border-strong lg:inline-flex" title="Switch org">
-      <span class="grid h-6 w-6 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground">M</span>
-      <span class="mono text-[13px]">meshydemo.eth</span>
-      <i data-lucide="chevrons-up-down" class="h-3.5 w-3.5 text-muted-foreground"></i>
+    <button class="ml-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium text-muted-foreground hover:text-foreground lg:inline-flex" title="Switch org">
+      <span class="mono text-[13px] text-foreground">meshydemo.eth</span><span class="text-xs">▾</span>
     </button>
     <nav class="ml-2 hidden items-center gap-0.5 md:flex" aria-label="Main">{links}</nav>
     <div class="ml-auto flex items-center gap-2">
-      <button onclick="openPalette()" class="hidden h-9 w-64 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card pl-3 pr-1.5 text-sm text-muted-foreground hover:border-border-strong 2xl:inline-flex">
-        <i data-lucide="search" class="h-4 w-4"></i><span>Search names, actions…</span><span class="ml-auto flex gap-0.5"><kbd>⌘</kbd><kbd>K</kbd></span>
-      </button>
-      <button onclick="openPalette()" class="btn btn-outline btn-sm gap-1.5 2xl:hidden" aria-label="Search"><i data-lucide="search"></i><kbd>⌘K</kbd></button>
-      <button onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
-      <button class="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card pl-1.5 pr-3 text-sm font-semibold hover:border-border-strong">
-        <span class="h-6 w-6 rounded-full" style="background:conic-gradient(from 200deg,#1e3fd8,#a5d8ff,#f6f8ff,#38bdf8,#1e3fd8)"></span>
-        <span class="mono text-[13px]">0x45e8…E0EA</span>
-        <span class="badge b-info h-5 px-2 text-[11px]">Owner</span>
+      <button onclick="openPalette()" class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Search">Search <kbd>⌘K</kbd></button>
+      <button onclick="toggleTheme()" class="btn btn-ghost btn-sm btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
+      <button class="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full border border-border px-3 text-sm hover:border-border-strong">
+        <span class="mono text-[13px]">0x45e8…E0EA</span><span class="text-xs text-muted-foreground">owner</span>
       </button>
     </div>
   </div>
@@ -164,6 +157,19 @@ STATUSBAR = """
 </footer>"""
 
 
+# Minimal UI: only icons that do a job (close, menu, copy, search, theme, progress, check/cross
+# in lists, the agent → target arrow) survive; decorative ones are dropped at build time.
+KEEP_ICONS = {"x", "ellipsis", "copy", "search", "sun-moon", "check", "circle-check", "loader-circle", "arrow-right", "minimize-2"}
+
+
+def strip_icons(html: str) -> str:
+    html = re.sub(r'<i data-lucide="([a-z0-9-]+)"[^>]*></i>', lambda m: m.group(0) if m.group(1) in KEEP_ICONS else "", html)
+    # icon tiles left empty after stripping
+    for _ in range(2):
+        html = re.sub(r'<span class="[^"]*place-items-center[^"]*">\s*</span>', "", html)
+    return html
+
+
 def render(page: Path) -> str:
     raw = page.read_text()
     header, body = raw.split("\n", 1)
@@ -178,9 +184,8 @@ def render(page: Path) -> str:
         out += topnav(meta.get("active", ""))
         cut = body.index("</section>") + len("</section>")
         head, rest = body[:cut], body[cut:]
-        ascii_opts = meta.get("ascii", '{"cellSize":16,"horizon":0.62,"arc":1.2,"cx":0.8,"glyphOpacity":0.85,"density":0.85}')
-        out += f'<div class="band on-dark" data-ascii-host><div data-ascii=\'{ascii_opts}\'></div>\n' + head + '\n</div><div class="band-edge"></div>\n'
-        out += '<div class="relative pb-20 pt-8">\n' + rest + "\n</div>"
+        out += '<div class="page-head">\n' + head + '\n</div>\n'
+        out += '<div class="relative pb-20 pt-2">\n' + rest + "\n</div>"
         bar = STATUSBAR
         if meta.get("orgkey"):
             bar = bar.replace('<i data-lucide="lock" class="h-3.5 w-3.5"></i>Org key not loaded · <a href="settings.html#org-key" class="font-medium text-foreground underline-offset-2 hover:underline">Import</a>',
@@ -190,6 +195,7 @@ def render(page: Path) -> str:
         out += body
         out += PALETTE
     out += f"\n<script>\n{js}\n</script>\n</body>\n</html>\n"
+    out = strip_icons(out)
     out = re.sub(r"\{\{(lockup|icon|mark)(?::([^}]*))?\}\}", lambda m: {"lockup": lockup, "icon": icon, "mark": mark}[m.group(1)](*( [m.group(2)] if m.group(2) else [])), out)
     return out
 

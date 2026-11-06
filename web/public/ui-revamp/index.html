@@ -105,7 +105,7 @@
   --tag-sun-bg: #fde047;    --tag-sun-fg: #3a2e00;
   --tag-pink-bg: #f9a8d4;   --tag-pink-fg: #4a0d2b;
   --tag-lilac-bg: #c4b5fd;  --tag-lilac-fg: #2e1065;
-  --shadow-soft: 0 1px 2px rgb(11 21 51 / 0.04), 0 8px 24px -12px rgb(30 63 216 / 0.12);
+  --shadow-soft: none; /* minimal: hairlines, no lift */
   --shadow-pop: 0 18px 48px -12px rgb(11 21 51 / 0.28), 0 2px 6px rgb(11 21 51 / 0.06);
 }
 
@@ -195,7 +195,10 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 .band::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(90deg, rgb(5 11 36 / .78) 0%, rgb(5 11 36 / .35) 45%, transparent 75%); }
 .band-edge { height: 3px; background: linear-gradient(90deg, transparent, #38bdf8 20%, #f6f8ff 50%, #a5d8ff 80%, transparent); opacity: .9; }
-.topbar { background: rgb(5 11 36 / .62); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid rgb(255 255 255 / .08); }
+.topbar { background: color-mix(in srgb, var(--background) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+.page-head > section { padding-top: 2.5rem !important; padding-bottom: 1.75rem !important; }
+.page-head .display { font-size: clamp(1.75rem, 2.6vw, 2.25rem); }
+.page-head .lede { font-size: .9375rem; margin-top: .5rem; }
 .dark .band-edge { opacity: .6; }
 
 /* cards */
@@ -361,7 +364,7 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
       <h1 class="text-[clamp(2.6rem,5.4vw,4.4rem)] font-semibold leading-[0.98] tracking-[-0.04em]">Network access<br>for agents, as<br><span style="background:linear-gradient(90deg,#a5d8ff,#f6f8ff 60%);-webkit-background-clip:text;background-clip:text;color:transparent">ENS names.</span></h1>
       <p class="lede mt-6 max-w-xl">Grant a folder or a port for an hour. Revoke it, and the live session dies in the next block. This is the whole dashboard, redrawn in Meshy's blue and white.</p>
       <form class="mt-8 flex max-w-md items-center gap-2 rounded-full border border-border bg-card p-1.5 pl-4" onsubmit="location.href='access.html';return false">
-        <i data-lucide="at-sign" class="h-4 w-4 text-muted-foreground"></i>
+        
         <input class="mono h-9 flex-1 bg-transparent text-[14px] text-foreground outline-none placeholder:text-muted-foreground" value="meshydemo.eth" aria-label="Org name">
         <button class="btn btn-primary">Open org<i data-lucide="arrow-right"></i></button>
       </form>
@@ -373,12 +376,12 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
       <div class="mt-4 flex items-center gap-4">
         <div class="relative h-14 w-14">
           <svg viewBox="0 0 48 48" class="h-14 w-14 -rotate-90"><circle cx="24" cy="24" r="21" fill="none" stroke-width="3" stroke="rgb(255 255 255 / .15)"/><circle cx="24" cy="24" r="21" fill="none" stroke-width="3" stroke-linecap="round" stroke="#a5d8ff" stroke-dasharray="131.95" stroke-dashoffset="4" data-ring data-left="3518" data-total="3600"/></svg>
-          <span class="absolute inset-[9px] grid place-items-center rounded-full bg-white text-[#1e3fd8]"><i data-lucide="sparkle" class="h-4 w-4"></i></span>
+          
         </div>
         <div class="min-w-0"><div class="ens text-[15px] font-semibold">claude-1 → db1.prod</div><div class="mono tnum mt-0.5 text-2xl font-semibold" data-left="3518">58m 38s</div></div>
       </div>
       <div class="ens mt-4 truncate rounded-lg bg-white/5 px-3 py-2 text-[12.5px] text-muted-foreground">claude-1.db1.prod.meshydemo.eth</div>
-      <div class="mt-4 flex gap-2"><a href="access.html" class="btn btn-outline btn-sm flex-1"><i data-lucide="timer-reset"></i>+1h</a><a href="revoke.html" class="btn btn-sm flex-1" style="background:#fff;color:#e11d48"><i data-lucide="zap"></i>Revoke</a></div>
+      <div class="mt-4 flex gap-2"><a href="access.html" class="btn btn-outline btn-sm flex-1">+1h</a><a href="revoke.html" class="btn btn-sm flex-1" style="background:#fff;color:#e11d48">Revoke</a></div>
       <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-cyan">home</span><span class="tag">prod</span><span class="tag tag-lilac">world id</span><span class="tag tag-sun">expires 15:04</span></div>
     </div>
   </div>
@@ -397,7 +400,7 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
   <section id="screens" class="pb-12">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div><div class="eyebrow mb-2">the screens</div><h2 class="text-[2rem] font-semibold tracking-tight">Ten screens, one system</h2></div>
-      <div class="flex gap-2"><a href="access.html?palette=0x35e7" class="btn btn-outline"><i data-lucide="command"></i>Try ⌘K</a></div>
+      <div class="flex gap-2"><a href="access.html?palette=0x35e7" class="btn btn-outline">Try ⌘K</a></div>
     </div>
     <div class="mt-6 space-y-1">
       <a class="row" href="access.html"><span class="mono text-2xl font-semibold text-muted-foreground">01</span><div><div class="flex flex-wrap items-center gap-2"><b class="text-[17px]">Access home</b><span class="tag tag-lime">home</span></div><p class="mt-1 text-[13.5px] text-muted-foreground">Live grants with countdown rings, recently ended, a time-axis view, the Arkiv feed with "Grant this", and the setup checklist.</p></div><i data-lucide="arrow-right" class="go h-5 w-5 text-muted-foreground"></i></a>
@@ -432,30 +435,30 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
       <div data-resolve hidden class="mb-1 rounded-xl border border-border bg-muted/50 p-3">
         <div class="eyebrow mb-1.5">Resolved on ENSv2 · Sepolia</div>
         <a href="agent.html" class="flex items-center gap-3">
-          <span class="grid h-8 w-8 place-items-center rounded-lg bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span>
+          
           <span class="min-w-0"><span class="ens block">claude-1<span class="rest">.agents.meshydemo.eth</span></span><span class="text-xs text-muted-foreground">agent · 0x35e7…A62f · human-backed · 1 live grant</span></span>
           <span class="ml-auto text-xs text-muted-foreground">Open ↵</span>
         </a>
       </div>
       <div data-group><div class="eyebrow px-2 pb-1 pt-2">Actions</div>
-        <a data-item="give access grant" href="give-access.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="key-round" class="h-4 w-4"></i>Give access…<span class="ml-auto"><kbd>G</kbd></span></a>
-        <a data-item="revoke claude-1 db1.prod" href="revoke.html" class="flex h-10 items-center gap-3 rounded-lg px-2 text-destructive"><i data-lucide="zap" class="h-4 w-4"></i>Revoke <span class="ens">claude-1 → db1.prod</span><span class="ml-auto text-xs text-muted-foreground">live · 58m left</span></a>
-        <a data-item="invite agent" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="user-plus" class="h-4 w-4"></i>Invite an agent…</a>
-        <a data-item="import org key decrypt" href="settings.html#org-key" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="key-square" class="h-4 w-4"></i>Import org key</a>
-        <a data-item="copy meshy ssh db1" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="terminal" class="h-4 w-4"></i>Copy <code class="text-[13px]">meshy ssh db1.prod.meshydemo.eth</code></a>
+        <a data-item="give access grant" href="give-access.html" class="flex h-10 items-center gap-3 rounded-lg px-2">Give access…<span class="ml-auto"><kbd>G</kbd></span></a>
+        <a data-item="revoke claude-1 db1.prod" href="revoke.html" class="flex h-10 items-center gap-3 rounded-lg px-2 text-destructive">Revoke <span class="ens">claude-1 → db1.prod</span><span class="ml-auto text-xs text-muted-foreground">live · 58m left</span></a>
+        <a data-item="invite agent" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2">Invite an agent…</a>
+        <a data-item="import org key decrypt" href="settings.html#org-key" class="flex h-10 items-center gap-3 rounded-lg px-2">Import org key</a>
+        <a data-item="copy meshy ssh db1" class="flex h-10 items-center gap-3 rounded-lg px-2">Copy <code class="text-[13px]">meshy ssh db1.prod.meshydemo.eth</code></a>
       </div>
       <div data-group><div class="eyebrow px-2 pb-1 pt-3">Names</div>
-        <a data-item="claude-1.agents.meshydemo.eth agent" href="agent.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="sparkle" class="h-4 w-4"></i><span class="ens">claude-1<span class="rest">.agents.meshydemo.eth</span></span><span class="badge b-live ml-auto">1 live</span></a>
-        <a data-item="db1.prod.meshydemo.eth device" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="server" class="h-4 w-4"></i><span class="ens">db1<span class="rest">.prod.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">device</span></a>
-        <a data-item="pi.home.meshydemo.eth raspberry device" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="cpu" class="h-4 w-4"></i><span class="ens">pi<span class="rest">.home.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">Raspberry Pi 5</span></a>
-        <a data-item="camera.pi.home.meshydemo.eth service" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="cctv" class="h-4 w-4"></i><span class="ens">camera<span class="rest">.pi.home.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">http · 8001</span></a>
-        <a data-item="rig1.home.meshydemo.eth device" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="server" class="h-4 w-4"></i><span class="ens">rig1<span class="rest">.home.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">server</span></a>
+        <a data-item="claude-1.agents.meshydemo.eth agent" href="agent.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><span class="ens">claude-1<span class="rest">.agents.meshydemo.eth</span></span><span class="badge b-live ml-auto">1 live</span></a>
+        <a data-item="db1.prod.meshydemo.eth device" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><span class="ens">db1<span class="rest">.prod.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">device</span></a>
+        <a data-item="pi.home.meshydemo.eth raspberry device" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><span class="ens">pi<span class="rest">.home.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">Raspberry Pi 5</span></a>
+        <a data-item="camera.pi.home.meshydemo.eth service" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><span class="ens">camera<span class="rest">.pi.home.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">http · 8001</span></a>
+        <a data-item="rig1.home.meshydemo.eth device" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><span class="ens">rig1<span class="rest">.home.meshydemo.eth</span></span><span class="ml-auto text-xs text-muted-foreground">server</span></a>
       </div>
       <div data-group><div class="eyebrow px-2 pb-1 pt-3">Go to</div>
-        <a data-item="access home grants" href="access.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="key-round" class="h-4 w-4"></i>Access<span class="ml-auto"><kbd>g</kbd> <kbd>a</kbd></span></a>
-        <a data-item="directory devices" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="network" class="h-4 w-4"></i>Directory<span class="ml-auto"><kbd>g</kbd> <kbd>d</kbd></span></a>
-        <a data-item="activity audit arkiv" href="activity.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="activity" class="h-4 w-4"></i>Activity<span class="ml-auto"><kbd>g</kbd> <kbd>l</kbd></span></a>
-        <a data-item="settings admins" href="settings.html" class="flex h-10 items-center gap-3 rounded-lg px-2"><i data-lucide="settings" class="h-4 w-4"></i>Settings<span class="ml-auto"><kbd>g</kbd> <kbd>s</kbd></span></a>
+        <a data-item="access home grants" href="access.html" class="flex h-10 items-center gap-3 rounded-lg px-2">Access<span class="ml-auto"><kbd>g</kbd> <kbd>a</kbd></span></a>
+        <a data-item="directory devices" href="directory.html" class="flex h-10 items-center gap-3 rounded-lg px-2">Directory<span class="ml-auto"><kbd>g</kbd> <kbd>d</kbd></span></a>
+        <a data-item="activity audit arkiv" href="activity.html" class="flex h-10 items-center gap-3 rounded-lg px-2">Activity<span class="ml-auto"><kbd>g</kbd> <kbd>l</kbd></span></a>
+        <a data-item="settings admins" href="settings.html" class="flex h-10 items-center gap-3 rounded-lg px-2">Settings<span class="ml-auto"><kbd>g</kbd> <kbd>s</kbd></span></a>
       </div>
     </div>
     <div class="flex items-center gap-4 border-t border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground">

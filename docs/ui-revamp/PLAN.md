@@ -8,8 +8,13 @@ Written 6 Nov 2026, from the live dashboard at `/org/meshydemo.eth` and from eth
 
 **Revision 2 (6 Nov).** The user asked for a Meshy vibe rather than a copy of ethglobal.com. What changed:
 - **Colour.** The logo's cobalt and white, plus the hero's gradient colours (`#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8`). Four directions were sampled (a palette page, since removed), and the user picked **B, Electric**: a white page, electric cobalt, and solid saturated chips (lime, sun, pink, lilac, cyan). See §2.
-- **Hero.** A night-sky `GradientASCII` horizon (`shape="horizon"`) replaces the pastel wash. It runs full size on the landing page, and as a short header band behind the nav and title on every app page. See §5.
+- **Hero.** A night-sky `GradientASCII` horizon (`shape="horizon"`) replaces the pastel wash, on the landing page only (revision 4). See §5.
 - **Landing.** No longer a showcase grid: it is a hero, then "three moves", then a numbered list of screens.
+
+**Revision 4 (6 Nov): minimal.**
+- The ASCII horizon stays on the landing page only. App pages have a plain white top bar (hairline border, no avatars) and a compact page header.
+- Icons are kept only where they do a job: close, the "…" menu, copy, search, theme, check and cross in lists, progress spinners, and the agent → target arrow. Every decorative icon (in buttons, badges, feed rows, tree rows, tiles, the status bar and the palette) is gone.
+- Cards have no shadow, only hairlines. The chip rows under page titles are gone.
 
 ethglobal.com remains the reference for restraint, spacing, type scale and layout (§1). Its pastel wash, uppercase ink-bordered tags and 2 px outlines are dropped.
 
@@ -369,9 +374,9 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
 | **Spacing** | Tailwind 4-px scale. Page gutter `px-6 lg:px-8`, container `max-w-7xl`, header band `pt-12 pb-8`, card padding 20 px (`p-5`), row padding `px-5 py-4`, gaps between sections 24 px (`gap-6`) |
 | **Radius** | buttons, tags and badges full pill · inputs 10 · cards 14 · sheets and dialogs 16 |
 | **Border** | 1 px blue-tinted hairlines (`--border`, `--border-strong`) everywhere. No 2 px outlines |
-| **Elevation** | Cards: `--shadow-soft` (a faint cobalt-tinted lift). Overlays: `--shadow-pop` plus a 38 % night scrim. Nothing else casts a shadow |
+| **Elevation** | Cards: none, hairlines only (revision 4). Overlays: `--shadow-pop` plus a 38 % night scrim. Nothing else casts a shadow |
 | **Motion** | 150–200 ms `ease-out` for colour and opacity; 350 ms fade-and-rise for sheets, dialogs and toasts; the live dot pulses every 1.8 s; countdown rings tick once a second; everything is off under `prefers-reduced-motion` |
-| **Icons** | `lucide-react` (already installed) at 16 px, stroke 1.75. 14 px inside badges. The spark (`Sparkle`) always means "agent" |
+| **Icons** | `lucide-react` at 16 px, stroke 1.75, **only for functional controls**: close, menu, copy, search, theme, check/cross, spinner, the → arrow. No decorative icons in buttons, badges, rows or tiles |
 | **Numbers** | `tabular-nums` everywhere a number changes (countdowns, blocks, ms, USDC) |
 
 ### Old → new class map (used by the codemod in §9 step 1)
@@ -423,7 +428,7 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
   - right-aligned actions
   - an optional row of Electric chips with live facts
   - the **header band** behind it (below)
-- **Header band** (`HeaderBand`, new). The nav and page header sit on the night sky.
+- **Header band** (`HeaderBand`). *Revision 4: landing only.* App pages use a plain white top bar and PageHeader. What follows describes the landing hero.
   - A `GradientASCII` canvas with `shape="horizon"` runs behind it. On app pages it is a short band whose planet rises on the right (`cx≈0.8`), so the title and lede on the left stay on calm dark sky. A left-to-right night scrim keeps text contrast at least 10 : 1.
   - A 3 px cyan → ice → sky line closes the band. Content then sits on the white page.
   - The landing page runs the user's exact props at 600 px (`cellSize 18, density .8, glyphOpacity .85, glow .2, flicker .2, softness .5, flow .5, grain .08, mouseInteraction, scrambleRadius .1, clickEffect "wave", intro`).
@@ -485,7 +490,7 @@ Custom Meshy components, built on the above (in `web/src/components/meshy/`):
 | `FeedItem` | Arkiv event as a sentence, with an action ("Grant this") |
 | `StatTile` | Number plus caption plus optional sparkline; renders a skeleton until data arrives (never a fake 0) |
 | `Ticket` | A small date tile for expiries and renewal dates |
-| `GradientASCII` (the user's component) + `HeaderBand` | The ASCII horizon: full 600 px hero on `/`, short band behind the nav and PageHeader on every app page, centred band on Approve. Wraps its children in `.on-dark` |
+| `GradientASCII` (the user's component) | The ASCII horizon: the full 600 px hero on `/` only. Its children sit in `.on-dark` |
 | `PageHeader`, `TopNav`, `StatusBar`, `CommandPalette` | Shell components |
 
 ---
@@ -834,7 +839,7 @@ Pages are in order of demo value.
 | R5 | **Transaction flows regress while being re-wrapped** (double-send, lost steps) | Keep `submit()` bodies verbatim; keep the `fired` ref; move flows into the store; rerun the full lifecycle on Sepolia |
 | R6 | **Listing delegated admins** needs scanning EAC role events: more `eth_getLogs`, and the public node is slow | Reuse `LOGS_RPC` + Multicall; cache in sessionStorage like the tree; show a skeleton; fall back to the current "check an address" |
 | R7 | **The slow RPC still means 20 s+ first loads.** The new design only hides it better | Skeletons everywhere; render cached sessionStorage data immediately with a "refreshing" dot; consider `/v1/map` from meshy-sync as a faster first paint |
-| R8 | **ASCII canvas cost.** A 30 fps canvas behind every page header, plus backdrop blur, on low-end laptops | Cap at 30 fps; pause off-screen and on hidden tabs; static frame under reduced motion; app bands use a larger cell (fewer glyphs) and no intro; if needed, render app-page bands once and animate only the landing hero (decision D8) |
+| R8 | **ASCII canvas cost** (now landing only, revision 4). A 30 fps canvas behind every page header, plus backdrop blur, on low-end laptops | Cap at 30 fps; pause off-screen and on hidden tabs; static frame under reduced motion; app bands use a larger cell (fewer glyphs) and no intro; if needed, render app-page bands once and animate only the landing hero (decision D8) |
 | R9 | **Bundle growth** (Radix, cmdk, TanStack Table, Sonner) | All tree-shaken, about 60–80 kB gzip in total; `@xyflow/react` is removed |
 | R10 | **Concurrent sessions.** Another session edits Go under `meshy/`, `meshnet/` and `menubar/` | This plan touches only `web/`, `docs/ui-revamp/` and copies from `brand/` |
 
@@ -846,7 +851,7 @@ Pages are in order of demo value.
 - **D5. Agent page and admin listing scope.** Both need new data code: a route plus `adminsOf()` event scanning. Include them in the first pass?
 - **D6. "+1h" renew from the dashboard.** This is a new on-chain write the current UI doesn't have. Do you want it?
 - **D7. Mockup sources.** Keep `mockups/_src/` + `build.py` in the repo (recommended: easy to iterate), or keep only the built HTML?
-- **D8. How alive should app pages be?** The animated ASCII band on every page (as mocked), or animated on the landing page only with a still frame on app pages? *Recommendation:* animated, with no intro and paused off-screen. Switch to still frames if it costs too much on the demo laptop.
+- **D8. How alive should app pages be?** *Settled by revision 4: no ASCII on app pages.* Original question: The animated ASCII band on every page (as mocked), or animated on the landing page only with a still frame on app pages? *Recommendation:* animated, with no intro and paused off-screen. Switch to still frames if it costs too much on the demo laptop.
 
 ---
 

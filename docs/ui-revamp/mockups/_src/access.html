@@ -8,13 +8,8 @@
     </div>
     <div class="flex items-center gap-2">
       <a href="directory.html" class="btn btn-outline"><i data-lucide="user-plus"></i>Invite agent</a>
-      <a href="give-access.html" class="btn btn-primary btn-lg"><i data-lucide="key-round"></i>Give access<kbd class="ml-1 border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground">G</kbd></a>
+      <a href="give-access.html" class="btn btn-primary btn-lg"><i data-lucide="key-round"></i>Give access</a>
     </div>
-  </div>
-  <div class="mt-6 flex flex-wrap items-center gap-2">
-    <span class="tag tag-lime"><span class="dot dot-live"></span>1 live grant</span>
-    <span class="tag tag-sun"><i data-lucide="hourglass" class="h-3 w-3"></i>Next expiry in 58m</span>
-    <span class="tag tag-cyan"><i data-lucide="zap" class="h-3 w-3"></i>Revoke → session dead: 1.6 s after the block</span>
   </div>
 </section>
 
@@ -29,7 +24,7 @@
           <button role="tab">All</button>
         </div>
         <div class="flex items-center gap-2 pb-2">
-          <div class="relative"><i data-lucide="filter" class="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground"></i><input class="input h-8 w-48 rounded-full pl-8 text-[13px]" placeholder="Filter by agent or name"></div>
+          <div class="relative"><i data-lucide="filter" class="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground"></i><input class="input h-8 w-48 rounded-full text-[13px]" placeholder="Filter by agent or name"></div>
           <div class="seg"><button aria-pressed="true">List</button><button>Timeline</button></div>
         </div>
       </div>
@@ -72,7 +67,7 @@
       </div>
       <div class="divide">
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 opacity-75">
-          <span class="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-border-strong text-muted-foreground"><i data-lucide="zap-off" class="h-4 w-4"></i></span>
+          <span class="h-12 w-12 rounded-full border border-dashed border-border-strong"></span>
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-x-2"><span class="ens font-semibold"><a href="agent.html">claude-1</a></span><i data-lucide="arrow-right" class="h-3.5 w-3.5 text-muted-foreground"></i><span class="ens font-semibold"><a href="directory.html">rig1</a><span class="dot-sep">.</span><a href="directory.html">home</a></span><span class="badge b-bad">Revoked</span></div>
             <div class="mt-1 text-[13px] text-muted-foreground">Folders · revoked 3h ago by <span class="mono">0xf846…Fc98</span> (admin of home) · live session killed 216 ms after block 12,073,941</div>
@@ -80,7 +75,7 @@
           <button class="btn btn-outline btn-sm"><i data-lucide="rotate-ccw"></i>Grant again</button>
         </div>
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 opacity-75">
-          <span class="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-border-strong text-muted-foreground"><i data-lucide="clock" class="h-4 w-4"></i></span>
+          <span class="h-12 w-12 rounded-full border border-dashed border-border-strong"></span>
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-x-2"><span class="ens font-semibold"><a href="agent.html">claude-1</a></span><i data-lucide="arrow-right" class="h-3.5 w-3.5 text-muted-foreground"></i><span class="ens font-semibold"><a href="directory.html">camera</a><span class="dot-sep">.</span><a href="directory.html">pi</a><span class="dot-sep">.</span><a href="directory.html">home</a></span><span class="badge b-muted">Expired</span></div>
             <div class="mt-1 text-[13px] text-muted-foreground">One port · http → 127.0.0.1:8001 · expired on its own 2h ago</div>
