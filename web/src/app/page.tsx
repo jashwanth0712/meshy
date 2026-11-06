@@ -43,6 +43,12 @@ export default function Home() {
         <button className="h-9 rounded-full bg-accent px-5 text-[14px] font-semibold text-on-accent hover:opacity-90">Open</button>
       </form>
       {bad && <p className="mt-3 text-[14px] text-bad">Type your org&apos;s ENS name, like acme.eth.</p>}
+      <div className="mt-5 flex items-center gap-3">
+        <Link href="/new" className="inline-flex h-9 items-center rounded-full border border-line-strong px-4 text-[14px] font-semibold hover:border-accent">
+          Create an organization
+        </Link>
+        <span className="text-[13px] text-muted">Free name like acme.meshy.eth, owned by your wallet</span>
+      </div>
 
       {recent.length > 0 ? (
         <div className="mt-8">

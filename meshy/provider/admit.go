@@ -125,6 +125,76 @@ type SeatStatus struct {
 	Used       int    `json:"used"` // devices + agents on ENS
 	PaidUntil  uint64 `json:"paidUntil"`
 	ProviderID uint64 `json:"providerId"`
+	Trial      bool   `json:"trial,omitempty"`
+}
+
+// TrialSeats is what a new MeshyOrgFactory org gets before it subscribes.
+const TrialSeats = 3
+
+// isFactoryOrg reports whether org was created by MeshyOrgFactory (it writes
+// meshy.created-by on the org's own resolver, which the org owner controls).
+func (s *Server) isFactoryOrg(ctx context.Context, org string) bool {
+	rec, err := s.mapBuilder.ENS.Lookup(ctx, enskit.Name(org))
+	if err != nil || rec.Resolver == (common.Address{}) {
+		return false
+	}
+	v, err := rec.Text(ctx, s.mapBuilder.ENS, "meshy.created-by")
+	return err == nil && v == "MeshyOrgFactory"
+}
+
+// orgCreatedTopic is keccak("OrgCreated(string,string,string,address,address,address,address,address)").
+var orgCreatedTopic = crypto.Keccak256Hash([]byte("OrgCreated(string,string,string,address,address,address,address,address)"))
+
+var orgCreatedArgs = func() abi.Arguments {
+	str, _ := abi.NewType("string", "", nil)
+	ad, _ := abi.NewType("address", "", nil)
+	return abi.Arguments{{Type: str}, {Type: str}, {Type: ad}, {Type: ad}, {Type: ad}, {Type: ad}}
+}()
+
+// discoverOrgs returns every org name created by the factory (OrgCreated logs).
+func (s *Server) discoverOrgs(ctx context.Context) ([]string, error) {
+	if s.cfg.OrgFactory == (common.Address{}) {
+		return nil, nil
+	}
+	logs, err := s.mapBuilder.ETH.FilterLogs(ctx, ethereum.FilterQuery{
+		FromBlock: new(big.Int).SetUint64(s.cfg.OrgFactoryFrom),
+		Addresses: []common.Address{s.cfg.OrgFactory},
+		Topics:    [][]common.Hash{{orgCreatedTopic}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, l := range logs {
+		v, err := orgCreatedArgs.Unpack(l.Data)
+		if err == nil && len(v) >= 2 {
+			out = append(out, v[1].(string))
+		}
+	}
+	return out, nil
+}
+
+// orgsToReconcile is the configured orgs plus those discovered from the factory.
+func (s *Server) orgsToReconcile(ctx context.Context) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(o string) {
+		if o != "" && !seen[o] {
+			seen[o] = true
+			out = append(out, o)
+		}
+	}
+	for _, o := range s.cfg.Orgs {
+		add(o)
+	}
+	if found, err := s.discoverOrgs(ctx); err != nil {
+		s.log.Warn("discover orgs", "err", err)
+	} else {
+		for _, o := range found {
+			add(o)
+		}
+	}
+	return out
 }
 
 func (s *Server) seats(ctx context.Context, org string) (SeatStatus, error) {
@@ -136,6 +206,12 @@ func (s *Server) seats(ctx context.Context, org string) (SeatStatus, error) {
 	st.Seats = res[0].(uint32)
 	st.PaidUntil = res[1].(uint64)
 	st.ProviderID = res[2].(*big.Int).Uint64()
+	// Orgs created with MeshyOrgFactory get a free trial until they subscribe.
+	if st.Seats == 0 && s.isFactoryOrg(ctx, org) {
+		st.Seats, st.Trial = TrialSeats, true
+		st.PaidUntil = uint64(time.Now().Add(365 * 24 * time.Hour).Unix())
+		st.ProviderID = s.cfg.ProviderID
+	}
 	m, err := s.mapBuilder.Build(ctx, org)
 	if err != nil {
 		return st, err
@@ -148,13 +224,7 @@ func (s *Server) seats(ctx context.Context, org string) (SeatStatus, error) {
 }
 
 // orgFromName returns the 2LD of a name: claude-1.agents.acme.eth -> acme.eth.
-func orgFromName(name string) string {
-	p := strings.Split(name, ".")
-	if len(p) < 2 {
-		return name
-	}
-	return strings.Join(p[len(p)-2:], ".")
-}
+func orgFromName(name string) string { return string(enskit.Name(name).Org()) }
 
 // --- attestation log (evidence for challengers) ---
 
@@ -301,7 +371,7 @@ func (s *Server) handleAdmit(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasSuffix(req.Name, ".agents."+org):
 		group = netbird.AgentGroup(req.Name)
-	case strings.Count(req.Name, ".") == 3: // device.network.org.eth
+	case name.Depth() == 2: // device.network.<org>
 		group = netbird.ResGroup(req.Name)
 	default:
 		jsonError(w, http.StatusBadRequest, "only devices (<device>.<network>.<org>) and agents (<agent>.agents.<org>) join the mesh")
@@ -411,11 +481,14 @@ func (s *Server) handleSeats(w http.ResponseWriter, r *http.Request) {
 
 // RunReconciler syncs every configured org into NetBird every interval.
 func (s *Server) RunReconciler(ctx context.Context, every time.Duration) {
-	if s.nb == nil || len(s.cfg.Orgs) == 0 {
+	if s.nb == nil || (len(s.cfg.Orgs) == 0 && s.cfg.OrgFactory == (common.Address{})) {
 		return
 	}
 	for {
-		for _, org := range s.cfg.Orgs {
+		dctx, dcancel := context.WithTimeout(ctx, 30*time.Second)
+		orgs := s.orgsToReconcile(dctx)
+		dcancel()
+		for _, org := range orgs {
 			cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			m, err := s.mapBuilder.Build(cctx, org)
 			if err == nil {

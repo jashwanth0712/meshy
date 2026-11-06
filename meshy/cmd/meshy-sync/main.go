@@ -61,6 +61,8 @@ func main() {
 	subscription := fs.String("subscription", env("MESHY_SUBSCRIPTION", ""), "MeshySubscription address (enables seat enforcement in /v1/admit)")
 	registry := fs.String("provider-registry", env("MESHY_PROVIDER_REGISTRY", "0x8B93557b315E825C657D48A4CB962A3fF7E4eEec"), "ProviderRegistry address (EIP-712 domain)")
 	providerID := fs.Uint64("provider-id", 0, "this provider's id in ProviderRegistry (attested in admissions)")
+	orgFactory := fs.String("org-factory", env("MESHY_ORG_FACTORY", ""), "MeshyOrgFactory address (auto-discover orgs + trial seats)")
+	orgFactoryFrom := fs.Uint64("org-factory-from", 12077000, "block to scan OrgCreated events from")
 	stateDir := fs.String("state", env("MESHY_SYNC_STATE", ""), "state dir for attestations.jsonl (default: dir of the signer key)")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -107,6 +109,10 @@ func main() {
 		ProviderRegistry:  common.HexToAddress(*registry),
 		ProviderID:        *providerID,
 		StateDir:          *stateDir,
+	}
+	if *orgFactory != "" {
+		cfg.OrgFactory = common.HexToAddress(*orgFactory)
+		cfg.OrgFactoryFrom = *orgFactoryFrom
 	}
 	if cfg.StateDir == "" {
 		cfg.StateDir = filepath.Dir(*signerKeyFile)

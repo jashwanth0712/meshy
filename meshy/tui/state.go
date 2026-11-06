@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"github.com/jashwanth0712/meshy/meshy/enskit"
 	"sort"
 	"strings"
 	"time"
@@ -117,13 +118,7 @@ func short(full, org string) string {
 	return strings.TrimSuffix(strings.TrimSuffix(full, org), ".")
 }
 
-func orgOf(name string) string {
-	p := strings.Split(name, ".")
-	if len(p) < 2 {
-		return name
-	}
-	return strings.Join(p[len(p)-2:], ".")
-}
+func orgOf(name string) string { return string(enskit.Name(name).Org()) }
 
 func eventKey(e audit.Event) string {
 	return fmt.Sprintf("%s|%d|%s|%s|%s|%s", e.Kind, e.TS.UnixNano(), e.Session, e.Op, e.Path, e.Grant)

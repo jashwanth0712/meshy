@@ -8,6 +8,7 @@ import { Short, cx } from "./ui";
 const NAV = [
   { href: "", label: "Access" },
   { href: "/directory", label: "Directory" },
+  { href: "/people", label: "People" },
   { href: "/activity", label: "Activity" },
   { href: "/billing", label: "Billing" },
   { href: "/provider", label: "Provider" },

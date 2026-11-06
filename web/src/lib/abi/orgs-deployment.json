@@ -1,0 +1,9 @@
+{
+  "chainId": 11155111,
+  "parentName": "meshy.eth",
+  "parentRegistry": "0x2fB2Ae6bF9c0c7A6AE46D85BdbBfcEC9bd19ae5A",
+  "parentResolver": "0xc7881A67dfeF45BccebbbE97516a0F9c0a5C4BF1",
+  "MeshyOrgFactory": "0x0000000000000000000000000000000000000000",
+  "MeshyInvites": "0x0000000000000000000000000000000000000000",
+  "deployBlock": 12077000
+}

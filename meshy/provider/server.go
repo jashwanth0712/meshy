@@ -56,6 +56,10 @@ type Config struct {
 	ChainID          uint64
 	// StateDir holds attestations.jsonl (evidence for slashing challenges).
 	StateDir string
+	// OrgFactory: MeshyOrgFactory; orgs it creates are discovered and reconciled
+	// automatically and get TrialSeats until they subscribe.
+	OrgFactory     common.Address
+	OrgFactoryFrom uint64
 }
 
 // Server is the meshy-sync HTTP server.
