@@ -195,7 +195,7 @@ export default function MapPage() {
     );
   if (!tree) return <div className="text-muted">{loading ? "Reading the org from ENSv2 on Sepolia…" : ""}</div>;
   const resources = tree.networks.flatMap((n) => n.resources);
-  const grants = resources.flatMap((r) => r.grants);
+  const grants = [...resources.flatMap((r) => r.grants), ...resources.flatMap((r) => r.services.flatMap((sv) => sv.grants))];
   const live = grants.filter((g) => g.status === "live" && g.expiry > now / 1000);
   return (
     <div className="space-y-5">

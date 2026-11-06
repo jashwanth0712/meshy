@@ -1,5 +1,16 @@
 # Audit: plan vs. built, and prize depth
 
+> **Update, Fri ~08:00 IST.** Fixes since this audit was written:
+> - **ENS:** EAC delegated admins are done. A network admin gets `grantRootRoles` on the network, device and service registries, plus a setter-scoped `grantSetterRoles` so it may write only `meshy.policy`. The fork e2e verified that the admin is refused on `meshy.orgkey`.
+> - **ENS:** each agent now has its own Permissioned Resolver, and the agent may edit only `meshy.ssh`. The fork e2e verified that the agent is refused on `meshy.worldid`.
+> - **ENS: devices and services are new.** Example: `camera.pi.home.meshydemo.eth` carries a `meshy.service` record (proto and target). Service grants are port-level, and meshyd forwards only to the ENS-declared target. **This is live on Sepolia**, and a revoke cuts a live stream.
+> - **Arkiv:**
+>   - The 4 judging files are written.
+>   - Reads are filtered by `$owner` = the resource daemon's address from ENS, verified live: 5 / 5 / 0 results for no owner, the right owner and a wrong owner.
+>   - Lifetimes are now per type: blocked 30 d, chunks 30 d, sessions = grant expiry + 1 d, revocations 90 d.
+> - **Dashboard:** loads are about 10x fewer RPCs (Multicall3), and the dashboard covers services, admins and per-agent resolvers.
+> - **Still open:** World (needs sandbox credentials), wallet-testing the dashboard writes, a live URL and a public repo, NetBird on a VPS, and provider admission attestations for slashing.
+
 Written on Fri 6 Nov. This is an honest check of [PLAN.md](PLAN.md) against what exists in the repo, and of each prize track against the official ETHGlobal Mumbai requirements.
 
 ## 1. The plan, component by component

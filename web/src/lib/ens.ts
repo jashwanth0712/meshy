@@ -77,7 +77,13 @@ export const parentName = (name: string) => name.split(".").slice(1).join(".");
 export function publicClient(): PublicClient {
   // RPC goes through our server-side proxy so the provider key stays private.
   const url = typeof window === "undefined" ? process.env.SEPOLIA_RPC! : "/api/rpc";
-  return createPublicClient({ chain: sepolia, transport: http(url, { batch: true }) }) as PublicClient;
+  // Reads issued in the same tick are aggregated into one Multicall3 eth_call,
+  // and remaining JSON-RPC calls are batched into one HTTP request.
+  return createPublicClient({
+    chain: sepolia,
+    batch: { multicall: { wait: 20, batchSize: 4096 } },
+    transport: http(url, { batch: { wait: 20 }, retryCount: 2 }),
+  }) as PublicClient;
 }
 
 export type State = { status: number; expiry: bigint; latestOwner: Address; tokenId: bigint; resource: bigint };
@@ -134,12 +140,18 @@ export async function childLabels(
   c: PublicClient,
   registry: Address,
 ): Promise<{ label: string; tokenId: bigint; block: bigint; unregistered: boolean }[]> {
-  const latest = await c.getBlockNumber();
-  const logs: { data: Hex; topics: [Hex, ...Hex[]] | []; blockNumber: bigint | null }[] = [];
-  // Chunk to stay within RPC log-range limits.
-  for (let from = FROM_BLOCK; from <= latest; from += 5000n) {
-    const to = from + 4999n > latest ? latest : from + 4999n;
-    logs.push(...((await c.getLogs({ address: registry, events: regEvents as never, fromBlock: from, toBlock: to })) as never[]));
+  let logs: { data: Hex; topics: [Hex, ...Hex[]] | []; blockNumber: bigint | null }[];
+  try {
+    // One query over the whole range (the logs RPC allows it); no extra head lookup.
+    logs = (await c.getLogs({ address: registry, events: regEvents as never, fromBlock: FROM_BLOCK, toBlock: "latest" })) as never[];
+  } catch {
+    // Fallback: chunked ranges for stricter RPCs.
+    const latest = await c.getBlockNumber();
+    logs = [];
+    for (let from = FROM_BLOCK; from <= latest; from += 5000n) {
+      const to = from + 4999n > latest ? latest : from + 4999n;
+      logs.push(...((await c.getLogs({ address: registry, events: regEvents as never, fromBlock: from, toBlock: to })) as never[]));
+    }
   }
   const latestByLabel = new Map<string, { label: string; tokenId: bigint; block: bigint; unregistered: boolean }>();
   const labelByToken = new Map<string, string>();
@@ -158,6 +170,12 @@ export async function childLabels(
     }
   }
   return [...latestByLabel.values()];
+}
+
+/** State, resolver and subregistry of one label, fetched concurrently (one batched round trip). */
+async function nodeInfo(c: PublicClient, registry: Address, label: string) {
+  const [state, resolver, sub] = await Promise.all([getState(c, registry, label), resolverOf(c, registry, label), subregistryOf(c, registry, label)]);
+  return { state, resolver, sub };
 }
 
 // ---------- org tree ----------
@@ -234,11 +252,10 @@ async function grantsIn(c: PublicClient, registry: Address, parent: string, now:
   return Promise.all(
     gl.map(async ({ label: g, unregistered }) => {
       const gn = `${g}.${parent}`;
-      const gst = await getState(c, registry, g);
+      const [gst, gres] = await Promise.all([getState(c, registry, g), resolverOf(c, registry, g)]);
       const exp = Number(gst.expiry);
       const live = gst.status === 2 && exp > now;
       const status: GrantNode["status"] = live ? "live" : unregistered ? "revoked" : "expired";
-      const gres = live ? await resolverOf(c, registry, g) : zeroAddress;
       const pol = live ? await text(c, gres, gn, "meshy.policy") : "";
       return { name: gn, agent: g, registry, owner: gst.latestOwner, expiry: exp, status, tokenId: gst.tokenId, policySet: !!pol };
     }),
@@ -273,9 +290,8 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
   await Promise.all(
     top.map(async ({ label: l }) => {
       const name = `${l}.${org}`;
-      const st = await getState(c, orgRegistry, l);
+      const { state: st, sub } = await nodeInfo(c, orgRegistry, l);
       if (st.status !== 2 || Number(st.expiry) <= now) return;
-      const sub = await subregistryOf(c, orgRegistry, l);
       if (l === "agents") {
         tree.agentsRegistry = sub;
         if (sub === zeroAddress) return;
@@ -284,9 +300,8 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
           await Promise.all(
             agents.map(async ({ label: a }) => {
               const an = `${a}.${name}`;
-              const ast = await getState(c, sub, a);
+              const { state: ast, resolver: res } = await nodeInfo(c, sub, a);
               if (ast.status !== 2) return null;
-              const res = await resolverOf(c, sub, a);
               const [addr, ssh, ownerTxt, worldid, ctx] = await Promise.all([
                 addrRecord(c, res, an),
                 text(c, res, an, "meshy.ssh"),
@@ -307,9 +322,8 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
           await Promise.all(
             res.map(async ({ label: r }) => {
               const rn = `${r}.${name}`;
-              const rst = await getState(c, sub, r);
+              const { state: rst, resolver: rres, sub: grantsReg } = await nodeInfo(c, sub, r);
               if (rst.status !== 2) return null;
-              const [rres, grantsReg] = await Promise.all([resolverOf(c, sub, r), subregistryOf(c, sub, r)]);
               const [addr, encKey, sshHost, roots, endpoint, kind, meta] = await Promise.all([
                 addrRecord(c, rres, rn),
                 text(c, rres, rn, "meshy.enckey"),
@@ -341,11 +355,11 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
                 const children = await childLabels(c, grantsReg);
                 const classified = await Promise.all(
                   children.map(async (ch) => {
-                    const st = await getState(c, grantsReg, ch.label);
-                    if (st.status !== 2) return { ch, svc: null as null | { spec: string; res: Address } };
-                    const res = await resolverOf(c, grantsReg, ch.label);
-                    const spec = await text(c, res, `${ch.label}.${rn}`, "meshy.service");
-                    return { ch, svc: spec ? { spec, res } : null };
+                    const { state: st, resolver: res, sub: chSub } = await nodeInfo(c, grantsReg, ch.label);
+                    if (st.status !== 2) return { ch, svc: null as null | { spec: string; res: Address; sub: Address } };
+                    // Services own a subregistry (for their grants); agent grants never do.
+                    const spec = chSub !== zeroAddress ? await text(c, res, `${ch.label}.${rn}`, "meshy.service") : "";
+                    return { ch, svc: spec ? { spec, res, sub: chSub } : null };
                   }),
                 );
                 node.grants = await grantsIn(c, grantsReg, rn, now, classified.filter((x) => !x.svc).map((x) => x.ch));
@@ -355,7 +369,7 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
                     .map(async ({ ch, svc }) => {
                       const sn = `${ch.label}.${rn}`;
                       const spec = safeJSON<{ proto?: string; target?: string; desc?: string }>(svc!.spec, {});
-                      const sreg = await subregistryOf(c, grantsReg, ch.label);
+                      const sreg = svc!.sub;
                       return {
                         name: sn,
                         label: ch.label,

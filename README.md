@@ -9,6 +9,8 @@
 - **Revoke on-chain, and the session dies.** Each resource daemon watches ENSv2 on Sepolia and kills live agent sessions within ~15 s.
 - **Folder sandboxing.** Agents see only the approved folders (read-only or read-write). Every read and write is logged, and every blocked attempt is recorded.
 - **Decentralized providers.** Anyone can stake ETH and run a Meshy provider (forked from NetBird). Self-hosting is free.
+- **Devices and services are ENS names.** `pi.home.acme.eth` is a device with kind and metadata records. `camera.pi.home.acme.eth` is a port on that device, declared in its `meshy.service` record. `claude-1.camera.pi.home.acme.eth` is a port-level grant. Agents reach a service with `meshy connect` or `meshy curl` using the clean name, never an IP address and port, and only while the grant is live.
+- **Delegated admins (ENSv2 Enhanced Access Control).** A network admin can grant and revoke inside that network and write only `meshy.policy` records. Each agent owns its own Permissioned Resolver.
 - **Human-backed agents.** Agents join only after the human behind them approves through World ID Agent Pass.
 
 ## Measured: revocation latency
