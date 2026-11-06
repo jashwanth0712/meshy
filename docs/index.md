@@ -11,6 +11,8 @@ If you're an agent picking this up, read in this order: **STATUS â†’ LEARNINGS â
 | [INTERFACES.md](INTERFACES.md) | The contracts between components: ENS names and records, policy envelope, approve flow, World attestation, Arkiv schema, agent-facing strings |
 | [ONCHAIN.md](ONCHAIN.md) | Every record we write, who reads it, why it exists, and what we removed |
 | [RUNBOOK.md](RUNBOOK.md) | How to run everything locally and live on Sepolia: processes, ports, state dirs, demo scripts, troubleshooting |
+| [DEMO-3-MACS.md](DEMO-3-MACS.md) | Step-by-step demo on three MacBooks: two devices sharing folders, one Claude agent, grant / block / live revoke over the mesh |
+| [DNS.md](DNS.md) | meshy.live: hostnames, Vercel DNS, software distribution (GitHub Releases + installer), status |
 | [AUDIT.md](AUDIT.md) | Honest plan-vs-built and prize-depth audit (ENS / World / Arkiv), with the fix list |
 | [PLAN.md](PLAN.md) | The original build plan: architecture, UI/UX, demo script, test plan. Partly superseded; see STATUS |
 | [mac/PLAN.md](mac/PLAN.md) | Meshy for macOS menu-bar menu: menu tree, data refresh, browser sign-in (`meshy://signin`), edge cases, tests |
