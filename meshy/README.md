@@ -2,10 +2,11 @@
 
 | Package / command | What it does |
 |---|---|
+| `cmd/meshy-sync` + `provider/` | Provider API: World ID device flow + attestations, `/v1/map` (org tree from ENS), `/v1/admit`, and a NetBird reconciler (`provider/netbird`) |
 | `cmd/meshyd` | Resource daemon. Runs an SSH server that admits agents from ENSv2 grants, sandboxes every session to the granted folders, audits each file op and block to Arkiv, and kills live sessions when a grant is revoked or expires. |
-| `cmd/meshy` | Agent CLI: `join` (keygen, approval link, wait for ENS), `whoami`, `grants`, and `ssh` (host key pinned from ENS). |
-| `cmd/meshy-admin` | Org admin CLI. It creates the org, networks, resources, agents and grants in ENSv2, and revokes grants. The dashboard does the same with a wallet. |
-| `enskit` | ENSv2 reads and writes, and a per-block grant watcher that fails closed. |
+| `cmd/meshy` | Agent CLI: `join` (keygen, approval link, wait for ENS), `whoami`, `grants`, `ssh` (host key pinned from ENS), `connect` and `curl` (tunnel to, or one HTTP request through, a **service** like `camera.pi.home.acme.eth`). |
+| `cmd/meshy-admin` | Org admin CLI. It creates the org, networks, devices (with kind and meta), **services**, agents (each with its own resolver) and grants, revokes, and **delegates admins** (`admin add [--devices]`). The dashboard does the same with a wallet. |
+| `enskit` | ENSv2 reads (via `resolve()`), admin writes (registries, resolvers, EAC `GrantRootRoles` / `GrantTextKey` / `GrantAddrSetter`, `ClampTip`), child enumeration from logs, and the per-block grant watcher that fails closed. |
 | `policy` | Grant policy, plus an X25519 envelope bound to the grant name and token id. |
 | `sandbox` | Linux: bubblewrap + GateFS (policy-checking FUSE). macOS: Seatbelt + BlockTap + eslogger. |
 | `arkivkit` | Raw-transaction Arkiv writer and batching audit sink. Payloads are sealed to the org key. |
@@ -56,3 +57,15 @@ meshy ssh db1.prod.acme.eth -- cat /srv/reports/q3.csv
 The plan put this code inside a vendored NetBird fork. Instead the mesh lives in a separate module, [`../meshnet`](../meshnet) (`meshy-mesh`), which wraps NetBird's `client/embed` (BSD-3) in userspace.
 
 It has to be separate because NetBird v0.82 and go-ethereum need incompatible `pion/stun/v3` versions, so they can't link into one binary. On resources, `meshy-mesh serve` forwards the mesh port `:22` to meshyd on localhost. On agents, `meshy-mesh proxy` is the SSH ProxyCommand, so each agent is its own mesh peer. Authorization doesn't depend on source IP: meshyd authorizes the SSH key against ENS.
+
+## Authorization in meshyd (three steps)
+1. **Login:** the agent's key, address and World ID attestation are checked against ENS.
+2. **Shell or exec:** requires a device grant plus its sealed folder policy.
+3. **Port-forward:** requires a service grant; the target comes from `meshy.service`.
+
+Details are in [docs/INTERFACES.md §8](../docs/INTERFACES.md). Code: `meshyd/auth.go`, `meshyd/forward.go`.
+
+## Where to look next
+- [docs/STATUS.md](../docs/STATUS.md): what is done and what is pending
+- [docs/LEARNINGS.md](../docs/LEARNINGS.md): ENSv2, Arkiv, NetBird and Docker gotchas
+- [docs/RUNBOOK.md](../docs/RUNBOOK.md): how to run everything

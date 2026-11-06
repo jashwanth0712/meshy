@@ -46,7 +46,8 @@ meshyd reacts in about 150 ms once it sees the block. The rest of the total is S
 | `deploy/` | Provider compose, meshyd Dockerfile, launchd plist, e2e compose |
 | `e2e/` | Scenario runner + simulation harness |
 | `arkiv/` | Arkiv prize docs (schema, friction, reach, why-arkiv, how-you-use-arkiv) |
-| `docs/` | [Build plan](docs/PLAN.md), [interface contracts](docs/INTERFACES.md), [AI usage](docs/AI_USAGE.md) |
+| `docs/` | **[Start here: docs/index.md](docs/index.md)**: [status](docs/STATUS.md), [learnings](docs/LEARNINGS.md), [runbook](docs/RUNBOOK.md), [interfaces](docs/INTERFACES.md), [on-chain records](docs/ONCHAIN.md), [audit](docs/AUDIT.md), [plan](docs/PLAN.md), [AI usage](docs/AI_USAGE.md) |
+| `menubar/` | macOS menu-bar app |
 
 ## What's new vs NetBird
 NetBird ([netbirdio/netbird](https://github.com/netbirdio/netbird)) is used as a library and base for the mesh: WireGuard, signal, relay and management. Everything under `meshy/`, `contracts/`, `web/`, `agent/`, `deploy/` and `e2e/` was written during the hackathon. See the commit history.

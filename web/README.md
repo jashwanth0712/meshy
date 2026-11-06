@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# web/: Meshy dashboard (Next.js 16)
 
-## Getting Started
+This is an access-first dashboard for a Meshy org. Everything is read **live from ENSv2 on Sepolia** and from **Arkiv**, so it's viewable without a wallet. Writes go through the browser wallet, and the chain enforces roles (the owner or a delegated admin).
 
-First, run the development server:
+> **Next.js 16 has breaking changes.** Read `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing or data fetching. See also [docs/LEARNINGS.md](../docs/LEARNINGS.md) #35–39.
 
+## Run
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # fill SEPOLIA_RPC (Alchemy), ARKIV_RPC (+ access key), NEXT_PUBLIC_MESHY_SYNC
+pnpm install && pnpm dev     # http://localhost:3000/org/meshydemo.eth
+npx next typegen && npx tsc --noEmit
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Screens (`src/app/org/[org]/…`)
+| Route | What |
+|---|---|
+| `/` **Access** | Every grant as a line (agent → target, scope, countdown, Revoke), plus **Give access** (`GrantDrawer`) and "Happening now" from Arkiv (sentences) |
+| `/directory` | Networks → devices (kind/meta) → services, plus agents. Add network, device (join code) and service; invite an agent (`components/Devices.tsx`, `Agents.tsx`) |
+| `/activity` | Full Arkiv audit feed: live sessions, blocks, revocation latency, decrypt with the org key, runnable query |
+| `/billing` | `MeshySubscription` seats used vs paid, add seats, renew |
+| `/provider` | `ProviderRegistry` providers, register (stake), fraud-proof `slash` form, meshy-sync health |
+| `/settings` | Org records, import the org key (localStorage only), **delegated admins** (EAC) |
+| `/approve?org&agent&addr&ssh` | Approve an agent: World ID (or dev attestation) via meshy-sync, then a per-agent resolver |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Libraries (`src/lib`)
+| File | What |
+|---|---|
+| `ens.ts` | ENSv2 reads (via `resolve()`), org tree loader (registry event logs + Multicall3 batching), write helpers (`deployRegistry`, `deployResolver`, `recordCalls`, EAC `eacAbi`, `textKeySetter`) |
+| `envelope.ts` | TS port of the Go policy/payload envelope. **Must stay byte-compatible** with `meshy/policy/envelope.go` (verified both ways) |
+| `arkiv.ts` | `arkiv_query`, `$owner`-filtered org feed, payload decryption, live sessions |
+| `contracts.ts` + `abi/` | ProviderRegistry / MeshySubscription ABIs and addresses (copied from `contracts/`) |
+| `store.tsx` | Wallet (injected EIP-1193), org tree (sessionStorage cache), org key, toasts |
+| `config.ts` | ENSv2 Sepolia addresses, `FROM_BLOCK`, provider URL |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Server routes
+- `/api/rpc`: Sepolia JSON-RPC proxy. It keeps the key server-side and routes `eth_getLogs` to `LOGS_RPC` (the public node), because Alchemy's free tier caps logs at 10 blocks.
+- `/api/arkiv`: read-only Arkiv proxy that adds the access key; only query methods are allowed.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Known gaps
+- No org-creation wizard (`meshy-admin org init` only).
+- Activity polls instead of using `watchEntityEvents`.
+- Privy isn't integrated (browser wallet only).
+- No deployed URL yet.

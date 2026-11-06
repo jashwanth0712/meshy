@@ -20,8 +20,20 @@ Each name below has its own UserRegistry, the subregistry of its parent. All rec
 | `prod.acme.eth` (network) | admin | (none required) |
 | `db1.prod.acme.eth` (resource) | admin | `addr` (daemon EVM address), `meshy.enckey` (daemon X25519 pubkey), `meshy.ssh-host` (SSH host key, authorized_keys line), `meshy.roots` (JSON array of root paths), `meshy.endpoint` (optional `host:port`; omit when using mesh DNS) |
 | `agents.acme.eth` | admin | (none) |
-| `claude-1.agents.acme.eth` (agent identity) | the human who approved it | `addr` (agent EVM address), `meshy.ssh` (agent SSH pubkey, authorized_keys line), `meshy.owner` (approver address), `meshy.worldid` (attestation, §4), `agent-context` (ENSIP-26 free text) |
-| `claude-1.db1.prod.acme.eth` (**grant**) | **agent address** (must equal the identity's `addr`) | `meshy.policy` (§2). Expiry is the grant's end; the default is 1 h, and the CLI caps agents at 4 h. Register it with `roleBitmap = 0`, so the agent can't renew, re-point or transfer it. |
+| `camera.pi.home.acme.eth` (**service** on a device) | org/admin | `meshy.service` = `{"proto":"http","target":"127.0.0.1:8001","desc":"…"}`. It has its own subregistry for grants. |
+| `claude-1.agents.acme.eth` (agent identity) | the human who approved it (the ENS owner, so there is **no** `meshy.owner` record) | **On the agent's own PermissionedResolver**: `addr` (agent EVM address), `meshy.ssh` (agent SSH pubkey; the agent holds a setter role for this key only), `meshy.worldid` (attestation, §4), `agent-context` (ENSIP-26) |
+| `claude-1.db1.prod.acme.eth` (**device grant**) | **agent address** (must equal the identity's `addr`) | `meshy.policy` (§2). Expiry is the grant's end; the default is 1 h, and the CLI caps agents at 4 h. Register it with `roleBitmap = 0`, so the agent can't renew, re-point or transfer it. |
+| `claude-1.camera.pi.home.acme.eth` (**service grant**) | agent address | none. It's port-level: meshyd forwards to the service's `meshy.service` target while this name is live. |
+
+Devices may also carry enrichment records: `meshy.kind` (`server`, `gpu-server`, `raspberry-pi`, …) and `meshy.meta` (JSON, for example `{"model":"Raspberry Pi 5","gpus":"2x RTX 4090","location":"…"}`).
+
+**How a device's children are classified:** a device's subregistry holds both agent grants and services. A child is a **service** if it has its own subregistry **and** a `meshy.service` record; otherwise it is a grant.
+
+**Delegated admins (Enhanced Access Control):**
+- **Registry roles:** `grantRootRoles(REGISTRAR|UNREGISTER|RENEW = 0x11001, admin)` on the network registry and on each device and service registry in it.
+- **Resolver roles:** `grantSetterRoles(setText(_, "meshy.policy", _), admin)` on the org resolver.
+- **With `--devices`, additionally:** setter roles for `meshy.enckey`, `meshy.ssh-host`, `meshy.roots`, `meshy.endpoint`, `meshy.kind`, `meshy.meta`, `meshy.service`, plus `setAddress(_, 60, _)`, and the registry roles on `agents.<org>`.
+- **Admins can never write:** `meshy.orgkey`, `meshy.attestor`, or another network.
 
 **Labels:** `a-z`, `0-9` and `-`, up to 63 characters. The SSH username equals the agent label, and meshyd derives the grant name as `<user>.<resource>`.
 
@@ -89,7 +101,15 @@ The record value is `base64url(JSON)` (no padding) of:
 - `MESHY_EXPIRED grant=<name> at <time>; session terminated` (exit 137)
 - `MESHY_NO_GRANT resource=<name> …`, `MESHY_NOT_HUMAN_BACKED: …`, `MESHY_UNREACHABLE …`, `MESHY_UNAVAILABLE chain view is stale`
 
-## 7. meshy-sync HTTP API (`/v1`): TODO, Lane B
-- `POST /agent/device-flow/start` takes `{agent, addr}` and returns `{user_code, verification_uri_complete, poll_id}`.
-- `POST /agent/device-flow/poll` takes `{poll_id}`. It returns `{status: pending|denied|expired}` or `{status: ok, attestation}`.
-- `POST /admit`, `GET /map`, `GET /health`.
+## 7. meshy-sync HTTP API (`/v1`, implemented in `meshy/provider/server.go`)
+- `GET /v1/health` → `{ok, attestor, world: "sandbox"|"production"|"disabled", devAttest, version}`
+- `POST /v1/agent/device-flow/start` takes `{org, agent, addr}` and returns `{pollId, userCode, verificationUri, verificationUriComplete, expiresIn, interval}`. This is the World IdP OIDC device flow.
+- `POST /v1/agent/device-flow/poll` takes `{pollId}` and returns `{status: "pending"|"denied"|"expired"|"ok", attestation?}`. The ID token is validated server-side (RS256 JWKS, iss, aud, exp, auth_time, acr).
+- `POST /v1/agent/attest-dev` takes `{org, agent, addr}` and returns `{attestation, dev: true}`. It only exists with `--dev-attest`.
+- `GET /v1/map?org=` returns the org tree from ENS logs. Grants are a flat list (`fullName = <agent>.<target>`); services are not yet classified (STATUS pending #7).
+- `POST /v1/admit` takes `{name, wgPubKey, sig}` (EIP-191 by the name's owner over `meshy-admit:<name>:<wgPubKey>`) and returns `{setupKey, managementUrl}`, or 503 without NetBird.
+
+## 8. meshyd authorization (three steps)
+1. **Login (`Authenticate`):** the SSH username is the agent label. The key must equal `meshy.ssh` on `<label>.agents.<org>`, the agent must have an `addr`, and it needs a valid `meshy.worldid` attestor signature. No grant is required.
+2. **Shell or exec (`AuthorizeSession`):** a live grant `<label>.<resource>`, owned by the agent's `addr`, and a `meshy.policy` that decrypts with the daemon key and matches the token ID. Otherwise the agent gets `MESHY_NO_GRANT …` on stderr and exit 1.
+3. **Port-forward (`AuthorizeService`, `direct-tcpip`):** the requested host is the **service ENS name** and must be a child of this resource. It needs a live grant `<label>.<service>`, and meshyd dials the `meshy.service` target (the client's port is ignored). The forward is watched every block and cut on revoke or expiry.
