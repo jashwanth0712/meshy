@@ -9,36 +9,31 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 ::selection { background: color-mix(in srgb, var(--primary) 22%, transparent); }
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
 
-/* type scale (ethglobal: 60/600 display, 14 uppercase eyebrow, 16 body) */
+/* type scale: big tight display, mono eyebrows (an echo of the ASCII hero) */
 .display { font-size: clamp(2rem, 3.2vw, 2.75rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.03em; }
 .h2 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 600; letter-spacing: -0.015em; }
 .h3 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
-.eyebrow { font-size: 0.75rem; line-height: 1rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 500; }
+.eyebrow { font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.6875rem; line-height: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 500; }
 .lede { font-size: 1.0625rem; line-height: 1.6; color: var(--muted-foreground); font-weight: 450; }
 
-/* aurora band: ethglobal's pastel blur, rebuilt from cobalt + peach + mint */
-.aurora { position: absolute; inset: 0 0 auto 0; height: 460px; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(40% 70% at 8% 0%, #fde8d7 0%, transparent 70%),
-    radial-gradient(38% 80% at 42% -10%, #e0e4ff 0%, transparent 70%),
-    radial-gradient(34% 70% at 78% 0%, #ddf3ea 0%, transparent 70%),
-    radial-gradient(30% 60% at 100% 10%, #efe4ff 0%, transparent 70%);
-  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
-          mask-image: linear-gradient(to bottom, #000 30%, transparent); }
-.dark .aurora { opacity: .55; background:
-    radial-gradient(40% 70% at 10% 0%, #2a1f3a 0%, transparent 70%),
-    radial-gradient(40% 80% at 45% -10%, #1b2560 0%, transparent 70%),
-    radial-gradient(34% 70% at 85% 0%, #0f2d2a 0%, transparent 70%); }
+/* ASCII horizon band: nav + page header sit on the night sky, content sits on the ice */
+.band { position: relative; overflow: hidden; margin-top: -4rem; padding-top: 4rem; background: #050b24; isolation: isolate; }
+.band > [data-ascii] { position: absolute; inset: 0; z-index: -1; }
+.band::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgb(5 11 36 / .78) 0%, rgb(5 11 36 / .35) 45%, transparent 75%); }
+.band-edge { height: 3px; background: linear-gradient(90deg, transparent, #38bdf8 20%, #f6f8ff 50%, #a5d8ff 80%, transparent); opacity: .9; }
+.topbar { background: rgb(5 11 36 / .62); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid rgb(255 255 255 / .08); }
+.dark .band-edge { opacity: .6; }
 
 /* cards */
-.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-soft); }
+.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-soft); }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
 .card-b { padding: 1.25rem; }
 .hairline { border-color: var(--border); }
 .divide > * + * { border-top: 1px solid var(--border); }
 
-/* buttons: ethglobal pill CTAs, 2px outline secondaries */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.25rem; padding: 0 1rem; border-radius: 9999px; font-size: .875rem; font-weight: 600; border: 2px solid transparent; transition: background-color .2s, color .2s, border-color .2s, opacity .2s, transform .1s; white-space: nowrap; cursor: pointer; }
+/* buttons: pills; cobalt for the one main action, hairline outlines for the rest */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.25rem; padding: 0 1rem; border-radius: 9999px; font-size: .875rem; font-weight: 600; border: 1px solid transparent; transition: background-color .2s, color .2s, border-color .2s, opacity .2s, transform .1s; white-space: nowrap; cursor: pointer; }
 .btn:active { transform: translateY(1px); }
 .btn svg { width: 16px; height: 16px; }
 .btn-sm { height: 2rem; padding: 0 .8rem; font-size: .8125rem; }
@@ -69,11 +64,20 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 .b-info { background: var(--info-soft); color: var(--accent-foreground); }
 .b-muted { background: var(--muted); color: var(--muted-foreground); }
 .b-outline { border: 1px solid var(--border-strong); color: var(--muted-foreground); background: var(--card); }
-/* ethglobal "event tag": uppercase, ink border, pastel fill */
-.tag { display: inline-flex; align-items: center; gap: .35rem; height: 1.5rem; padding: 0 .65rem; border-radius: 9999px; border: 1.5px solid var(--foreground); font-size: .6875rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; background: var(--color-cobalt-100, #e0e4ff); color: #121417; }
-.dark .tag { background: #1b2142; color: #c4cbff; border-color: #8c9bff; }
-.tag-mint { background: #ddf3ea; } .tag-peach { background: #fde8d7; } .tag-lilac { background: #efe4ff; }
-.dark .tag-mint, .dark .tag-peach, .dark .tag-lilac { background: #1b2142; }
+/* tags: fun minimal. Soft fill, deep text, a bright dot, mono lowercase label */
+.tag { --bg: var(--tag-cobalt-bg); --fg: var(--tag-cobalt-fg); --dt: var(--tag-cobalt-dot);
+  display: inline-flex; align-items: center; gap: .4rem; height: 1.5rem; padding: 0 .6rem 0 .5rem; border-radius: 9999px;
+  background: var(--bg); color: var(--fg); font-family: "Geist Mono", ui-monospace, monospace; font-size: .75rem; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
+.tag::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--dt); flex: none; }
+.tag:has(> .dot)::before, .tag:has(> svg)::before, .tag:has(> i)::before { display: none; }
+.tag svg { width: 12px; height: 12px; color: var(--dt); }
+.tag-sky { --bg: var(--tag-sky-bg); --fg: var(--tag-sky-fg); --dt: var(--tag-sky-dot); }
+.tag-mint { --bg: var(--tag-mint-bg); --fg: var(--tag-mint-fg); --dt: var(--tag-mint-dot); }
+.tag-lemon { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
+.tag-coral { --bg: var(--tag-coral-bg); --fg: var(--tag-coral-fg); --dt: var(--tag-coral-dot); }
+.tag-lilac { --bg: var(--tag-lilac-bg); --fg: var(--tag-lilac-fg); --dt: var(--tag-lilac-dot); }
+.tag-peach { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
+.ndot { width: 8px; height: 8px; border-radius: 3px; display: inline-block; flex: none; }
 
 .dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; flex: none; }
 .dot-live { background: #22c55e; box-shadow: 0 0 0 0 rgb(34 197 94 / .5); animation: pulse 1.8s ease-out infinite; }
@@ -100,18 +104,17 @@ textarea.input { height: auto; padding: .7rem .85rem; line-height: 1.5; }
 .seg > * { white-space: nowrap; height: 1.9rem; padding: 0 .9rem; border-radius: 9999px; font-size: .8125rem; font-weight: 600; color: var(--muted-foreground); display: inline-flex; align-items: center; gap: .35rem; }
 .seg > [aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 0 0 1px var(--border); }
 
-/* tabs: ethglobal events page underline tabs */
+/* tabs: underline in cobalt */
 .tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--border); }
 .tabs > a, .tabs > button { position: relative; padding: .6rem 0; font-size: .875rem; font-weight: 500; color: var(--muted-foreground); display: inline-flex; align-items: center; gap: .4rem; }
 .tabs > [aria-selected="true"] { color: var(--foreground); font-weight: 600; }
-.tabs > [aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--foreground); }
-.count { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; border-radius: 9999px; background: var(--foreground); color: var(--background); font-size: .6875rem; font-weight: 700; }
+.tabs > [aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--primary); }
+.count { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; border-radius: 9999px; background: var(--primary); color: var(--primary-foreground); font-size: .6875rem; font-weight: 700; }
 .count-soft { background: var(--muted); color: var(--muted-foreground); }
 
-/* tables: ethglobal prize table header */
+/* tables: mono uppercase header on a faint blue row */
 .tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .875rem; }
-.tbl th { text-align: left; font-size: .6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted-foreground); background: var(--color-cobalt-50, #eef0ff); padding: .7rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.dark .tbl th { background: var(--muted); }
+.tbl th { text-align: left; font-family: "Geist Mono", ui-monospace, monospace; font-size: .6875rem; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--muted-foreground); background: var(--secondary); padding: .7rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .tbl td { padding: .8rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl tbody tr { transition: background-color .15s; }
@@ -130,13 +133,13 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 .ring-val { stroke: var(--primary); transition: stroke-dashoffset 1s linear; }
 .ring-val.low { stroke: var(--warning); }
 
-/* expiry ticket: ethglobal date tile */
+/* expiry ticket: a small date tile */
 .ticket { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 4.25rem; padding: .3rem .55rem; border-radius: 8px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-soft); line-height: 1.1; }
 .ticket .t1 { font-size: .5625rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); }
 .ticket .t2 { font-size: .9375rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* overlays */
-.scrim { position: fixed; inset: 0; background: rgb(18 20 23 / .32); backdrop-filter: blur(2px); z-index: 50; }
+.scrim { position: fixed; inset: 0; background: rgb(5 11 36 / .38); backdrop-filter: blur(2px); z-index: 50; }
 .dark .scrim { background: rgb(0 0 0 / .55); }
 .pop { background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-pop); }
 

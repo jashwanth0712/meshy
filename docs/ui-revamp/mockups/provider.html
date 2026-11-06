@@ -11,8 +11,9 @@
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <style type="text/tailwindcss">
 /* Meshy design tokens: the same variables PLAN.md proposes for web/src/app/globals.css.
-   shadcn/ui semantic names, values built from the brand (brand/README.md) and the
-   ethglobal.com look: paper background, white cards, ink text, one cobalt accent. */
+   shadcn/ui semantic names. Values come from the logo (cobalt + white) and the hero's
+   GradientASCII colours (#1e3fd8 cobalt, #f6f8ff ice, #a5d8ff sky, #38bdf8 cyan),
+   with a small set of candy tag colours. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
@@ -52,8 +53,12 @@
   --color-cobalt-700: #1c2a9e;
   --color-cobalt-800: #18237d;
   --color-cobalt-900: #141c5e;
-  --color-ink: #121417;
-  --color-paper: #f6f6f4;
+  --color-ink: #0b1533;
+  --color-night: #050b24;
+  --color-sky: #a5d8ff;
+  --color-cyan: #38bdf8;
+  --color-ice: #f6f8ff;
+  --color-paper: #f6f8ff;
 
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -66,66 +71,112 @@
 }
 
 :root {
-  --radius: 0.625rem; /* 10px, ethglobal.com cards */
-  --background: #f6f6f4; /* brand paper */
-  --foreground: #121417; /* brand ink */
+  --radius: 0.625rem;
+  --background: #f6f8ff; /* ice: the white of the hero gradient */
+  --foreground: #0b1533; /* navy ink */
   --card: #ffffff;
-  --card-foreground: #121417;
+  --card-foreground: #0b1533;
   --popover: #ffffff;
-  --popover-foreground: #121417;
+  --popover-foreground: #0b1533;
   --primary: #2b3fe0; /* brand cobalt: 7.27:1 with white */
   --primary-foreground: #ffffff;
-  --secondary: #efefec;
-  --secondary-foreground: #121417;
-  --muted: #f1f1ee;
-  --muted-foreground: #66696f; /* 5.3:1 on white, 4.9:1 on paper */
-  --accent: #eef0ff; /* cobalt-50: hover and selected rows */
-  --accent-foreground: #1c2a9e;
-  --destructive: #d92d20;
+  --secondary: #eef2ff;
+  --secondary-foreground: #0b1533;
+  --muted: #f0f3fc;
+  --muted-foreground: #5b6787; /* 5.6:1 on white */
+  --accent: #eaf0ff;
+  --accent-foreground: #1e3fd8;
+  --destructive: #e11d48;
   --destructive-foreground: #ffffff;
-  --border: #e8e8e4;
-  --border-strong: #d9d9d4;
-  --input: #dcdcd6;
+  --border: #e3e8f6;
+  --border-strong: #cdd5ec;
+  --input: #d5dcef;
   --ring: #2b3fe0;
   --success: #15803d;
   --success-soft: #dcfce7;
-  --warning: #a35200;
-  --warning-soft: #fef3c7;
-  --danger-soft: #fee4e2;
-  --info-soft: #e0e4ff;
-  --shadow-soft: 0 0 30px 0.5px rgb(40 50 70 / 0.07);
-  --shadow-pop: 0 12px 40px -8px rgb(18 20 23 / 0.18), 0 2px 6px rgb(18 20 23 / 0.06);
+  --warning: #a16207;
+  --warning-soft: #fef9c3;
+  --danger-soft: #ffe4e6;
+  --info-soft: #e0f2fe;
+  /* fun minimal tag colours: soft fill, deep text, bright dot */
+  --tag-cobalt-bg: #e3e8ff; --tag-cobalt-fg: #2b3fe0; --tag-cobalt-dot: #2b3fe0;
+  --tag-sky-bg: #e0f2fe;    --tag-sky-fg: #0369a1;    --tag-sky-dot: #38bdf8;
+  --tag-mint-bg: #dcfce7;   --tag-mint-fg: #15803d;   --tag-mint-dot: #22c55e;
+  --tag-lemon-bg: #fef9c3;  --tag-lemon-fg: #a16207;  --tag-lemon-dot: #eab308;
+  --tag-coral-bg: #ffe4e6;  --tag-coral-fg: #be123c;  --tag-coral-dot: #fb7185;
+  --tag-lilac-bg: #ede9fe;  --tag-lilac-fg: #6d28d9;  --tag-lilac-dot: #a78bfa;
+  --shadow-soft: 0 1px 2px rgb(11 21 51 / 0.04), 0 8px 24px -12px rgb(30 63 216 / 0.12);
+  --shadow-pop: 0 18px 48px -12px rgb(11 21 51 / 0.28), 0 2px 6px rgb(11 21 51 / 0.06);
 }
 
 .dark {
-  --background: #0e1013;
-  --foreground: #ecedee;
-  --card: #15181c;
-  --card-foreground: #ecedee;
-  --popover: #181b20;
-  --popover-foreground: #ecedee;
-  --primary: #8c9bff; /* cobalt-300: brand rule, never cobalt-500 on ink */
-  --primary-foreground: #0e1013;
-  --secondary: #1d2126;
-  --secondary-foreground: #ecedee;
-  --muted: #1b1e23;
-  --muted-foreground: #9a9ea6;
-  --accent: #1b2142;
+  --background: #050b24; /* the hero's night sky */
+  --foreground: #e8edff;
+  --card: #0b1435;
+  --card-foreground: #e8edff;
+  --popover: #0e1840;
+  --popover-foreground: #e8edff;
+  --primary: #8c9bff; /* cobalt-300: brand rule, never cobalt-500 on dark */
+  --primary-foreground: #050b24;
+  --secondary: #111c48;
+  --secondary-foreground: #e8edff;
+  --muted: #101b45;
+  --muted-foreground: #93a0c8;
+  --accent: #14205a;
   --accent-foreground: #c4cbff;
-  --destructive: #f97066;
-  --destructive-foreground: #0e1013;
-  --border: #24282e;
-  --border-strong: #30353c;
-  --input: #2c3137;
+  --destructive: #fb7185;
+  --destructive-foreground: #050b24;
+  --border: #1a2652;
+  --border-strong: #26346a;
+  --input: #26346a;
   --ring: #8c9bff;
   --success: #4ade80;
-  --success-soft: #0f2a1a;
-  --warning: #fbbf24;
-  --warning-soft: #2a2110;
-  --danger-soft: #2d1414;
-  --info-soft: #1b2142;
-  --shadow-soft: 0 0 0 1px rgb(255 255 255 / 0.02);
-  --shadow-pop: 0 16px 48px -8px rgb(0 0 0 / 0.6);
+  --success-soft: #0d2a26;
+  --warning: #facc15;
+  --warning-soft: #2a2610;
+  --danger-soft: #2e1022;
+  --info-soft: #0c2545;
+  --tag-cobalt-bg: #18245e; --tag-cobalt-fg: #c4cbff; --tag-cobalt-dot: #8c9bff;
+  --tag-sky-bg: #0c2545;    --tag-sky-fg: #a5d8ff;    --tag-sky-dot: #38bdf8;
+  --tag-mint-bg: #0d2a26;   --tag-mint-fg: #86efac;   --tag-mint-dot: #22c55e;
+  --tag-lemon-bg: #2a2610;  --tag-lemon-fg: #fde68a;  --tag-lemon-dot: #eab308;
+  --tag-coral-bg: #2e1022;  --tag-coral-fg: #fda4af;  --tag-coral-dot: #fb7185;
+  --tag-lilac-bg: #1f1645;  --tag-lilac-fg: #c4b5fd;  --tag-lilac-dot: #a78bfa;
+  --shadow-soft: 0 0 0 1px rgb(140 155 255 / 0.04);
+  --shadow-pop: 0 18px 48px -8px rgb(0 0 0 / 0.65);
+}
+
+/* Forced-dark scope for the ASCII hero band and the top nav, in both themes */
+.on-dark {
+  --background: #050b24;
+  --foreground: #ffffff;
+  --card-foreground: #ffffff;
+  --popover: #0e1840;
+  --popover-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --muted-foreground: rgb(214 224 255 / 0.74);
+  --card: rgb(255 255 255 / 0.07);
+  --muted: rgb(255 255 255 / 0.08);
+  --border: rgb(255 255 255 / 0.14);
+  --border-strong: rgb(255 255 255 / 0.26);
+  --input: rgb(255 255 255 / 0.22);
+  --primary: #ffffff;
+  --primary-foreground: #1e3fd8;
+  --accent: rgb(255 255 255 / 0.12);
+  --accent-foreground: #ffffff;
+  --ring: #a5d8ff;
+  --info-soft: rgb(165 216 255 / 0.16);
+  --success: #86efac; --success-soft: rgb(34 197 94 / 0.16);
+  --warning: #fde68a; --warning-soft: rgb(234 179 8 / 0.16);
+  --destructive: #fda4af; --danger-soft: rgb(251 113 133 / 0.16);
+  --secondary: rgb(255 255 255 / 0.08);
+  --tag-cobalt-bg: rgb(140 155 255 / 0.18); --tag-cobalt-fg: #dfe4ff;
+  --tag-sky-bg: rgb(56 189 248 / 0.16);     --tag-sky-fg: #bae6fd;
+  --tag-mint-bg: rgb(34 197 94 / 0.16);     --tag-mint-fg: #bbf7d0;
+  --tag-lemon-bg: rgb(234 179 8 / 0.16);    --tag-lemon-fg: #fef08a;
+  --tag-coral-bg: rgb(251 113 133 / 0.16);  --tag-coral-fg: #fecdd3;
+  --tag-lilac-bg: rgb(167 139 250 / 0.18);  --tag-lilac-fg: #ddd6fe;
+  color: var(--foreground);
 }
 
 </style>
@@ -141,36 +192,31 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 ::selection { background: color-mix(in srgb, var(--primary) 22%, transparent); }
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
 
-/* type scale (ethglobal: 60/600 display, 14 uppercase eyebrow, 16 body) */
+/* type scale: big tight display, mono eyebrows (an echo of the ASCII hero) */
 .display { font-size: clamp(2rem, 3.2vw, 2.75rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.03em; }
 .h2 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 600; letter-spacing: -0.015em; }
 .h3 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
-.eyebrow { font-size: 0.75rem; line-height: 1rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 500; }
+.eyebrow { font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.6875rem; line-height: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 500; }
 .lede { font-size: 1.0625rem; line-height: 1.6; color: var(--muted-foreground); font-weight: 450; }
 
-/* aurora band: ethglobal's pastel blur, rebuilt from cobalt + peach + mint */
-.aurora { position: absolute; inset: 0 0 auto 0; height: 460px; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(40% 70% at 8% 0%, #fde8d7 0%, transparent 70%),
-    radial-gradient(38% 80% at 42% -10%, #e0e4ff 0%, transparent 70%),
-    radial-gradient(34% 70% at 78% 0%, #ddf3ea 0%, transparent 70%),
-    radial-gradient(30% 60% at 100% 10%, #efe4ff 0%, transparent 70%);
-  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
-          mask-image: linear-gradient(to bottom, #000 30%, transparent); }
-.dark .aurora { opacity: .55; background:
-    radial-gradient(40% 70% at 10% 0%, #2a1f3a 0%, transparent 70%),
-    radial-gradient(40% 80% at 45% -10%, #1b2560 0%, transparent 70%),
-    radial-gradient(34% 70% at 85% 0%, #0f2d2a 0%, transparent 70%); }
+/* ASCII horizon band: nav + page header sit on the night sky, content sits on the ice */
+.band { position: relative; overflow: hidden; margin-top: -4rem; padding-top: 4rem; background: #050b24; isolation: isolate; }
+.band > [data-ascii] { position: absolute; inset: 0; z-index: -1; }
+.band::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgb(5 11 36 / .78) 0%, rgb(5 11 36 / .35) 45%, transparent 75%); }
+.band-edge { height: 3px; background: linear-gradient(90deg, transparent, #38bdf8 20%, #f6f8ff 50%, #a5d8ff 80%, transparent); opacity: .9; }
+.topbar { background: rgb(5 11 36 / .62); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid rgb(255 255 255 / .08); }
+.dark .band-edge { opacity: .6; }
 
 /* cards */
-.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-soft); }
+.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-soft); }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
 .card-b { padding: 1.25rem; }
 .hairline { border-color: var(--border); }
 .divide > * + * { border-top: 1px solid var(--border); }
 
-/* buttons: ethglobal pill CTAs, 2px outline secondaries */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.25rem; padding: 0 1rem; border-radius: 9999px; font-size: .875rem; font-weight: 600; border: 2px solid transparent; transition: background-color .2s, color .2s, border-color .2s, opacity .2s, transform .1s; white-space: nowrap; cursor: pointer; }
+/* buttons: pills; cobalt for the one main action, hairline outlines for the rest */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.25rem; padding: 0 1rem; border-radius: 9999px; font-size: .875rem; font-weight: 600; border: 1px solid transparent; transition: background-color .2s, color .2s, border-color .2s, opacity .2s, transform .1s; white-space: nowrap; cursor: pointer; }
 .btn:active { transform: translateY(1px); }
 .btn svg { width: 16px; height: 16px; }
 .btn-sm { height: 2rem; padding: 0 .8rem; font-size: .8125rem; }
@@ -201,11 +247,20 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 .b-info { background: var(--info-soft); color: var(--accent-foreground); }
 .b-muted { background: var(--muted); color: var(--muted-foreground); }
 .b-outline { border: 1px solid var(--border-strong); color: var(--muted-foreground); background: var(--card); }
-/* ethglobal "event tag": uppercase, ink border, pastel fill */
-.tag { display: inline-flex; align-items: center; gap: .35rem; height: 1.5rem; padding: 0 .65rem; border-radius: 9999px; border: 1.5px solid var(--foreground); font-size: .6875rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; background: var(--color-cobalt-100, #e0e4ff); color: #121417; }
-.dark .tag { background: #1b2142; color: #c4cbff; border-color: #8c9bff; }
-.tag-mint { background: #ddf3ea; } .tag-peach { background: #fde8d7; } .tag-lilac { background: #efe4ff; }
-.dark .tag-mint, .dark .tag-peach, .dark .tag-lilac { background: #1b2142; }
+/* tags: fun minimal. Soft fill, deep text, a bright dot, mono lowercase label */
+.tag { --bg: var(--tag-cobalt-bg); --fg: var(--tag-cobalt-fg); --dt: var(--tag-cobalt-dot);
+  display: inline-flex; align-items: center; gap: .4rem; height: 1.5rem; padding: 0 .6rem 0 .5rem; border-radius: 9999px;
+  background: var(--bg); color: var(--fg); font-family: "Geist Mono", ui-monospace, monospace; font-size: .75rem; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
+.tag::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--dt); flex: none; }
+.tag:has(> .dot)::before, .tag:has(> svg)::before, .tag:has(> i)::before { display: none; }
+.tag svg { width: 12px; height: 12px; color: var(--dt); }
+.tag-sky { --bg: var(--tag-sky-bg); --fg: var(--tag-sky-fg); --dt: var(--tag-sky-dot); }
+.tag-mint { --bg: var(--tag-mint-bg); --fg: var(--tag-mint-fg); --dt: var(--tag-mint-dot); }
+.tag-lemon { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
+.tag-coral { --bg: var(--tag-coral-bg); --fg: var(--tag-coral-fg); --dt: var(--tag-coral-dot); }
+.tag-lilac { --bg: var(--tag-lilac-bg); --fg: var(--tag-lilac-fg); --dt: var(--tag-lilac-dot); }
+.tag-peach { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
+.ndot { width: 8px; height: 8px; border-radius: 3px; display: inline-block; flex: none; }
 
 .dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; flex: none; }
 .dot-live { background: #22c55e; box-shadow: 0 0 0 0 rgb(34 197 94 / .5); animation: pulse 1.8s ease-out infinite; }
@@ -232,18 +287,17 @@ textarea.input { height: auto; padding: .7rem .85rem; line-height: 1.5; }
 .seg > * { white-space: nowrap; height: 1.9rem; padding: 0 .9rem; border-radius: 9999px; font-size: .8125rem; font-weight: 600; color: var(--muted-foreground); display: inline-flex; align-items: center; gap: .35rem; }
 .seg > [aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 0 0 1px var(--border); }
 
-/* tabs: ethglobal events page underline tabs */
+/* tabs: underline in cobalt */
 .tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--border); }
 .tabs > a, .tabs > button { position: relative; padding: .6rem 0; font-size: .875rem; font-weight: 500; color: var(--muted-foreground); display: inline-flex; align-items: center; gap: .4rem; }
 .tabs > [aria-selected="true"] { color: var(--foreground); font-weight: 600; }
-.tabs > [aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--foreground); }
-.count { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; border-radius: 9999px; background: var(--foreground); color: var(--background); font-size: .6875rem; font-weight: 700; }
+.tabs > [aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--primary); }
+.count { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; border-radius: 9999px; background: var(--primary); color: var(--primary-foreground); font-size: .6875rem; font-weight: 700; }
 .count-soft { background: var(--muted); color: var(--muted-foreground); }
 
-/* tables: ethglobal prize table header */
+/* tables: mono uppercase header on a faint blue row */
 .tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .875rem; }
-.tbl th { text-align: left; font-size: .6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted-foreground); background: var(--color-cobalt-50, #eef0ff); padding: .7rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.dark .tbl th { background: var(--muted); }
+.tbl th { text-align: left; font-family: "Geist Mono", ui-monospace, monospace; font-size: .6875rem; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--muted-foreground); background: var(--secondary); padding: .7rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .tbl td { padding: .8rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl tbody tr { transition: background-color .15s; }
@@ -262,13 +316,13 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 .ring-val { stroke: var(--primary); transition: stroke-dashoffset 1s linear; }
 .ring-val.low { stroke: var(--warning); }
 
-/* expiry ticket: ethglobal date tile */
+/* expiry ticket: a small date tile */
 .ticket { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 4.25rem; padding: .3rem .55rem; border-radius: 8px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-soft); line-height: 1.1; }
 .ticket .t1 { font-size: .5625rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); }
 .ticket .t2 { font-size: .9375rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* overlays */
-.scrim { position: fixed; inset: 0; background: rgb(18 20 23 / .32); backdrop-filter: blur(2px); z-index: 50; }
+.scrim { position: fixed; inset: 0; background: rgb(5 11 36 / .38); backdrop-filter: blur(2px); z-index: 50; }
 .dark .scrim { background: rgb(0 0 0 / .55); }
 .pop { background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-pop); }
 
@@ -297,10 +351,10 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 </head>
 <body class="min-h-screen bg-background text-foreground">
 
-<header class="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
+<header class="on-dark topbar sticky top-0 z-40">
   <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-6 lg:px-8">
-    <a href="index.html" class="shrink-0 text-foreground" title="All mockups"><svg class="h-7 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk11" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk11)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
-    <button class="ml-1 hidden items-center gap-2 rounded-full border-2 border-border bg-card py-1 pl-1.5 pr-3 text-sm font-medium hover:border-border-strong lg:inline-flex" title="Switch org">
+    <a href="index.html" class="shrink-0 text-foreground" title="All mockups"><svg class="h-7 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk12" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk12)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
+    <button class="ml-1 hidden items-center gap-2 rounded-full border border-border bg-card py-1 pl-1.5 pr-3 text-sm font-medium hover:border-border-strong lg:inline-flex" title="Switch org">
       <span class="grid h-6 w-6 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground">M</span>
       <span class="mono text-[13px]">meshydemo.eth</span>
       <i data-lucide="chevrons-up-down" class="h-3.5 w-3.5 text-muted-foreground"></i>
@@ -312,19 +366,19 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 <a class="navlink" href="provider.html" aria-current="page">Provider</a>
 <a class="navlink" href="settings.html">Settings</a></nav>
     <div class="ml-auto flex items-center gap-2">
-      <button onclick="openPalette()" class="hidden h-9 w-64 items-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-card pl-3 pr-1.5 text-sm text-muted-foreground hover:border-border-strong 2xl:inline-flex">
+      <button onclick="openPalette()" class="hidden h-9 w-64 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card pl-3 pr-1.5 text-sm text-muted-foreground hover:border-border-strong 2xl:inline-flex">
         <i data-lucide="search" class="h-4 w-4"></i><span>Search names, actions…</span><span class="ml-auto flex gap-0.5"><kbd>⌘</kbd><kbd>K</kbd></span>
       </button>
       <button onclick="openPalette()" class="btn btn-outline btn-sm gap-1.5 2xl:hidden" aria-label="Search"><i data-lucide="search"></i><kbd>⌘K</kbd></button>
       <button onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
-      <button class="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-card pl-1.5 pr-3 text-sm font-semibold hover:border-border-strong">
-        <span class="h-6 w-6 rounded-full" style="background:conic-gradient(from 200deg,#2b3fe0,#8c9bff,#ddf3ea,#fde8d7,#2b3fe0)"></span>
+      <button class="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card pl-1.5 pr-3 text-sm font-semibold hover:border-border-strong">
+        <span class="h-6 w-6 rounded-full" style="background:conic-gradient(from 200deg,#1e3fd8,#a5d8ff,#f6f8ff,#38bdf8,#1e3fd8)"></span>
         <span class="mono text-[13px]">0x45e8…E0EA</span>
         <span class="badge b-info h-5 px-2 text-[11px]">Owner</span>
       </button>
     </div>
   </div>
-</header><div class="relative pb-20"><div class="aurora"></div><div class="relative">
+</header><div class="band on-dark" data-ascii-host><div data-ascii='{"cellSize":16,"horizon":0.62,"arc":1.2,"cx":0.8,"glyphOpacity":0.85,"density":0.85}'></div>
 <section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
   <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">provider</span></nav>
   <div class="flex flex-wrap items-end justify-between gap-6">
@@ -336,6 +390,9 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
   </div>
   <div class="tabs mt-8" role="tablist"><button role="tab" aria-selected="true">Providers <span class="count">1</span></button><button role="tab">Run a provider</button><button role="tab">Challenge a provider</button></div>
 </section>
+</div><div class="band-edge"></div>
+<div class="relative pb-20 pt-8">
+
 
 <main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
   <section class="card overflow-hidden">
@@ -357,7 +414,7 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 
   <div class="grid gap-6 lg:grid-cols-2">
     <section class="card">
-      <div class="card-h"><div><h2 class="h3">This dashboard's provider</h2><p class="mono text-[12.5px] text-muted-foreground">meshy-sync · http://localhost:8787</p></div><span class="tag tag-mint"><span class="dot dot-live"></span>Online · v0.1.0</span></div>
+      <div class="card-h"><div><h2 class="h3">This dashboard's provider</h2><p class="mono text-[12.5px] text-muted-foreground">meshy-sync · http://localhost:8787</p></div><span class="tag tag-mint"><span class="dot dot-live"></span>online · v0.1.0</span></div>
       <ul class="divide text-[13.5px]">
         <li class="flex items-center justify-between px-5 py-3"><span class="flex items-center gap-2"><i data-lucide="pen-line" class="h-4 w-4 text-muted-foreground"></i>Attestor</span><span class="mono">0x6Aaf…0EC4 <span class="badge b-live h-5 font-sans">trusted by org</span></span></li>
         <li class="flex items-center justify-between px-5 py-3"><span class="flex items-center gap-2"><i data-lucide="fingerprint" class="h-4 w-4 text-muted-foreground"></i>World ID</span><span class="badge b-warn">Disabled</span></li>
@@ -381,7 +438,7 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
   </div>
 </main>
 
-</div></div>
+</div>
 <div id="palette" hidden class="fixed inset-0 z-[60]">
   <div class="scrim"></div>
   <div role="dialog" aria-label="Command palette" class="pop fade-in relative z-[51] mx-auto mt-[12vh] w-[min(640px,92vw)] overflow-hidden">
@@ -502,6 +559,214 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
   setInterval(tick, 1000);
 
   if (window.lucide) lucide.createIcons({ attrs: { "stroke-width": 1.75 } });
+})();
+
+// GradientASCII for static mockups: a dependency-free canvas take on the React
+// <GradientASCII shape="horizon" …/> the user picked for the hero. Same prop names.
+// Usage: <div data-ascii='{"cellSize":18,"lightMode":false}'></div>
+(function () {
+  const DEFAULTS = {
+    colors: ["#1e3fd8", "#f6f8ff", "#a5d8ff", "#38bdf8"],
+    shape: "horizon",
+    characters: " =+xX0S8#@",
+    cellSize: 18,
+    density: 0.8,
+    glyphOpacity: 0.85,
+    glow: 0.2,
+    flicker: 0.2,
+    softness: 0.5,
+    scale: 1,
+    flow: 0.5,
+    speed: 1,
+    gradientOpacity: 0.9,
+    grain: 0.08,
+    mouseInteraction: true,
+    scrambleRadius: 0.1,
+    clickEffect: "wave",
+    intro: true,
+    lightMode: false,
+    horizon: 0.72, // where the horizon line sits (0 top … 1 bottom)
+  };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+  // smooth value noise
+  const P = new Uint8Array(512);
+  for (let i = 0; i < 256; i++) P[i] = i;
+  for (let i = 255; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [P[i], P[j]] = [P[j], P[i]]; }
+  for (let i = 0; i < 256; i++) P[i + 256] = P[i];
+  const fade = (t) => t * t * (3 - 2 * t);
+  function noise(x, y) {
+    const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255, xf = x - Math.floor(x), yf = y - Math.floor(y);
+    const h = (a, b) => P[P[a] + b] / 255;
+    const u = fade(xf), v = fade(yf);
+    return (h(xi, yi) * (1 - u) + h(xi + 1, yi) * u) * (1 - v) + (h(xi, yi + 1) * (1 - u) + h(xi + 1, yi + 1) * u) * v;
+  }
+
+  function mount(el) {
+    const o = Object.assign({}, DEFAULTS, JSON.parse(el.dataset.ascii || "{}"));
+    const stops = o.colors.map(hex);
+    // gradient ramp: deep → bright at the horizon. Reorder so the brightest stop sits at the line.
+    const Y = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    const lum = stops.slice().sort((p, q) => Y(p) - Y(q));
+    const rampL = (t) => {
+      t = Math.min(1, Math.max(0, t)) * (lum.length - 1);
+      const i = Math.min(lum.length - 2, Math.floor(t));
+      return mix(lum[i], lum[i + 1], t - i);
+    };
+    const ramp = (t) => {
+      t = Math.min(1, Math.max(0, t)) * (stops.length - 1);
+      const i = Math.min(stops.length - 2, Math.floor(t));
+      return mix(stops[i], stops[i + 1], t - i);
+    };
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
+    el.prepend(canvas);
+    const ctx = canvas.getContext("2d");
+    const glowC = document.createElement("canvas"), gctx = glowC.getContext("2d");
+    let W = 0, H = 0, cols = 0, rows = 0, dpr = 1, cell = o.cellSize;
+    let chars = [], seeds = [];
+    const pointer = { x: -1e4, y: -1e4, on: false };
+    const waves = [];
+    const t0 = performance.now();
+
+    function resize() {
+      const r = el.getBoundingClientRect();
+      dpr = Math.min(2, devicePixelRatio || 1);
+      W = r.width; H = r.height;
+      canvas.width = glowC.width = Math.round(W * dpr);
+      canvas.height = glowC.height = Math.round(H * dpr);
+      cell = o.cellSize * o.scale;
+      cols = Math.ceil(W / cell) + 1; rows = Math.ceil(H / cell) + 1;
+      chars = new Array(cols * rows).fill(0);
+      seeds = Array.from({ length: cols * rows }, () => Math.random());
+    }
+
+    // arc of a big "planet" whose rim is the horizon
+    function rimY(x) {
+      const R = o.arc || 1.6, cx = o.cx ?? 0.5, cy = o.horizon + R * 0.55, ax = (x - cx) * (W / Math.max(H, 1)) * 0.55;
+      return cy - Math.sqrt(Math.max(0, (R * 0.55) ** 2 - ax * ax));
+    }
+    function field(x, y, t) {
+      const dy = y - rimY(x);
+      const soft = 0.18 + o.softness * 0.36;
+      const n = noise(x * 7 + t * 0.25 * o.flow, y * 9 - t * 0.12 * o.flow);
+      const n2 = noise(x * 23 - t * 0.4 * o.flow, y * 23 + 7);
+      let v;
+      if (dy < 0) v = Math.exp(-Math.pow(dy / soft, 2)) * (0.2 + 1.0 * n) + (n2 > 0.86 ? 0.35 * Math.exp(dy * 1.5) : 0);
+      else v = Math.exp(-dy / 0.045) * (0.7 + 0.4 * n) + 0.32 * Math.exp(-dy / 0.3) * Math.pow(n, 1.5);
+      return Math.min(1, Math.max(0, v + (n2 - 0.5) * 0.16 * v));
+    }
+
+    function draw(now) {
+      const t = ((now - t0) / 1000) * o.speed;
+      const intro = o.intro && !reduce ? Math.min(1, t / 1.8) : 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const L = o.lightMode;
+      ctx.fillStyle = L ? "#f6f8ff" : "#040a22"; ctx.fillRect(0, 0, W, H);
+      // sky wash
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      const bright = lum[lum.length - 1], deep = lum[0], mid = lum[1];
+      if (L) { sky.addColorStop(0, "rgba(246,248,255,1)"); sky.addColorStop(o.horizon, `rgba(${mid},${0.35 * o.gradientOpacity})`); sky.addColorStop(1, `rgba(${bright},1)`); }
+      else { sky.addColorStop(0, "rgba(4,10,34,1)"); sky.addColorStop(Math.max(0, o.horizon - 0.2), `rgba(${deep},${0.45 * o.gradientOpacity})`); sky.addColorStop(o.horizon, `rgba(${mid},${0.55 * o.gradientOpacity})`); sky.addColorStop(1, `rgba(${deep},${0.9 * o.gradientOpacity})`); }
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      // rim glow along the horizon arc
+      ctx.save();
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 8) { const y = rimY(x / W) * H; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+      const body = ctx.createLinearGradient(0, o.horizon * H - 0.1 * H, 0, H);
+      body.addColorStop(0, L ? `rgba(${lum[2] || bright},0.45)` : `rgba(${lum[2] || bright},${0.85 * o.gradientOpacity})`);
+      body.addColorStop(0.18, L ? `rgba(${mid},0.25)` : `rgba(${lum[1]},${0.8 * o.gradientOpacity})`);
+      body.addColorStop(0.6, L ? "rgba(246,248,255,0.8)" : `rgba(${deep},0.9)`);
+      body.addColorStop(1, L ? "rgba(246,248,255,1)" : "rgba(4,10,34,1)");
+      ctx.fillStyle = body; ctx.fill();
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 8) { const y = rimY(x / W) * H; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.strokeStyle = `rgba(${bright},${(L ? 0.7 : 0.95) * o.gradientOpacity * intro})`;
+      ctx.lineWidth = 2.5; ctx.shadowColor = `rgba(${lum[2] || bright},0.9)`; ctx.shadowBlur = 40 * (0.5 + o.glow * 2);
+      ctx.stroke(); ctx.stroke();
+      ctx.restore();
+
+      gctx.clearRect(0, 0, W, H);
+      ctx.font = `${Math.round(cell * 0.74)}px "Geist Mono", ui-monospace, monospace`;
+      gctx.font = ctx.font;
+      ctx.textAlign = gctx.textAlign = "center";
+      ctx.textBaseline = gctx.textBaseline = "middle";
+      const cs = o.characters, nC = cs.length - 1;
+      const pr = o.scrambleRadius * Math.max(W, 600);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const i = r * cols + c, px = c * cell + cell / 2, py = r * cell + cell / 2;
+          const x = px / W, y = py / H;
+          let v = field(x, y, t);
+          const reveal = Math.min(1, Math.max(0, (intro * 1.5 - Math.abs(y - rimY(x)) * 1.6) * 2.5));
+          let scramble = reveal < 1 && reveal > 0;
+          if (o.mouseInteraction && pointer.on) {
+            const d = Math.hypot(px - pointer.x, py - pointer.y);
+            if (d < pr) { scramble = true; v = Math.min(1, v + (1 - d / pr) * 0.45); }
+          }
+          for (const w of waves) {
+            const rad = (now - w.t) * 0.7, d = Math.hypot(px - w.x, py - w.y);
+            const k = Math.exp(-Math.pow((d - rad) / 30, 2)) * Math.max(0, 1 - (now - w.t) / 1600);
+            if (k > 0.05) { v = Math.min(1, v + k * 0.7); scramble = true; }
+          }
+          v *= reveal;
+          if (v * o.density < 0.07) continue;
+          let idx = Math.min(nC, Math.max(1, Math.round(v * o.density * nC * 1.15)));
+          if (scramble || (o.flicker && Math.random() < o.flicker * 0.015)) idx = 1 + ((Math.random() * nC) | 0);
+          const col = rampL(L ? 0.15 + v * 0.3 : 0.15 + v * 0.85);
+          const fl = o.flicker ? 1 - o.flicker * 0.5 * noise(c * 0.7 + t * 6, r * 0.7) : 1;
+          const a = o.glyphOpacity * (L ? 0.18 + v * 0.5 : 0.18 + v * 0.82) * fl;
+          ctx.fillStyle = `rgba(${col.map((n) => n | 0)},${a})`;
+          ctx.fillText(cs[idx], px, py);
+          if (o.glow && v > 0.5) { gctx.fillStyle = ctx.fillStyle; gctx.fillText(cs[idx], px, py); }
+        }
+      }
+      if (o.glow) {
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = Math.min(1, o.glow * 2.5); ctx.filter = `blur(${5 * dpr}px)`;
+        ctx.globalCompositeOperation = L ? "multiply" : "lighter";
+        ctx.drawImage(glowC, 0, 0); ctx.restore();
+      }
+      if (o.grain) {
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = o.grain; ctx.globalCompositeOperation = "overlay";
+        ctx.fillStyle = grainPattern || (grainPattern = makeGrain()); ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore();
+      }
+      for (let k = waves.length - 1; k >= 0; k--) if (now - waves[k].t > 1700) waves.splice(k, 1);
+    }
+
+    let grainPattern = null;
+    function makeGrain() {
+      const n = document.createElement("canvas"); n.width = n.height = 128;
+      const x = n.getContext("2d"), d = x.createImageData(128, 128);
+      for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+      x.putImageData(d, 0, 0);
+      return ctx.createPattern(n, "repeat");
+    }
+
+    let last = 0, raf = 0, visible = true;
+    function loop(now) {
+      raf = requestAnimationFrame(loop);
+      if (!visible || now - last < 33) return; // ~30 fps
+      last = now; draw(now);
+    }
+    resize();
+    new ResizeObserver(() => { resize(); if (reduce) draw(performance.now()); }).observe(el);
+    new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(el);
+    if (o.mouseInteraction) {
+      const host = el.closest("[data-ascii-host]") || el;
+      host.addEventListener("pointermove", (e) => { const r = el.getBoundingClientRect(); pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top; pointer.on = true; });
+      host.addEventListener("pointerleave", () => (pointer.on = false));
+      if (o.clickEffect === "wave") host.addEventListener("pointerdown", (e) => { const r = el.getBoundingClientRect(); waves.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() }); });
+    }
+    if (reduce) draw(performance.now() + 5000); else raf = requestAnimationFrame(loop);
+  }
+  const start = () => document.querySelectorAll("[data-ascii]").forEach(mount);
+  (document.fonts?.ready || Promise.resolve()).then(start);
 })();
 
 </script>

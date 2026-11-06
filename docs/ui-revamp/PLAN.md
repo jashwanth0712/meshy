@@ -4,7 +4,14 @@ Status: planning and mockups only. Nothing in `web/src` has changed.
 Mockups: [`mockups/index.html`](mockups/index.html). Open it from disk; it needs internet only for Tailwind, Geist and Lucide from CDNs.
 Written 6 Nov 2026, from the live dashboard at `/org/meshydemo.eth` and from ethglobal.com as it was that day.
 
-**Goal.** Move the dashboard from its current dark, terminal-style look to a calm, light, minimal style close to ethglobal.com. Build it on shadcn/ui, design it around the new logo (`brand/`), and keep the access-first layout the user chose: the home page is the grants feed, not a network map.
+**Goal.** Move the dashboard from its current dark, terminal-style look to a calm, minimal style with Meshy's own character. Build it on shadcn/ui, design it around the new logo (`brand/`), and keep the access-first layout the user chose: the home page is the grants feed, not a network map.
+
+**Revision 2 (6 Nov).** The user asked for a Meshy vibe rather than a copy of ethglobal.com. What changed:
+- **Colour.** The logo's cobalt and white, plus the hero's gradient colours (`#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8`), plus fun minimal "candy" tags. Four directions were sampled, and A was picked. See [`mockups/palette.html`](mockups/palette.html) and §2.
+- **Hero.** A night-sky `GradientASCII` horizon (`shape="horizon"`) replaces the pastel wash. It runs full size on the landing page, and as a short header band behind the nav and title on every app page. See §5.
+- **Landing.** No longer a showcase grid: it is a hero, then "three moves", then a numbered list of screens.
+
+ethglobal.com remains the reference for restraint, spacing, type scale and layout (§1). Its pastel wash, uppercase ink-bordered tags and 2 px outlines are dropped.
 
 **Deadline note.** The ETHGlobal Mumbai deadline is Sat 7 Nov 2026, 09:00 IST. The step plan in §9 is ordered so the work can stop after any phase and still ship. See decision D1 in §11.
 
@@ -34,59 +41,82 @@ The values below come from computed styles on `/`, `/events`, `/showcase` and `/
 |---|---|---|---|
 | **Typeface** | One grotesk everywhere. Event banners use a second face. | **Roobert** (commercial, Displaay) at 400 / 500 / 600; banners use Plus Jakarta Sans 700 | **Geist** (free, and already the brand's UI face) for text; **Geist Mono** for ENS names, addresses and numbers |
 | **Type scale** | Big, tight display headings; plain 16 px body; small uppercase eyebrows | Display 60/60 · 600 (`text-6xl`); card title 24 · 600; body 16/24 · 400; small 14; eyebrow 14 uppercase `#737374`; nav 17.6 · 500; table header 12 · 700 uppercase, tracking 0.3 px | Display 44/46 · 600 · −0.03em; h2 20 · 600; body 14–16; eyebrow 12 uppercase; table header 11 · 700 uppercase |
-| **Colour** | Near-black text on white; grey sections; one pastel tint per context; yellow only for the main event CTA | Text `#0A0A0A`; muted `#737374`, `#6B7280`, `#4B5563`; section bg `#F4F4F5`; borders `#E5E7EB`; tag lavender `#C6C9F6`; table header `#F8F5FF`; amounts `#581C87`; CTA yellow `#FFC750`; "New" badge `#DCFCE7` / `#166534` | Ink on paper; **cobalt** (from the logo) as the only accent; pastel tags and the aurora band; green, amber and red only for state |
-| **Background** | White pages. A soft pastel blur (peach, lavender, mint) behind each page header (`projects-blur.png`) | — | `.aurora`: the same idea built from radial gradients in cobalt-100, peach and mint, fading out by 460 px |
+| **Colour** | Near-black text on white; grey sections; one pastel tint per context; yellow only for the main event CTA | Text `#0A0A0A`; muted `#737374`, `#6B7280`, `#4B5563`; section bg `#F4F4F5`; borders `#E5E7EB`; tag lavender `#C6C9F6`; table header `#F8F5FF`; amounts `#581C87`; CTA yellow `#FFC750`; "New" badge `#DCFCE7` / `#166534` | Navy ink on ice; **cobalt** for action; sky and cyan only for light (glow, focus, the horizon); candy tags with a small dot |
+| **Background** | White pages. A soft pastel blur (peach, lavender, mint) behind each page header (`projects-blur.png`) | — | **Not taken.** Meshy uses its own night-sky ASCII horizon band instead (§5) |
 | **Radius** | 10 px on cards and panels; full pills on buttons and tags | `rounded` = 10 px (30 uses); `9999px` (37 uses); 12 px and 32 px are rare | `--radius: 0.625rem`; pill buttons, tags and badges; cards 12 px |
-| **Borders** | Their signature: **2 px** outlines on buttons, cards and tags. Black 2 px card borders on the showcase | `2px solid #0A0A0A` (cards, tags); `2px solid #E5E7EB` (secondary button); `2px solid #F4F4F5` (dividers) | 2 px outlines on secondary buttons, the search pill, the wallet pill and the gallery cards; 1 px hairlines inside cards |
+| **Borders** | Their signature: **2 px** outlines on buttons, cards and tags. Black 2 px card borders on the showcase | `2px solid #0A0A0A` (cards, tags); `2px solid #E5E7EB` (secondary button); `2px solid #F4F4F5` (dividers) | **Not taken.** 1 px blue-tinted hairlines everywhere; pills keep the round shape |
 | **Shadow** | Almost none | Panel `0 0 30px 0.5px rgba(40,50,70,.08)`; one drop shadow on a hero card | `--shadow-soft` on cards; `--shadow-pop` only on overlays |
 | **Iconography** | Small line icons inside tags (pin, tag); big flat illustrations in heroes | — | Lucide at 16 px, stroke 1.75; the **spark from the logo** stands for an agent; no illustrations |
 | **Navigation** | Top bar: logo, 7 text links (one with a green "New" pill), Login as a 2 px outline pill on the right; hover `opacity-60`; no sidebar | Container `max-w-7xl`, `px-6 lg:px-8`, 64 px tall | Same top bar; org switcher pill; ⌘K search pill; wallet pill |
-| **Cards and lists** | Showcase: 3-column cards with a 16:9 image, title, two-line description and an uppercase tag. Events: wide banners with a **date tile** ("NOVEMBER 5→7 Thu—Sat") | Tag: 12 px / 600 uppercase, `px-3 py-1`, 2 px ink border, pastel fill | Uppercase "event tags" for facts (kind, location, network); the date tile becomes the expiry **ticket** |
+| **Cards and lists** | Showcase: 3-column cards with a 16:9 image, title, two-line description and an uppercase tag. Events: wide banners with a **date tile** ("NOVEMBER 5→7 Thu—Sat") | Tag: 12 px / 600 uppercase, `px-3 py-1`, 2 px ink border, pastel fill | The date tile becomes the expiry **ticket**. Tags are Meshy's own: mono lowercase, soft fill, a bright dot |
 | **Dense data** | Prizes: a white **master-detail** panel (list with dividers on the left, detail on the right) and tables with a lavender header row | `grid-cols-12 rounded-lg bg-white shadow`; `thead bg-purple-50 text-xs font-semibold uppercase tracking-wide text-gray-600` | Directory as master-detail; every table gets the tinted uppercase header |
-| **Tabs** | Underline tabs ("All · Hackathons · Summits · Meetups") and counts in black circles ("Featured ②") | — | Same underline tabs with black count pills |
+| **Tabs** | Underline tabs ("All · Hackathons · Summits · Meetups") and counts in black circles ("Featured ②") | — | Same underline tabs, in cobalt, with cobalt count pills |
 | **Motion** | Quiet: `transition-colors 200ms`, opacity on hover, carousels | — | 150–200 ms colour and opacity changes; one 350 ms fade-in for overlays; live dots pulse; nothing moves under `prefers-reduced-motion` |
 | **Light / dark** | Light only (`color-scheme: normal`) | — | Light by default, plus a dark theme for people who want it (decision D2) |
 
-The look in one sentence: generous white space, very dark text, big tight headlines, pill-shaped controls with 2 px outlines, one pastel wash at the top, and colour used sparingly.
+The ethglobal look in one sentence: generous white space, very dark text, big tight headlines, pill-shaped controls with 2 px outlines, one pastel wash at the top, and colour used sparingly. Meshy keeps the white space, the headlines, the pills and the sparing colour. The rest is its own.
 
 ---
 
 ## 2. Brand → palette
 
-The logo (`brand/`, from commit `fe22bf8`) is an M drawn as a network. Rings are devices. The solid node is your own device. The agent is a four-point spark held apart by a gap: it reaches only what it is granted. The brand README sets out the core colours and rules:
+The logo (`brand/`, from commit `fe22bf8`) is an M drawn as a network. Rings are devices. The solid node is your own device. The agent is a four-point spark held apart by a gap: it reaches only what it is granted.
 
-| Brand token | Hex | UI role |
+### Four directions were sampled ([`mockups/palette.html`](mockups/palette.html))
+| | Direction | Verdict |
 |---|---|---|
-| Cobalt | `#2B3FE0` | `--primary` in light mode: primary buttons, links, focus ring, live grant bars |
-| Cobalt 300 | `#8C9BFF` | `--primary` in dark mode. The brand forbids cobalt on ink (2.54 : 1) |
-| Ink | `#121417` | `--foreground`, the ink button, the code blocks |
-| Paper | `#F6F6F4` | `--background` (cards are white on top of it, as on ethglobal.com) |
+| **A** | **Cobalt horizon.** Ice page, white cards, navy ink, cobalt action; sky and cyan for light; candy tags | **Picked.** It is the logo, literally. The tags add play without competing with cobalt |
+| B | **Electric.** White, cobalt and cyan, with solid saturated chips (lime, sun, pink) | Fun, but the chips outshout the data on dense tables |
+| C | **All blue.** Every tag a shade of blue or cyan | Serene, but live, expiring and refused look alike. State then rests on words alone |
+| D | **Night mesh.** The hero's night sky as the whole theme | Kept as A's **dark theme**, not the default |
+
+### The picked system (A)
+| Token | Hex | UI role |
+|---|---|---|
+| Night | `#050B24` | Top nav, ASCII hero band, dark-theme page |
+| Ice | `#F6F8FF` | `--background` (the white of the hero gradient) |
 | White | `#FFFFFF` | `--card`, `--popover` |
+| Navy ink | `#0B1533` | `--foreground` (bluer than the brand's `#121417`, so text sits in the same family) |
+| Cobalt | `#2B3FE0` | `--primary`: one main action per view, links, focus ring, live grant bars, tab underline (`#1E3FD8` is the hero's cobalt, used only inside the canvas) |
+| Cobalt 300 | `#8C9BFF` | `--primary` in the dark theme. The brand forbids cobalt on dark (2.54 : 1) |
+| Sky | `#A5D8FF` | Glow, focus ring on dark, the hero gradient |
+| Cyan | `#38BDF8` | The horizon edge line, highlights, the sky tag's dot |
+| Hairline | `#E3E8F6` / `#CDD5EC` | `--border` / `--border-strong` |
+| Accent | `#EAF0FF` | Hover and selected rows |
 
-The rest of the palette, derived from those:
+**Tags: fun but minimal.** Each tag is mono lowercase on a soft fill, with deep text and a 6 px bright dot. Colour means one thing per family:
 
-- **Cobalt scale** for tints: 50 `#EEF0FF` (`--accent`, table headers), 100 `#E0E4FF` (tags, aurora), 200 `#C4CBFF`, 400 `#5E70F5`, 600 `#2233C4` (hover), 700 `#1C2A9E` (`--accent-foreground`), 800 `#18237D`, 900 `#141C5E`.
-- **Aurora pastels**, used only in the header wash and on tags: peach `#FDE8D7`, mint `#DDF3EA`, lilac `#EFE4FF`.
-- **State colours**, each with a soft background. Never use them for decoration.
-  - success `#15803D` on `#DCFCE7`: live, session open
-  - warning `#A35200` on `#FEF3C7`: sealed, demo-only, expiring soon
-  - destructive `#D92D20` on `#FEE4E2`: revoke, refused, blocked
-- **Agent glyph.** Agents always show the logo's spark, in ink or white, never coloured. The old UI painted agent names yellow, which read as a warning.
+| Tag | Fill / text / dot | Meaning |
+|---|---|---|
+| `mint` | `#DCFCE7` / `#15803D` / `#22C55E` | live, healthy, session open |
+| `lemon` | `#FEF9C3` / `#A16207` / `#EAB308` | expiring soon, demo-only, sealed |
+| `coral` | `#FFE4E6` / `#BE123C` / `#FB7185` | refused, revoked, blocked |
+| `lilac` | `#EDE9FE` / `#6D28D9` / `#A78BFA` | identity: World ID, agents, Arkiv |
+| `sky` | `#E0F2FE` / `#0369A1` / `#38BDF8` | network label (e.g. `home`), kind |
+| `cobalt` (default) | `#E3E8FF` / `#2B3FE0` / `#2B3FE0` | ENS names, `prod`, defaults |
+
+State badges (`Session open`, `Revoked`) use the same mint, lemon and coral values in Geist Sans, with an icon.
+
+**On dark surfaces** (the nav and the hero band), an `.on-dark` scope swaps tokens: white text, translucent white cards and borders, white primary buttons with cobalt text, and translucent tag fills. The same components work on the band without extra classes.
+
+- **Agent glyph.** Agents always show the logo's spark, in navy or white, never coloured. The old UI painted agent names yellow, which read as a warning.
 - **Logo usage.**
-  - Header: the lockup, with the wordmark in `currentColor` so it turns white in dark mode, and the cobalt tile kept.
+  - Header: the lockup, with the wordmark in `currentColor` so it is white on the night nav, and the cobalt tile kept.
   - Favicon: the bold cut.
   - The mark appears nowhere else. The brand rule is "one field, one subject".
 
-Contrast checks (WCAG AA for body text):
+Contrast checks (WCAG AA; computed):
 
 | Pair | Ratio |
 |---|---|
-| `--muted-foreground` `#66696F` on white | 5.3 : 1 |
-| `#66696F` on paper | 4.9 : 1 |
-| Cobalt on paper | 6.7 : 1 |
+| Navy ink on white / on ice | 18.0 / 16.9 : 1 |
+| `--muted-foreground` `#5B6787` on white / on ice | 5.6 / 5.3 : 1 |
+| Cobalt on ice | 6.9 : 1 |
 | White on cobalt | 7.3 : 1 |
-| Cobalt 300 on dark card `#15181C` | 6.9 : 1 |
-| `#9A9EA6` on dark card `#15181C` | 6.6 : 1 |
+| White on night `#050B24` | 19.5 : 1 |
+| Muted on the band (`#D6E0FF` at 74 %) on night | ≥ 10 : 1 |
+| Dark theme: `#93A0C8` / cobalt 300 on card `#0B1435` | 7.0 / 7.1 : 1 |
+| Tag text on its fill (lowest: mint and lemon) | 4.6 : 1 (AA for 12 px medium mono) |
 
 ---
 
@@ -193,77 +223,158 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  /* Meshy additions */
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-danger-soft: var(--danger-soft);
   --color-info-soft: var(--info-soft);
-  --color-cobalt-50: #eef0ff;  --color-cobalt-100: #e0e4ff; --color-cobalt-200: #c4cbff;
-  --color-cobalt-300: #8c9bff; --color-cobalt-400: #5e70f5; --color-cobalt-500: #2b3fe0;
-  --color-cobalt-600: #2233c4; --color-cobalt-700: #1c2a9e; --color-cobalt-800: #18237d;
+  --color-cobalt-50: #eef0ff;
+  --color-cobalt-100: #e0e4ff;
+  --color-cobalt-200: #c4cbff;
+  --color-cobalt-300: #8c9bff;
+  --color-cobalt-400: #5e70f5;
+  --color-cobalt-500: #2b3fe0;
+  --color-cobalt-600: #2233c4;
+  --color-cobalt-700: #1c2a9e;
+  --color-cobalt-800: #18237d;
   --color-cobalt-900: #141c5e;
-  --color-ink: #121417;
-  --color-paper: #f6f6f4;
+  --color-ink: #0b1533;
+  --color-night: #050b24;
+  --color-sky: #a5d8ff;
+  --color-cyan: #38bdf8;
+  --color-ice: #f6f8ff;
+  --color-paper: #f6f8ff;
 
-  /* Literal family names: see §9 step 4 for the Tailwind v4 font caveat */
+  /* Literal family names: see §9 Phase 3 for the Tailwind v4 font caveat */
   --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 
-  --radius-sm: calc(var(--radius) * 0.6);   /* 6px  : kbd, small chips */
-  --radius-md: calc(var(--radius) * 0.8);   /* 8px  : ticket, inner tiles */
-  --radius-lg: var(--radius);               /* 10px : inputs, table wrappers */
-  --radius-xl: calc(var(--radius) * 1.2);   /* 12px : cards */
-  --radius-2xl: calc(var(--radius) * 1.6);  /* 16px : sheets, dialogs */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: calc(var(--radius) * 1.6);
 }
 
 :root {
   --radius: 0.625rem;
-  --background: #f6f6f4;  --foreground: #121417;
-  --card: #ffffff;        --card-foreground: #121417;
-  --popover: #ffffff;     --popover-foreground: #121417;
-  --primary: #2b3fe0;     --primary-foreground: #ffffff;
-  --secondary: #efefec;   --secondary-foreground: #121417;
-  --muted: #f1f1ee;       --muted-foreground: #66696f;
-  --accent: #eef0ff;      --accent-foreground: #1c2a9e;
-  --destructive: #d92d20; --destructive-foreground: #ffffff;
-  --border: #e8e8e4;      --border-strong: #d9d9d4;
-  --input: #dcdcd6;       --ring: #2b3fe0;
-  --success: #15803d;     --success-soft: #dcfce7;
-  --warning: #a35200;     --warning-soft: #fef3c7;
-  --danger-soft: #fee4e2; --info-soft: #e0e4ff;
-  --shadow-soft: 0 0 30px 0.5px rgb(40 50 70 / 0.07);
-  --shadow-pop: 0 12px 40px -8px rgb(18 20 23 / 0.18), 0 2px 6px rgb(18 20 23 / 0.06);
+  --background: #f6f8ff; /* ice: the white of the hero gradient */
+  --foreground: #0b1533; /* navy ink */
+  --card: #ffffff;
+  --card-foreground: #0b1533;
+  --popover: #ffffff;
+  --popover-foreground: #0b1533;
+  --primary: #2b3fe0; /* brand cobalt: 7.27:1 with white */
+  --primary-foreground: #ffffff;
+  --secondary: #eef2ff;
+  --secondary-foreground: #0b1533;
+  --muted: #f0f3fc;
+  --muted-foreground: #5b6787; /* 5.6:1 on white */
+  --accent: #eaf0ff;
+  --accent-foreground: #1e3fd8;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #e3e8f6;
+  --border-strong: #cdd5ec;
+  --input: #d5dcef;
+  --ring: #2b3fe0;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #a16207;
+  --warning-soft: #fef9c3;
+  --danger-soft: #ffe4e6;
+  --info-soft: #e0f2fe;
+  /* fun minimal tag colours: soft fill, deep text, bright dot */
+  --tag-cobalt-bg: #e3e8ff; --tag-cobalt-fg: #2b3fe0; --tag-cobalt-dot: #2b3fe0;
+  --tag-sky-bg: #e0f2fe;    --tag-sky-fg: #0369a1;    --tag-sky-dot: #38bdf8;
+  --tag-mint-bg: #dcfce7;   --tag-mint-fg: #15803d;   --tag-mint-dot: #22c55e;
+  --tag-lemon-bg: #fef9c3;  --tag-lemon-fg: #a16207;  --tag-lemon-dot: #eab308;
+  --tag-coral-bg: #ffe4e6;  --tag-coral-fg: #be123c;  --tag-coral-dot: #fb7185;
+  --tag-lilac-bg: #ede9fe;  --tag-lilac-fg: #6d28d9;  --tag-lilac-dot: #a78bfa;
+  --shadow-soft: 0 1px 2px rgb(11 21 51 / 0.04), 0 8px 24px -12px rgb(30 63 216 / 0.12);
+  --shadow-pop: 0 18px 48px -12px rgb(11 21 51 / 0.28), 0 2px 6px rgb(11 21 51 / 0.06);
 }
 
 .dark {
-  --background: #0e1013;  --foreground: #ecedee;
-  --card: #15181c;        --card-foreground: #ecedee;
-  --popover: #181b20;     --popover-foreground: #ecedee;
-  --primary: #8c9bff;     --primary-foreground: #0e1013;   /* cobalt-300 on ink, per brand */
-  --secondary: #1d2126;   --secondary-foreground: #ecedee;
-  --muted: #1b1e23;       --muted-foreground: #9a9ea6;
-  --accent: #1b2142;      --accent-foreground: #c4cbff;
-  --destructive: #f97066; --destructive-foreground: #0e1013;
-  --border: #24282e;      --border-strong: #30353c;
-  --input: #2c3137;       --ring: #8c9bff;
-  --success: #4ade80;     --success-soft: #0f2a1a;
-  --warning: #fbbf24;     --warning-soft: #2a2110;
-  --danger-soft: #2d1414; --info-soft: #1b2142;
-  --shadow-soft: 0 0 0 1px rgb(255 255 255 / 0.02);
-  --shadow-pop: 0 16px 48px -8px rgb(0 0 0 / 0.6);
+  --background: #050b24; /* the hero's night sky */
+  --foreground: #e8edff;
+  --card: #0b1435;
+  --card-foreground: #e8edff;
+  --popover: #0e1840;
+  --popover-foreground: #e8edff;
+  --primary: #8c9bff; /* cobalt-300: brand rule, never cobalt-500 on dark */
+  --primary-foreground: #050b24;
+  --secondary: #111c48;
+  --secondary-foreground: #e8edff;
+  --muted: #101b45;
+  --muted-foreground: #93a0c8;
+  --accent: #14205a;
+  --accent-foreground: #c4cbff;
+  --destructive: #fb7185;
+  --destructive-foreground: #050b24;
+  --border: #1a2652;
+  --border-strong: #26346a;
+  --input: #26346a;
+  --ring: #8c9bff;
+  --success: #4ade80;
+  --success-soft: #0d2a26;
+  --warning: #facc15;
+  --warning-soft: #2a2610;
+  --danger-soft: #2e1022;
+  --info-soft: #0c2545;
+  --tag-cobalt-bg: #18245e; --tag-cobalt-fg: #c4cbff; --tag-cobalt-dot: #8c9bff;
+  --tag-sky-bg: #0c2545;    --tag-sky-fg: #a5d8ff;    --tag-sky-dot: #38bdf8;
+  --tag-mint-bg: #0d2a26;   --tag-mint-fg: #86efac;   --tag-mint-dot: #22c55e;
+  --tag-lemon-bg: #2a2610;  --tag-lemon-fg: #fde68a;  --tag-lemon-dot: #eab308;
+  --tag-coral-bg: #2e1022;  --tag-coral-fg: #fda4af;  --tag-coral-dot: #fb7185;
+  --tag-lilac-bg: #1f1645;  --tag-lilac-fg: #c4b5fd;  --tag-lilac-dot: #a78bfa;
+  --shadow-soft: 0 0 0 1px rgb(140 155 255 / 0.04);
+  --shadow-pop: 0 18px 48px -8px rgb(0 0 0 / 0.65);
+}
+
+/* Forced-dark scope for the ASCII hero band and the top nav, in both themes */
+.on-dark {
+  --background: #050b24;
+  --foreground: #ffffff;
+  --card-foreground: #ffffff;
+  --popover: #0e1840;
+  --popover-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --muted-foreground: rgb(214 224 255 / 0.74);
+  --card: rgb(255 255 255 / 0.07);
+  --muted: rgb(255 255 255 / 0.08);
+  --border: rgb(255 255 255 / 0.14);
+  --border-strong: rgb(255 255 255 / 0.26);
+  --input: rgb(255 255 255 / 0.22);
+  --primary: #ffffff;
+  --primary-foreground: #1e3fd8;
+  --accent: rgb(255 255 255 / 0.12);
+  --accent-foreground: #ffffff;
+  --ring: #a5d8ff;
+  --info-soft: rgb(165 216 255 / 0.16);
+  --success: #86efac; --success-soft: rgb(34 197 94 / 0.16);
+  --warning: #fde68a; --warning-soft: rgb(234 179 8 / 0.16);
+  --destructive: #fda4af; --danger-soft: rgb(251 113 133 / 0.16);
+  --secondary: rgb(255 255 255 / 0.08);
+  --tag-cobalt-bg: rgb(140 155 255 / 0.18); --tag-cobalt-fg: #dfe4ff;
+  --tag-sky-bg: rgb(56 189 248 / 0.16);     --tag-sky-fg: #bae6fd;
+  --tag-mint-bg: rgb(34 197 94 / 0.16);     --tag-mint-fg: #bbf7d0;
+  --tag-lemon-bg: rgb(234 179 8 / 0.16);    --tag-lemon-fg: #fef08a;
+  --tag-coral-bg: rgb(251 113 133 / 0.16);  --tag-coral-fg: #fecdd3;
+  --tag-lilac-bg: rgb(167 139 250 / 0.18);  --tag-lilac-fg: #ddd6fe;
+  color: var(--foreground);
 }
 ```
 
 ### Scales and rules
 | Scale | Values |
 |---|---|
-| **Type** | display `clamp(2rem, 3.2vw, 2.75rem)` / 1.05 / 600 / −0.03em · h2 20/28 · 600 · h3 16/24 · 600 · body 14–15 · small 13 · caption 12 · eyebrow 12 uppercase +0.06em · mono at 0.875em of its context |
+| **Type** | display `clamp(2rem, 3.2vw, 2.75rem)` / 1.05 / 600 / −0.03em · landing hero `clamp(2.6rem, 5.4vw, 4.4rem)` / 0.98 / −0.04em · h2 20/28 · 600 · h3 16/24 · 600 · body 14–15 · small 13 · caption 12 · **eyebrows and table headers in Geist Mono uppercase** (an echo of the ASCII hero) · mono at 0.875em of its context |
 | **Spacing** | Tailwind 4-px scale. Page gutter `px-6 lg:px-8`, container `max-w-7xl`, header band `pt-12 pb-8`, card padding 20 px (`p-5`), row padding `px-5 py-4`, gaps between sections 24 px (`gap-6`) |
-| **Radius** | buttons, tags and badges full pill · inputs 10 · cards 12 · sheets and dialogs 16 |
-| **Border** | 1 px `--border` inside cards; 2 px `--border` / `--border-strong` on outline pills (search, org, wallet, secondary buttons) |
-| **Elevation** | Cards: `--shadow-soft`. Overlays: `--shadow-pop` plus a 32 % ink scrim. Nothing else casts a shadow |
+| **Radius** | buttons, tags and badges full pill · inputs 10 · cards 14 · sheets and dialogs 16 |
+| **Border** | 1 px blue-tinted hairlines (`--border`, `--border-strong`) everywhere. No 2 px outlines |
+| **Elevation** | Cards: `--shadow-soft` (a faint cobalt-tinted lift). Overlays: `--shadow-pop` plus a 38 % night scrim. Nothing else casts a shadow |
 | **Motion** | 150–200 ms `ease-out` for colour and opacity; 350 ms fade-and-rise for sheets, dialogs and toasts; the live dot pulses every 1.8 s; countdown rings tick once a second; everything is off under `prefers-reduced-motion` |
 | **Icons** | `lucide-react` (already installed) at 16 px, stroke 1.75. 14 px inside badges. The spark (`Sparkle`) always means "agent" |
 | **Numbers** | `tabular-nums` everywhere a number changes (countdowns, blocks, ms, USDC) |
@@ -292,13 +403,14 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ [M meshy]  (M meshydemo.eth ⇅)  Access Directory Activity Billing Provider   │
-│                                  Settings      (🔍 Search names… ⌘K) ☼ (0x45e8…E0EA Owner) │  ← TopNav, 64px, sticky, blur
+│                                  Settings      (🔍 Search names… ⌘K) ☼ (0x45e8…E0EA Owner) │  ← TopNav: night #050B24 at 62 %, blur, sticky
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ ░░░░░░░░ aurora wash ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│ · · = + x X 0 S 8 # @   night sky + ASCII horizon rising on the right  ╭──── │  ← HeaderBand (.on-dark)
 │ meshydemo.eth / access                         ← ENS breadcrumb (each label  │
 │ Access right now                                  is a link)                 │  ← PageHeader
 │ One agent can reach one thing…        [Invite agent] [Give access  G]        │
-│ (● 1 LIVE GRANT) (⧗ NEXT EXPIRY 58M) (⚡ REVOKE → DEAD 1.6 S)  ← tags        │
+│ (● 1 live grant) (⧗ next expiry in 58m) (⚡ revoke → dead 1.6 s)  ← candy tags│
+╞══ cyan → ice → sky edge line (3 px) ═════════════════════════════════════════╡
 ├──────────────────────────────────────────────┬───────────────────────────────┤
 │ main content (cards)                         │ right rail (feed, setup)      │
 └──────────────────────────────────────────────┴───────────────────────────────┘
@@ -308,14 +420,19 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
 - **Top nav replaces the sidebar** (decision D3). Six destinations fit comfortably at ≥ 1024 px. Below `md`, the links move into a `Sheet` opened by a menu button. This follows ethglobal.com and gives the content about 240 px back.
 - **Org switcher pill.** It shows the current org and lets you paste any `*.eth` name. This replaces the "Organization" box and the landing form.
 - **⌘K pill.** It is the full search field at ≥ 1536 px and a compact `🔍 ⌘K` button below that. See innovation 1.
-- **Wallet pill.** It shows a generated avatar, the short address and a role badge (Owner, "Admin of home", or Read-only). When disconnected it becomes a 2 px outline pill reading "Connect wallet", like ethglobal's Login.
+- **Wallet pill.** It shows a generated avatar, the short address and a role badge (Owner, "Admin of home", or Read-only). When disconnected it becomes an outline pill reading "Connect wallet".
 - **PageHeader** (one component used by every page) includes:
   - the ENS breadcrumb
   - the display title
   - a one-sentence lede
   - right-aligned actions
-  - an optional row of uppercase tags with live facts
-  - the aurora wash behind it
+  - an optional row of candy tags with live facts
+  - the **header band** behind it (below)
+- **Header band** (`HeaderBand`, new). The nav and page header sit on the night sky.
+  - A `GradientASCII` canvas with `shape="horizon"` runs behind it. On app pages it is a short band whose planet rises on the right (`cx≈0.8`), so the title and lede on the left stay on calm dark sky. A left-to-right night scrim keeps text contrast at least 10 : 1.
+  - A 3 px cyan → ice → sky line closes the band. Content then sits on the ice page.
+  - The landing page runs the user's exact props at 600 px (`cellSize 18, density .8, glyphOpacity .85, glow .2, flicker .2, softness .5, flow .5, grain .08, mouseInteraction, scrambleRadius .1, clickEffect "wave", intro`).
+  - The Approve page uses a centred band with the horizon below the headline.
 - **StatusBar** (new, fixed bottom, 36 px) takes over the sidebar footer and the header strip:
   - the chain head with a live dot
   - the latest Arkiv event as a ticker (innovation 7)
@@ -337,8 +454,8 @@ Install with `npx shadcn@latest add …` into `web/src/components/ui/`. Base: **
 
 | shadcn component | Where it's used |
 |---|---|
-| `button` (variants extended: `default` = cobalt pill, `ink`, `outline` 2 px, `ghost`, `destructive`, `destructive-outline`; sizes `sm`/`default`/`lg`/`icon`) | Everywhere; replaces `ui.tsx` `Button` |
-| `badge` (variants: `live`, `warn`, `bad`, `info`, `muted`, `outline`) + a Meshy `Tag` variant (uppercase, 1.5 px ink border, pastel fill) | Grant state, World ID, roles, counts; tags in page headers and the Directory |
+| `button` (variants extended: `default` = cobalt pill, `ink`, `outline` (1 px hairline), `ghost`, `destructive`, `destructive-outline`; sizes `sm`/`default`/`lg`/`icon`) | Everywhere; replaces `ui.tsx` `Button` |
+| `badge` (variants: `live`, `warn`, `bad`, `info`, `muted`, `outline`) + a Meshy `Tag` (mono lowercase, soft fill, 6 px dot; `cobalt` · `sky` · `mint` · `lemon` · `coral` · `lilac`) | Grant state, World ID, roles, counts; tags in page headers and the Directory |
 | `card` | Every section container |
 | `sheet` | **Give access** (right, 580 px); mobile nav (left); **Add device / Add network / Add service** (right, replacing the inline forms); Add admin |
 | `alert-dialog` | **Revoke confirm**, Remove agent, Remove admin, Submit fraud proof, Forget org key |
@@ -372,7 +489,8 @@ Custom Meshy components, built on the above (in `web/src/components/meshy/`):
 | `TxSteps` + `txToast()` | Step model shared by sheets, dialogs and stepper toasts |
 | `FeedItem` | Arkiv event as a sentence, with an action ("Grant this") |
 | `StatTile` | Number plus caption plus optional sparkline; renders a skeleton until data arrives (never a fake 0) |
-| `Ticket` | The ethglobal-style date tile for expiries and renewal dates |
+| `Ticket` | A small date tile for expiries and renewal dates |
+| `GradientASCII` (the user's component) + `HeaderBand` | The ASCII horizon: full 600 px hero on `/`, short band behind the nav and PageHeader on every app page, centred band on Approve. Wraps its children in `.on-dark` |
 | `PageHeader`, `TopNav`, `StatusBar`, `CommandPalette` | Shell components |
 
 ---
@@ -502,9 +620,14 @@ The mockup for each page is linked in its heading.
 - **Approve card.** It lists the real transaction count, which is 1 when the agent already exists. On success it goes to the agent page with the Give access sheet open (fixing the `/grants` 404).
 
 ### Landing `/`
-- The same top bar, an aurora hero ("Give agents exactly the folders they need…"), and the org field as a large pill input with recent orgs.
-- The four feature cards restyled as showcase cards (2 px ink border), with the logo.
-- No mockup; it reuses the index page styles.
+- **Hero** ([mockup](mockups/index.html)): the full 600 px `GradientASCII` horizon with the user's exact props.
+  - Headline: "Network access for agents, as ENS names." The last words are in a sky → ice gradient.
+  - The org field is a pill input with "Open org".
+  - A glass "live grant" card sits on the horizon: countdown ring, `claude-1 → db1.prod`, +1h / Revoke, candy tags.
+  - The canvas answers the mouse (scramble) and clicks (wave).
+- **"Three moves"**: name it → grant it → revoke it, each with a real mono example.
+- **The list of screens**: numbered rows, not a showcase grid.
+- **A brand note** on the spark's gap.
 
 ---
 
@@ -582,7 +705,7 @@ Then smoke-test `/org/meshydemo.eth` in the browser. Stop after any phase if tim
 6. Still no visual change: nothing imports the new components yet.
 
 ### Phase 3: theme, fonts, brand (45 min)
-1. `web/src/app/globals.css`: put in the full §4 token block (light `:root`, `.dark`) and the `.aurora` utility.
+1. `web/src/app/globals.css`: put in the full §4 token block (light `:root`, `.dark`, `.on-dark`) and the `.tag` / `.band-edge` utilities.
 2. Fonts (`web/src/app/layout.tsx`):
    - **Don't use `next/font/google`.** LEARNINGS #39: it fetches at build time on a flaky network.
    - Use the `geist` package (`next/font/local` underneath): `import { GeistSans } from "geist/font/sans"` and `GeistMono`, and put **both `.variable` classes on `<html>`, not `<body>`**.
@@ -604,12 +727,18 @@ Then smoke-test `/org/meshydemo.eth` in the browser. Stop after any phase if tim
 1. `web/src/components/shell/TopNav.tsx`: lockup, org switcher (`DropdownMenu`), nav links, ⌘K button, theme toggle and wallet pill; `Sheet` nav below `md`.
    - **`usePathname()` must render inside the `<Suspense>` that `OrgShell` already sets up** (LEARNINGS #35), or prerendering breaks.
 2. `web/src/components/shell/StatusBar.tsx`: chain head, Arkiv ticker and org-key state. It reads from the store.
-3. `web/src/components/shell/PageHeader.tsx`: breadcrumb, title, lede, actions, tags and aurora.
-4. `web/src/components/Shell.tsx`: replace the sidebar layout with TopNav + main + StatusBar. Keep the `Shell` export so `OrgShell.tsx` doesn't change.
-5. `web/src/lib/store.tsx`:
+3. `web/src/components/shell/PageHeader.tsx`: breadcrumb, title, lede, actions and tags, rendered inside `HeaderBand`.
+4. `web/src/components/brand/GradientASCII.tsx`: the user's component, which is canvas-only, so it needs `"use client"`. Load it with `next/dynamic(() => import(...), { ssr: false })` so it never runs during prerender (and doesn't trip `cacheComponents`).
+   - Pause it when off-screen (IntersectionObserver).
+   - Draw one static frame under `prefers-reduced-motion`.
+   - Run `intro` only on the landing page.
+   - `HeaderBand.tsx` wraps it with `.on-dark`, the left scrim and the edge line. App pages pass lighter props: `cellSize 16, horizon .62, cx .8`.
+   - The mockup's [`_ascii.js`](mockups/_src/_ascii.js) is a vanilla stand-in with the same prop names. It shows the intended look if the real component needs tuning.
+5. `web/src/components/Shell.tsx`: replace the sidebar layout with TopNav + main + StatusBar. Keep the `Shell` export so `OrgShell.tsx` doesn't change.
+6. `web/src/lib/store.tsx`:
    - `toast(msg, kind)` becomes a thin adapter over `sonner`. Keep the signature, so the ~15 call sites don't change, and remove the `toasts` array.
    - Add `feed` (one shared Arkiv poller), `roles` (innovation 10, a stub for now) and `latestEvent`.
-6. `web/src/app/approve/*`: give it a minimal header (logo, theme, wallet) and no org nav.
+7. `web/src/app/approve/*`: a minimal header (logo, theme, wallet) on a centred `HeaderBand`, and no org nav.
 
 ### Phase 5: primitives (1 h)
 1. `web/src/components/meshy/primitives.tsx`: re-implement `Card`, `Badge`, `Button`, `Field`, `Empty`, `Ext` and `Short` on top of shadcn, keeping the names and props. Pages compile unchanged and pick up the new look.
@@ -653,7 +782,7 @@ Pages are in order of demo value.
 8. **Billing**: `app/org/[org]/billing/page.tsx`. Use `Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" })`, the segmented meter, the price breakdown and the stepper.
 9. **Provider**: `app/org/[org]/provider/page.tsx`. `Tabs`, the health checklist and the validated challenge form.
 10. **Approve**: `app/approve/Approve.tsx`. Stepper, fingerprint checkbox, the real transaction count, and redirect to the agent page on success.
-11. **Landing**: `app/page.tsx`. The aurora hero and the org pill input.
+11. **Landing**: `app/page.tsx`. The full `GradientASCII` hero, the live-grant glass card, the three moves and the org pill input.
 
 ### Phase 7: innovations not already covered (3–4 h)
 1. ⌘K palette: `components/shell/CommandPalette.tsx`. Index built from `tree` (networks, devices, services, agents, grants) plus static actions; address → name map from `addr` records.
@@ -691,7 +820,8 @@ Pages are in order of demo value.
   - The breadcrumb is `nav aria-label="Breadcrumb"`.
   - The reach map has a text alternative: the "In plain words" sentence is its accessible description.
 - **Keyboard.** ⌘K, `G`, `g …` sequences and `?` help. Every row action is reachable with Tab; "…" menus open with Enter or Space.
-- **Motion.** `prefers-reduced-motion` disables pulse, shimmer, ring transitions and fades.
+- **Motion.** `prefers-reduced-motion` disables pulse, shimmer, ring transitions and fades, and the ASCII canvas draws one still frame.
+- **The ASCII canvas** is `aria-hidden` and purely decorative. No text is ever drawn into it; headings are real DOM text over a night scrim.
 - **Targets and text.** Minimum target 32 px (buttons `sm`), 36 px by default. Body text 14 px or larger (up from 11–13 px). Monospace is used only for names, addresses, code and numbers, never for sentences.
 - **Language.** Sentences say what happens to people and agents ("claude-1 can read … for 1 hour"), with the protocol detail second. Machine codes (`MESHY_NO_GRANT`) stay visible for debugging, inside `<code>`.
 
@@ -709,18 +839,19 @@ Pages are in order of demo value.
 | R5 | **Transaction flows regress while being re-wrapped** (double-send, lost steps) | Keep `submit()` bodies verbatim; keep the `fired` ref; move flows into the store; rerun the full lifecycle on Sepolia |
 | R6 | **Listing delegated admins** needs scanning EAC role events: more `eth_getLogs`, and the public node is slow | Reuse `LOGS_RPC` + Multicall; cache in sessionStorage like the tree; show a skeleton; fall back to the current "check an address" |
 | R7 | **The slow RPC still means 20 s+ first loads.** The new design only hides it better | Skeletons everywhere; render cached sessionStorage data immediately with a "refreshing" dot; consider `/v1/map` from meshy-sync as a faster first paint |
-| R8 | **Aurora and backdrop blur cost** on low-end laptops | One gradient element per page, no animation; turn off the blur when `prefers-reduced-transparency` is set |
+| R8 | **ASCII canvas cost.** A 30 fps canvas behind every page header, plus backdrop blur, on low-end laptops | Cap at 30 fps; pause off-screen and on hidden tabs; static frame under reduced motion; app bands use a larger cell (fewer glyphs) and no intro; if needed, render app-page bands once and animate only the landing hero (decision D8) |
 | R9 | **Bundle growth** (Radix, cmdk, TanStack Table, Sonner) | All tree-shaken, about 60–80 kB gzip in total; `@xyflow/react` is removed |
 | R10 | **Concurrent sessions.** Another session edits Go under `meshy/`, `meshnet/` and `menubar/` | This plan touches only `web/`, `docs/ui-revamp/` and copies from `brand/` |
 
 ### Decisions needed from the user
 - **D1. When to implement.** Before the 7 Nov 09:00 IST deadline (phases 0–3, and 6.1–6.3 if time allows), or after judging (everything)? *Recommendation:* Phase 0 now. It is the broken-link fix. Phases 1–3 and 6.1–6.3 only if they can be verified on Sepolia by about 06:00 IST.
-- **D2. Light by default?** ethglobal.com is light-only, and the current app is dark. *Recommendation:* light by default, with dark one click away (both themes are fully specified and mocked). The alternative is to follow the system setting.
+- **D2. Light by default?** *Recommendation:* palette A (ice and white) by default, with D (night mesh) as the dark theme one click away. The nav and the header band stay night in both. The alternative is to follow the system setting.
 - **D3. Top nav instead of the sidebar.** *Recommendation:* the top nav, as ethglobal does. All six destinations fit, and the mobile `Sheet` covers small screens.
 - **D4. Typeface.** Geist (free, the brand's choice) instead of ethglobal's commercial Roobert. *Recommendation:* Geist. No licence needed, and the wordmark is drawn in it.
 - **D5. Agent page and admin listing scope.** Both need new data code: a route plus `adminsOf()` event scanning. Include them in the first pass?
 - **D6. "+1h" renew from the dashboard.** This is a new on-chain write the current UI doesn't have. Do you want it?
 - **D7. Mockup sources.** Keep `mockups/_src/` + `build.py` in the repo (recommended: easy to iterate), or keep only the built HTML?
+- **D8. How alive should app pages be?** The animated ASCII band on every page (as mocked), or animated on the landing page only with a still frame on app pages? *Recommendation:* animated, with no intro and paused off-screen. Switch to still frames if it costs too much on the demo laptop.
 
 ---
 
@@ -730,7 +861,8 @@ The `mockups/` folder:
 
 | File | Screen |
 |---|---|
-| `index.html` | Gallery with live thumbnails, token swatches and a theme toggle |
+| `index.html` | Landing: the 600 px `GradientASCII` hero (the user's props), three moves, and a numbered list of screens |
+| `palette.html` | Palette study: directions A–D side by side, and the picked system (surfaces, blues, tags) |
 | `access.html` | Access home (`?theme=dark` for dark; `?palette=0x35e7` opens ⌘K) |
 | `give-access.html` | Give access sheet |
 | `revoke.html` | Revoke confirm, live timeline, stepper toasts |
@@ -741,7 +873,7 @@ The `mockups/` folder:
 | `provider.html` | Provider |
 | `settings.html` | Settings |
 | `approve.html` | Approve an agent (`claude-2`) |
-| `_src/` | Page bodies, `_theme.css` (the tokens), `_components.css` (CSS stand-ins for the shadcn components) and `_shell.js` (theme toggle, palette, countdowns) |
+| `_src/` | Page bodies, `_theme.css` (the tokens), `_components.css` (CSS stand-ins for the shadcn components), `_shell.js` (theme toggle, palette, countdowns) and `_ascii.js` (a vanilla canvas stand-in for `GradientASCII`) |
 | `build.py` | `python3 docs/ui-revamp/mockups/build.py` wraps each `_src/*.html` in the shared shell and inlines the real logo from `brand/svg/` |
 
 Data sources: names, addresses, blocks (12,073,047 / 12,073,050 / 12,073,941), latencies (132 / 192 / 216 ms, 1.6 s after the block), seat counts, provider #1 and the admin `0xf846…Fc98` come from the live org and `docs/STATUS.md`. These are illustrative:
