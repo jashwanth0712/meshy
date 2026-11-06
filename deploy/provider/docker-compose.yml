@@ -1,0 +1,96 @@
+version: "3.9"
+
+# Meshy provider stack:  NetBird (management + signal + relay + dashboard)
+# + meshy-sync (attestor + ENS map + NetBird reconciler).
+#
+# QUICK START
+# -----------
+# 1. Copy .env.example → .env and fill in every value.
+# 2. docker compose up -d
+# 3. Bootstrap NetBird and get a PAT:
+#      docker compose exec netbird-combined /bin/sh -c '
+#        curl -s -X POST http://localhost:8080/api/setup | jq .access.token'
+#    Set NB_PAT in .env to the returned token, then restart:
+#      docker compose restart meshy-sync
+# 4. Register the provider on-chain: see contracts/README.md.
+#    The provider address is the attestor key address printed at startup.
+#
+# PORTS
+# -----
+#   443/tcp  NetBird dashboard + management API (HTTPS)
+#    80/tcp  NetBird ACME challenge redirect
+#  3478/udp  TURN / relay (coturn inside the combined image)
+#  8787/tcp  meshy-sync HTTP API (dashboard calls this)
+
+services:
+  netbird-combined:
+    image: netbirdio/netbird-server:latest
+    container_name: nb-combined
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "443:443"
+      - "80:80"
+      - "3478:3478/udp"
+    environment:
+      # Public hostname of this VPS.  Used in peer management URL and TURN.
+      NETBIRD_DOMAIN: "${NB_DOMAIN}"
+      # ACME e-mail for Let's Encrypt.
+      LETSENCRYPT_EMAIL: "${LETSENCRYPT_EMAIL}"
+      # Allow PAT creation via /api/setup (bootstrap only).
+      NB_SETUP_PAT_ENABLED: "true"
+      # Auth: use Zitadel or Auth0 — see NetBird docs.  For demos you can
+      # configure a "device code" grant in your IdP and point here.
+      NETBIRD_AUTH_OIDC_CONFIGURATION_ENDPOINT: "${NB_OIDC_DISCOVERY}"
+      NETBIRD_AUTH_CLIENT_ID: "${NB_AUTH_CLIENT_ID}"
+      NETBIRD_AUTH_AUDIENCE: "${NB_AUTH_AUDIENCE}"
+    volumes:
+      - nb_data:/var/lib/netbird
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  meshy-sync:
+    image: meshy-sync:latest
+    build:
+      context: ../..
+      dockerfile: deploy/provider/meshy-sync.Dockerfile
+    container_name: meshy-sync
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      MESHY_LISTEN: ":8787"
+      # Sepolia JSON-RPC (Alchemy recommended for free tier).
+      MESHY_SEPOLIA: "${MESHY_SEPOLIA}"
+      # World ID OIDC confidential client credentials.
+      WORLD_CLIENT_ID: "${WORLD_CLIENT_ID}"
+      WORLD_CLIENT_SECRET: "${WORLD_CLIENT_SECRET}"
+      # World ID issuer; use https://sandbox.auth.world.org for dev.
+      MESHY_WORLD_ISSUER: "${MESHY_WORLD_ISSUER:-https://sandbox.auth.world.org}"
+      # NetBird management API PAT (created in step 3 above).
+      NETBIRD_API_URL: "http://netbird-combined:8080"
+      NETBIRD_TOKEN: "${NB_PAT}"
+      NETBIRD_MANAGEMENT_URL: "https://${NB_DOMAIN}"
+      # CORS: allow the web dashboard origin.
+      MESHY_CORS: "${MESHY_CORS:-http://localhost:3000}"
+      # Set to "true" for hackathon demos while World sandbox credentials are pending.
+      MESHY_DEV_ATTEST: "${MESHY_DEV_ATTEST:-false}"
+    volumes:
+      # The attestor key persists across restarts.  Back this up.
+      - meshy_keys:/root/.meshy
+    depends_on:
+      netbird-combined:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8787/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nb_data:
+  meshy_keys:
