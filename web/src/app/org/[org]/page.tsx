@@ -142,6 +142,7 @@ export default function AccessPage() {
         path: q.get("path") ?? undefined,
         mode: mode === "rw" || mode === "ro" ? mode : undefined,
         dur: Number(q.get("dur")) || undefined,
+        sign: q.get("sign") === "1",
       });
     } else if (revoke) {
       const l = lines.find((x) => x.g.name === revoke);
@@ -205,8 +206,8 @@ export default function AccessPage() {
                     Add device
                   </Link>
                 ) : (
-                  <Button className="h-8 px-3.5" disabled={!canWrite} onClick={() => setDrawer({ agent: who, resource: r.target, path: r.path, mode: r.mode, dur: r.dur })}>
-                    Review
+                  <Button kind="primary" className="h-8 px-3.5" onClick={() => setDrawer({ agent: who, resource: r.target, path: r.path, mode: r.mode, dur: r.dur, sign: canWrite })}>
+                    Approve
                   </Button>
                 )}
               </Row>

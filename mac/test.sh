@@ -92,6 +92,16 @@ OUT=$(MESHY_TEST_INPUT="[[\"$MESHY_HOME/shared\"],[\"test-mac\",\"0\"]]" MESHY_S
 check  "share runs meshyd init, link for admin" "COPY: https://meshy.live/org/meshydemo.eth/directory?add=meshy-join:"
 OUT=$(M --fixture Tests/map.json --dump-menu)
 check  "shared device waits for ENS"         "test-mac.prod · waiting for an admin to add it"
+# a device added from the dashboard whose keys are on this Mac is adopted, not made again
+KEYADDR=$(build/Meshy.app/Contents/Resources/bin/meshyd whoami --state "$MESHY_HOME/meshyd" | sed -n 's/.*"addr":"\(0x[0-9a-fA-F]*\)".*/\1/p')
+ADOPT=$(mktemp); node -e 'const m=require("./Tests/map.json"); m.networks[0].resources[0].addr=process.argv[1]; console.log(JSON.stringify(m))' "$KEYADDR" > "$ADOPT"
+DB1=$(node -e 'console.log(require("./Tests/map.json").networks[0].resources[0].fullName)')
+OUT=$(MESHY_TEST_INPUT='[true]' MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Forget This Device…")
+check  "a dashboard-added device is adopted" "ADOPTED: $DB1"
+OUT=$(MESHY_TEST_INPUT='[true]' MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Forget This Device…")
+absent "forget stays forgotten"              "ADOPTED:"
+OUT=$(MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Share this Mac…")
+check  "share adopts it again, no new device" "This Mac is already"
 # a grant you hold (owned by your wallet): folders open in Finder, no terminal
 MINE=$(mktemp); node -e 'const m=require("./Tests/map.json"); m.grants.push({name:"you",fullName:"you.db1.prod.meshydemo.eth",owner:process.argv[1],expiry:4102444800,status:"live",kind:"device",agent:"you.people.meshydemo.eth",target:"db1.prod.meshydemo.eth",device:"db1.prod.meshydemo.eth"}); console.log(JSON.stringify(m))' "$ADDR" > "$MINE"
 OUT=$(M --fixture "$MINE" --dump-menu)

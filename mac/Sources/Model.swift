@@ -159,7 +159,7 @@ struct OrgRequest: Codable {
         if kind == "device" { return "/org/\(org)/directory?add=\(q(joinCode ?? ""))" }
         var p = "/org/\(org)?give=\(q(who))&target=\(q(target))&dur=\(dur ?? 3600)"
         if let path { p += "&path=\(q(path))&mode=\(mode ?? "ro")" }
-        return p
+        return p + "&sign=1" // the sheet starts signing right away: approve in one click + your wallet
     }
 }
 
@@ -490,7 +490,7 @@ final class MeshyStore {
                     for r in open where !self.seenRequests.contains(r.id) {
                         let what = r.kind == "device" ? "wants to add \(r.target.components(separatedBy: ".").first ?? r.target) as a device"
                             : "asks for \(r.mode == "rw" ? "read-write" : "read") access to \(r.target.components(separatedBy: ".").first ?? r.target)\(r.path.map { " · " + ($0 as NSString).lastPathComponent } ?? "")"
-                        self.notify(title: "Request from \(r.fromLabel)", body: what, id: "req-" + r.id)
+                        self.notify(title: "Request from \(r.fromLabel)", body: what + ". Click to approve.", id: "req-" + r.id, open: r.reviewPath)
                     }
                 }
                 for r in open { self.seenRequests.insert(r.id) }
@@ -580,11 +580,12 @@ final class MeshyStore {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    func notify(title: String, body: String, id: String = UUID().uuidString) {
+    func notify(title: String, body: String, id: String = UUID().uuidString, open path: String? = nil) {
         guard !isTest, notificationsOn else { return }
         let c = UNMutableNotificationContent()
         c.title = title
         c.body = body
+        if let path { c.userInfo = ["open": path] } // clicking it opens this dashboard path
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil))
     }
 

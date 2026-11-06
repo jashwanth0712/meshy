@@ -5,8 +5,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -82,4 +84,55 @@ func loadOrCreateKeys(dir string, create bool) (*Keys, error) {
 
 func missing(p string) error {
 	return errors.New("missing " + p + " (run `meshyd init` first)")
+}
+
+// cmdWhoami prints one JSON line per set of device keys on this machine
+// ({"state","addr","sshHost"}), so Meshy for Mac can recognize a device that
+// was added from the dashboard. It never creates keys.
+//
+//	meshyd whoami                 every key dir under ~/.meshy (and /var/lib/meshy)
+//	meshyd whoami --state <dir>   just that one
+func cmdWhoami(args []string) error {
+	fs := flag.NewFlagSet("whoami", flag.ExitOnError)
+	state := fs.String("state", "", "one state dir (default: scan)")
+	fs.Parse(args)
+	dirs := []string{*state}
+	if *state == "" {
+		home := os.Getenv("MESHY_HOME")
+		if home == "" {
+			h, _ := os.UserHomeDir()
+			home = filepath.Join(h, ".meshy")
+		}
+		dirs, _ = filepath.Glob(filepath.Join(home, "*"))
+		if os.Getenv("MESHY_HOME") == "" {
+			dirs = append(dirs, "/var/lib/meshy")
+		}
+	}
+	n := 0
+	for _, d := range dirs {
+		ok := true
+		for _, f := range []string{"eth.key", "host_ed25519", "policy.key"} {
+			if _, err := os.Stat(filepath.Join(d, f)); err != nil {
+				ok = false
+			}
+		}
+		if !ok {
+			continue
+		}
+		k, err := loadOrCreateKeys(d, false)
+		if err != nil {
+			continue
+		}
+		b, _ := json.Marshal(map[string]string{
+			"state":   d,
+			"addr":    crypto.PubkeyToAddress(k.Eth.PublicKey).Hex(),
+			"sshHost": strings.TrimSpace(string(gossh.MarshalAuthorizedKey(k.Host.PublicKey()))),
+		})
+		fmt.Println(string(b))
+		n++
+	}
+	if n == 0 && *state != "" {
+		return missing(filepath.Join(*state, "eth.key"))
+	}
+	return nil
 }

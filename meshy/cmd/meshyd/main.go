@@ -111,6 +111,8 @@ func main() {
 		err = cmdDoctor(os.Args[2:])
 	case "mesh-join":
 		err = cmdMeshJoin(os.Args[2:])
+	case "whoami":
+		err = cmdWhoami(os.Args[2:])
 	default:
 		usage()
 	}
@@ -131,6 +133,7 @@ func usage() {
   meshyd kill     <session-id>  terminate a session now
   meshyd logs     [-f]          audit events
   meshyd doctor                 check sandbox, chain, keys
+  meshyd whoami   [--state dir] device keys on this machine (addr, host key); never creates keys
   meshyd mesh-join --provider <meshy-sync url>
                                 join the provider's WireGuard mesh (admit + meshy-mesh serve)
 `)

@@ -17,10 +17,10 @@ const DURATIONS = [
 ];
 
 /** What a deep link (Mac menu bar "Request access…", Approve, activity) can prefill. */
-export type GrantPreset = { resource?: string; agent?: string; path?: string; mode?: "ro" | "rw"; dur?: number };
+export type GrantPreset = { resource?: string; agent?: string; path?: string; mode?: "ro" | "rw"; dur?: number; sign?: boolean };
 
 export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: GrantPreset }) {
-  const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
+  const { tree, wallet, client, account, refresh, toast, org, connect } = useMeshy();
   const resources = useMemo(() => tree?.networks.flatMap((n) => n.resources) ?? [], [tree]);
   const services = useMemo(() => resources.flatMap((r) => r.services), [resources]);
   const [resName, setResName] = useState(preset?.resource ?? resources[0]?.name ?? "");
@@ -99,6 +99,15 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
     }
   }
 
+  // Approve from the Mac menu bar (?sign=1): start signing as soon as the sheet is filled in.
+  const autoSigned = useRef(false);
+  useEffect(() => {
+    if (!preset?.sign || autoSigned.current || !valid || !wallet || steps) return;
+    autoSigned.current = true;
+    submit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset?.sign, valid, wallet, steps]);
+
   const pathNames = paths.map((p) => p.p.split("/").filter(Boolean).pop() ?? p.p).join(", ");
   const writes = paths.some((p) => p.m === "rw");
   const target = svc ?? res;
@@ -117,7 +126,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
         ) : (
           <>
             <span className="text-[13px] text-muted">{svc ? "1 transaction" : "2 transactions"}</span>
-            <Button kind="primary" disabled={!valid || busy || !account} onClick={submit}>
+            <Button kind="primary" disabled={account ? !valid || busy : false} onClick={account ? submit : connect}>
               {account ? "Give access" : "Connect a wallet"}
             </Button>
           </>

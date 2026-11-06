@@ -396,7 +396,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     private func requestsMenu() -> NSMenu {
         let m = NSMenu()
         m.autoenablesItems = false
-        m.addItem(label("Members asked for these. You sign each in the dashboard."))
+        m.addItem(label("Approve opens your wallet to sign the grant."))
         for r in store.orgRequests {
             let title = r.kind == "device" ? "\(r.fromLabel): add device \(short(r.target))" : "\(r.who) → \(short(r.target))"
             let it = NSMenuItem(title: title, action: nil, keyEquivalent: "")
@@ -407,7 +407,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             let sm = NSMenu()
             sm.autoenablesItems = false
             if r.kind == "access", let d = r.dur { sm.addItem(label("For \(d >= 3600 ? plural(d / 3600, "hour") : plural(d / 60, "minute"))")) }
-            sm.addItem(open(r.kind == "device" ? "Add Device…" : "Review and Grant…", r.reviewPath))
+            sm.addItem(open(r.kind == "device" ? "Add Device…" : "Approve…", r.reviewPath))
             let x = action("Dismiss", #selector(dismissRequest(_:)))
             x.representedObject = r.id
             sm.addItem(x)
@@ -870,6 +870,9 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     @objc func shareThisMac() {
         guard let org = store.org else { return UI.alert("Add your org first.") }
         guard let map = store.map else { return UI.alert("Still loading \(org).", info: "Try again in a moment.") }
+        if dev.adoptFromENS(explicit: true), let d = dev.device {
+            return UI.alert("This Mac is already \(short(d.name))", info: "It's on ENS with this Mac's keys, sharing \(d.roots.map(tilde).joined(separator: ", ")). Meshy is starting it now: no new device, no transactions.")
+        }
         let nets = map.allNetworks
         guard !nets.isEmpty else {
             UI.alert("\(org) has no networks yet.", info: "An owner creates one in the dashboard (Directory › Add › Network).")
@@ -996,8 +999,8 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     @objc func doctor() {
         guard let bin = Bins.path("meshyd") else { return UI.alert("meshyd is missing from Meshy.app.", info: "Reinstall Meshy.") }
         let script = FileManager.default.temporaryDirectory.appendingPathComponent("meshy-doctor.command")
-        let name = dev.device.map { " --name '\($0.name)' --state '\(Bins.stateDir)'" } ?? ""
-        let body = "#!/bin/zsh\nclear\necho '› meshyd doctor'\n'\(bin)' doctor --control '\(Bins.controlSocket)' --sepolia '\(Settings.sepoliaWS)'\(name)\necho\nread -k1 '?Press any key to close'\n"
+        let name = dev.device.map { " --name '\($0.name)' --state '\($0.stateDir)'" } ?? ""
+        let body = "#!/bin/zsh\nclear\necho '› meshyd doctor'\n'\(bin)' doctor --control '\(dev.device?.controlSocket ?? Bins.controlSocket)' --sepolia '\(Settings.sepoliaWS)'\(name)\necho\nread -k1 '?Press any key to close'\n"
         do {
             try body.write(to: script, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)

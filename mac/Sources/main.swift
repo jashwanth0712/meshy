@@ -11,6 +11,7 @@
 //
 // Build: mac/build.sh  →  mac/build/Meshy.app
 import AppKit
+import UserNotifications
 
 // MARK: - Settings
 
@@ -41,12 +42,13 @@ enum Settings {
 
 // MARK: - App delegate
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var status: StatusMenu!
 
     func applicationDidFinishLaunching(_ note: Notification) {
         NSApp.setActivationPolicy(.accessory)
         NSApp.mainMenu = editMenu() // so ⌘C / ⌘V / ⌘A work in dialogs
+        if !isTest, Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
         status = StatusMenu()
 
         let args = CommandLine.arguments
@@ -127,6 +129,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 finish()
             }
         }
+    }
+
+    // Clicking a request notification opens it in the dashboard, ready to sign.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler done: @escaping () -> Void) {
+        if let p = response.notification.request.content.userInfo["open"] as? String { openDashboard(p) }
+        done()
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent n: UNNotification, withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+        done([.banner, .sound])
     }
 
     func applicationWillTerminate(_ note: Notification) { AccessManager.shared.ejectAll() }

@@ -40,6 +40,16 @@ struct SharedDevice: Codable {
     /// Set by Stop Sharing: the device stays registered but this Mac doesn't serve it until
     /// Start Sharing. (Without it, the next status check would start it again by itself.)
     var paused: Bool?
+    /// Where this device's keys live, when not ~/.meshy/meshyd (a device made from the terminal).
+    var state: String?
+    var stateDir: String { state ?? Bins.stateDir }
+    var controlSocket: String { stateDir + "/control.sock" }
+}
+
+/// Device keys on this Mac (`meshyd whoami`).
+struct LocalKeys: Codable {
+    let state: String
+    let addr: String
 }
 
 /// Live status from meshyd's control socket.
@@ -92,6 +102,7 @@ final class DeviceManager {
         let j = Data(base64Encoded: b64).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
         let d = SharedDevice(name: name, org: org, roots: roots, addr: j?["addr"] as? String ?? "", joinCode: code, running: false, createdAt: Date().timeIntervalSince1970)
         device = d
+        keysCache = nil
         onChange?()
         return .success(d)
     }
@@ -113,9 +124,9 @@ final class DeviceManager {
         guard let meshyd = Bins.path("meshyd") else { return "meshyd is missing from Meshy.app." }
         let logs = Bins.home + "/Library/Logs/Meshy"
         try? FileManager.default.createDirectory(atPath: logs, withIntermediateDirectories: true)
-        let common = ["--name", d.name, "--state", Bins.stateDir]
+        let common = ["--name", d.name, "--state", d.stateDir]
         let jobs: [(String, [String], String)] = [
-            ("live.meshy.meshyd", [meshyd, "run"] + common + ["--roots", d.roots.joined(separator: ","), "--sepolia", Settings.sepoliaWS, "--arkiv=", "--listen", "127.0.0.1:2222", "--control", Bins.controlSocket], "meshyd"),
+            ("live.meshy.meshyd", [meshyd, "run"] + common + ["--roots", d.roots.joined(separator: ","), "--sepolia", Settings.sepoliaWS, "--arkiv=", "--listen", "127.0.0.1:2222", "--control", d.controlSocket], "meshyd"),
             ("live.meshy.mesh", [meshyd, "mesh-join"] + common + ["--provider", MeshyStore.shared.syncURL], "mesh"),
         ]
         for (label, args, log) in jobs {
@@ -153,6 +164,8 @@ final class DeviceManager {
 
     func forgetDevice() {
         stopDaemons()
+        // Don't adopt it again by itself (its keys stay on this Mac); Share this Mac can.
+        if let n = device?.name { defaults.set(forgotten + [n], forKey: "forgottenDevices") }
         device = nil
         onChange?()
     }
@@ -191,8 +204,8 @@ final class DeviceManager {
         DispatchQueue.global().async { [weak self] in
             guard let self else { return }
             var s = DaemonStatus()
-            if dev != nil, FileManager.default.fileExists(atPath: Bins.controlSocket),
-               let r = run("/usr/bin/curl", ["-s", "--max-time", "3", "--unix-socket", Bins.controlSocket, "http://meshyd/status"], timeout: 5), r.status == 0,
+            if let dev, FileManager.default.fileExists(atPath: dev.controlSocket),
+               let r = run("/usr/bin/curl", ["-s", "--max-time", "3", "--unix-socket", dev.controlSocket, "http://meshyd/status"], timeout: 5), r.status == 0,
                let d = r.stdout.data(using: .utf8), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
                 s.reachable = true
                 s.healthy = j["healthy"] as? Bool ?? false
@@ -202,12 +215,15 @@ final class DeviceManager {
             if dev != nil, !isTest, let r = run("/bin/launchctl", ["print", "gui/\(getuid())/live.meshy.mesh"], timeout: 5) {
                 s.meshRunning = r.status == 0 && r.stdout.contains("state = running")
             }
-            s.meshJoined = FileManager.default.fileExists(atPath: Bins.stateDir + "/mesh/management")
+            s.meshJoined = FileManager.default.fileExists(atPath: (dev?.stateDir ?? Bins.stateDir) + "/mesh/management")
+            if dev == nil { _ = self.localKeys() } // warm the cache off the main thread
             if dev?.running == true, let tail = lastLine(of: Bins.home + "/Library/Logs/Meshy/mesh.log"), tail.contains("refused") || tail.contains("MESHY_") {
                 s.meshError = tail.range(of: "MESHY_[A-Z_]+.*", options: .regularExpression).map { String(tail[$0]) } ?? tail
             }
             DispatchQueue.main.async {
                 self.status = s
+                // A device added from the dashboard (or the terminal) whose keys are on this Mac: adopt it.
+                if self.device == nil { self.adoptFromENS() }
                 // finish setup by itself once the dashboard transaction landed
                 if let d = self.device, !d.running, d.paused != true, self.registered { self.startDaemonsAsync() }
                 self.onChange?()
@@ -227,6 +243,47 @@ final class DeviceManager {
         let mesh = status.meshRunning ? "on the mesh" : status.meshJoined ? "mesh reconnecting" : "joining the mesh"
         let health = status.healthy ? "healthy" : "chain not live yet"
         return "\(short) · \(health) · \(mesh)" + (status.sessions > 0 ? " · \(plural(status.sessions, "session"))" : "")
+    }
+
+    // MARK: Adopt a device that is already on ENS
+
+    private var keysCache: [LocalKeys]?
+
+    /// Device keys on this Mac, from the bundled `meshyd whoami` (cached; refreshed after Share).
+    func localKeys() -> [LocalKeys] {
+        if let k = keysCache { return k }
+        guard let meshyd = Bins.path("meshyd"), let r = run(meshyd, ["whoami"], timeout: 10) else { return [] }
+        let k = r.stdout.components(separatedBy: "\n").compactMap { $0.data(using: .utf8).flatMap { try? JSONDecoder().decode(LocalKeys.self, from: $0) } }
+        keysCache = k
+        return k
+    }
+
+    /// The device in the selected org's map whose address is one of this Mac's keys, if any.
+    func deviceOnENSForThisMac() -> (MapResource, LocalKeys)? {
+        guard let m = MeshyStore.shared.map else { return nil }
+        for k in localKeys() {
+            if let d = m.devices.first(where: { ($0.addr ?? "").lowercased() == k.addr.lowercased() }) { return (d, k) }
+        }
+        return nil
+    }
+
+    private var forgotten: [String] { defaults.stringArray(forKey: "forgottenDevices") ?? [] }
+
+    /// Remembers that device as this Mac's and lets poll() start sharing it. True if adopted.
+    /// By itself (poll) it skips devices you forgot; Share this Mac passes explicit: true.
+    @discardableResult
+    func adoptFromENS(explicit: Bool = false) -> Bool {
+        guard device == nil, let org = MeshyStore.shared.map?.org, let (d, k) = deviceOnENSForThisMac() else { return false }
+        if forgotten.contains(d.fullName) {
+            guard explicit else { return false }
+            defaults.set(forgotten.filter { $0 != d.fullName }, forKey: "forgottenDevices")
+        }
+        device = SharedDevice(name: d.fullName, org: org, roots: d.rootList, addr: k.addr, joinCode: "", running: false,
+                              createdAt: Date().timeIntervalSince1970, paused: nil, state: k.state == Bins.stateDir ? nil : k.state)
+        UI.log("ADOPTED: \(d.fullName) keys=\(k.state)")
+        MeshyStore.shared.notify(title: "This Mac is \(d.name)", body: "It's on ENS with this Mac's keys. Meshy is starting to share it.")
+        onChange?()
+        return true
     }
 
     // MARK: Join with an invite link (agent or person)
