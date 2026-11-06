@@ -17,7 +17,9 @@ A menu-bar app (no Dock icon). Install `Meshy.dmg`, drag Meshy to Applications, 
    - **This Mac ›**:
      - **Share this Mac…**: pick folders and a network, then name the device.
      - **Join with an Invite Link…**: become an agent or person.
-     - **Install Command-Line Tools**: symlinks into `~/.local/bin`.
+     - **Link This Mac**: runs the bundled `meshy login`. Your wallet links this Mac's keys to your member name, once per Mac.
+     - **Command-Line Tools**: done by itself at every launch. The tools are symlinked into `~/.local/bin`, and `~/.zprofile` gets that folder on PATH if no profile has it yet.
+   - **Shared With Me ›** (everyone): each device you have a live grant on, with **Open in Finder** (the bundled `meshy mount`, a network volume in /Volumes), **Eject**, and a countdown. The volume is ejected when the grant is revoked or expires.
      - Daemon and mesh status.
    - Everyone also gets **This Mac**, **Organizations** and **More**.
 
@@ -33,10 +35,12 @@ Every write is signed in the browser by an owner or admin and enforced on-chain.
    - `live.meshy.meshyd`: `meshyd run` with `wss://ethereum-sepolia-rpc.publicnode.com`, `--arkiv=`, and the control socket at `~/.meshy/meshyd/control.sock`
    - `live.meshy.mesh`: `meshyd mesh-join --provider https://api.meshy.live`
 
-   Logs are in `~/Library/Logs/Meshy`. **Stop Sharing** removes both LaunchAgents and keeps the keys.
+   Logs are in `~/Library/Logs/Meshy`. **Stop Sharing** removes both LaunchAgents, ends live sessions and keeps the keys. The device stays stopped until **Start Sharing**. If the provider refuses the mesh (for example `MESHY_SEATS_EXCEEDED`), This Mac says so, and owners get **Add Seats in Billing…**.
+
+   A member who isn't an admin doesn't get a link to send. The app runs `meshy request device …`, and admins see it under **Requests** (it falls back to a link if this Mac isn't linked yet).
 
 ## Request access
-Pick an agent, a folder (from the device's `meshy.roots`), read or read-and-write, and a duration. You get a link to `/org/<org>?give=<agent>&target=<device>&path=…&mode=ro|rw&dur=…`, which opens the Give access sheet prefilled. Copy it or email it to an admin, or open it yourself if you are one. It shows under My Access until the grant lands.
+Pick who it's for (you by default, or one of this Mac's agents), a folder (from the device's `meshy.roots`), read or read-and-write, and a duration. Meshy sends it to the org's admins through the provider (`meshy request access …`, signed with this Mac's key). Admins get a notification, and it shows under **Requests** in their menu and on the dashboard's Access page. **Review and Grant…** there opens the Give access sheet prefilled. It shows under My Access until the grant lands. If this Mac isn't linked yet, you get the link to send instead, as before.
 
 ## Build and test
 ```bash

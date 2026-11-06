@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Shell";
+import { DMG_URL, SetupSteps } from "@/components/SetupMac";
 import { CopyLine } from "./CopyLine";
 
 export const metadata: Metadata = { title: "Download · Meshy" };
@@ -37,7 +38,31 @@ export default function Download() {
         Every binary comes from the public GitHub release, and the installer checks each archive against the release&apos;s SHA-256 checksums before installing.
       </p>
 
-      <section className="mt-10 space-y-3">
+      <section className="mt-10 rounded-2xl border border-line bg-panel p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-[15px] font-semibold">Meshy for Mac</div>
+            <div className="text-[13px] text-muted">Menu-bar app with the <span className="mono">meshy</span> CLI built in. macOS 13+, universal.</div>
+          </div>
+          <div className="flex gap-2">
+            <a className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-on-accent hover:opacity-90" href={DMG_URL}>
+              Download .dmg
+            </a>
+            <a className="rounded-full border border-line-strong px-4 py-2 text-[13px] font-semibold hover:border-accent" href={`${REL}/Meshy-mac.zip`}>
+              .zip
+            </a>
+          </div>
+        </div>
+        <p className="mt-3 text-[12px] text-muted">
+          One download: Meshy.app puts <span className="mono">meshy</span>, <span className="mono">meshyd</span> and <span className="mono">meshy-mesh</span> in ~/.local/bin and adds it to your PATH when it opens. Not notarised yet: on first launch, right-click the app and choose Open.
+        </p>
+        <div className="mt-5 border-t border-line pt-5">
+          <SetupSteps />
+        </div>
+      </section>
+
+      <h2 className="mt-12 text-[13px] font-semibold uppercase tracking-wide text-muted">Without the app (Linux, servers, agents)</h2>
+      <section className="mt-3 space-y-3">
         {installs.map((i) => (
           <div key={i.who} className="rounded-2xl border border-line bg-panel p-4">
             <div className="flex items-baseline justify-between gap-4">
@@ -47,24 +72,6 @@ export default function Download() {
             <CopyLine text={i.cmd} />
           </div>
         ))}
-      </section>
-
-      <section className="mt-10 rounded-2xl border border-line bg-panel p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="text-[15px] font-semibold">Meshy for Mac</div>
-            <div className="text-[13px] text-muted">The dashboard as a native app. macOS 13+, universal.</div>
-          </div>
-          <div className="flex gap-2">
-            <a className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-on-accent hover:opacity-90" href={`${REL}/Meshy.dmg`}>
-              Download .dmg
-            </a>
-            <a className="rounded-full border border-line-strong px-4 py-2 text-[13px] font-semibold hover:border-accent" href={`${REL}/Meshy-mac.zip`}>
-              .zip
-            </a>
-          </div>
-        </div>
-        <p className="mt-3 text-[12px] text-muted">Not notarised yet: on first launch, right-click the app and choose Open.</p>
       </section>
 
       <section className="mt-10">

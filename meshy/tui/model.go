@@ -25,11 +25,17 @@ const (
 
 type (
 	tickMsg   time.Time
-	mapMsg    mapResult
+	mapMsg    struct {
+		mapResult
+		gen int
+	}
 	headMsg   headResult
 	txHistMsg []float64
 	daemonMsg daemonResult
-	arkivMsg  feedResult
+	arkivMsg  struct {
+		feedResult
+		gen int
+	}
 	eventMsg  audit.Event
 	toastMsg  string
 )
@@ -52,6 +58,7 @@ type model struct {
 	confirm string // session id awaiting y/n
 	events  chan audit.Event
 	arkivOK bool // first Arkiv load done (older revokes do not flash)
+	gen     int  // bumped when the org changes; stale map/feed loops stop
 }
 
 func newModel(ctx context.Context, o Options, g Glyphs) *model {
@@ -86,7 +93,8 @@ func after(d time.Duration, f func() tea.Msg) tea.Cmd {
 }
 
 func (m *model) cmdMap(d time.Duration) tea.Cmd {
-	return after(d, func() tea.Msg { return mapMsg(fetchMap(m.ctx, m.o.API, m.o.Org)) })
+	gen, org := m.gen, m.o.Org
+	return after(d, func() tea.Msg { return mapMsg{fetchMap(m.ctx, m.o.API, org), gen} })
 }
 func (m *model) cmdHead(d time.Duration) tea.Cmd {
 	return after(d, func() tea.Msg { return headMsg(fetchHead(m.ctx, m.o.RPC)) })
@@ -95,7 +103,36 @@ func (m *model) cmdDaemon(d time.Duration) tea.Cmd {
 	return after(d, func() tea.Msg { return daemonMsg(fetchDaemon(m.ctx, m.o.Control)) })
 }
 func (m *model) cmdArkiv(d time.Duration) tea.Cmd {
-	return after(d, func() tea.Msg { return arkivMsg(fetchArkiv(m.ctx, m.o.Arkiv, m.o.Org)) })
+	gen, org := m.gen, m.o.Org
+	return after(d, func() tea.Msg { return arkivMsg{fetchArkiv(m.ctx, m.o.Arkiv, org), gen} })
+}
+
+// switchOrg moves the dashboard to the next org this machine belongs to.
+func (m *model) switchOrg() tea.Cmd {
+	if len(m.o.Orgs) < 2 {
+		m.say("this machine is in one org; use --org for another")
+		return nil
+	}
+	i := 0
+	for j, o := range m.o.Orgs {
+		if o == m.o.Org {
+			i = j + 1
+		}
+	}
+	m.o.Org = m.o.Orgs[i%len(m.o.Orgs)]
+	if m.o.MeFor != nil {
+		m.o.Me = m.o.MeFor(m.o.Org)
+	}
+	m.gen++
+	m.arkivOK = false
+	m.s = &State{Org: m.o.Org, Mode: m.o.Mode, Me: m.o.Me}
+	m.sel = 0
+	m.say("org " + m.o.Org)
+	cmds := []tea.Cmd{m.cmdMap(0)}
+	if m.o.Control == "" && m.o.Arkiv != "" {
+		cmds = append(cmds, m.cmdArkiv(0))
+	}
+	return tea.Batch(cmds...)
 }
 func (m *model) cmdEvent() tea.Cmd {
 	return func() tea.Msg {
@@ -152,6 +189,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tick()
 	case mapMsg:
+		if msg.gen != m.gen {
+			return m, nil // the org changed: this loop stops
+		}
 		if msg.Err != nil {
 			m.s.MapErr = msg.Err.Error()
 		} else {
@@ -198,6 +238,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.cmdDaemon(everyDaemon)
 	case arkivMsg:
+		if msg.gen != m.gen {
+			return m, nil
+		}
 		if msg.Err != nil {
 			m.s.FeedErr = msg.Err.Error()
 		} else {
@@ -307,6 +350,8 @@ func (m *model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		cmd := "meshy ssh " + dev + " -- "
 		m.say(copyText(cmd) + ": " + cmd)
+	case "g":
+		return m, m.switchOrg()
 	case "o":
 		u := m.o.Dashboard + "/org/" + m.s.Org
 		if os.Getenv("SSH_TTY") == "" && openURL(u) == nil {
@@ -348,7 +393,7 @@ func openURL(u string) error {
 
 func (m *model) frame() *Frame {
 	f := &Frame{S: m.s, Now: m.now, W: m.w, H: m.h, G: m.g, Tick: m.tick, Sel: m.sel, Focus: m.focus,
-		Help: m.help, Paused: m.paused, Status: m.toast}
+		Help: m.help, Paused: m.paused, Status: m.toast, Orgs: len(m.o.Orgs)}
 	if !m.o.NoSplash {
 		if e := m.now.Sub(m.start); e < splashFor {
 			f.Splash = max(0.01, float64(e)/float64(splashFor))

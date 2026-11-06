@@ -52,7 +52,13 @@ Under Docker on Linux, add `--device /dev/fuse --cap-add SYS_ADMIN --security-op
 meshy join 'https://<dashboard>/approve?org=acme.eth&agent=claude-1'
 meshy grants db1.prod.acme.eth
 meshy ssh db1.prod.acme.eth -- cat /srv/reports/q3.csv
+meshy mount jash.sample1.acme.eth        # the granted folders as a Finder volume (WebDAV on 127.0.0.1)
+meshy request access jash.sample1.acme.eth --path /Users/jash/oct26 --mode rw --dur 3600
+meshy top                                # every org this machine is in; g switches org
 ```
+- **`meshy mount`** opens one session on the device, like `meshy ssh`, and runs the system `sftp-server` inside meshyd's sandbox. The device's folder policy and audit apply to every file, and the volume is ejected when the grant is revoked or expires. Finder's `._*` and `.DS_Store` files stay in memory on your Mac. Code: `davfs/`, `cmd/meshy/mount.go`.
+- **`meshy request`** signs a request with this machine's key (the addr record of your name) and posts it to the provider's `/v1/requests`. Admins see it in Meshy for Mac (Requests) and on the dashboard (Access). Nothing is granted until an admin signs.
+- `ssh`, `mount` and `connect` join the mesh on first use (`meshy mesh-join` is no longer a separate step).
 
 ## Deviation from the plan
 The plan put this code inside a vendored NetBird fork. Instead the mesh lives in a separate module, [`../meshnet`](../meshnet) (`meshy-mesh`), which wraps NetBird's `client/embed` (BSD-3) in userspace.
@@ -60,7 +66,7 @@ The plan put this code inside a vendored NetBird fork. Instead the mesh lives in
 It has to be separate because NetBird v0.82 and go-ethereum need incompatible `pion/stun/v3` versions, so they can't link into one binary. On resources, `meshy-mesh serve` forwards the mesh port `:22` to meshyd on localhost. On agents, `meshy-mesh proxy` is the SSH ProxyCommand, so each agent is its own mesh peer. Authorization doesn't depend on source IP: meshyd authorizes the SSH key against ENS.
 
 ## Authorization in meshyd (three steps)
-1. **Login:** the agent's key, address and World ID attestation are checked against ENS.
+1. **Login:** the agent's key, address and World ID attestation are checked against ENS. For members (`<you>.people.<org>`), a grant may be owned by the member's wallet (the owner of the name) or by the linked machine key (the addr record), so linking another Mac doesn't break existing grants.
 2. **Shell or exec:** requires a device grant plus its sealed folder policy.
 3. **Port-forward:** requires a service grant; the target comes from `meshy.service`.
 

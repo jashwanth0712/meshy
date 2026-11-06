@@ -14,6 +14,7 @@ import ServiceManagement
 final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     let store = MeshyStore.shared
     let dev = DeviceManager.shared
+    let access = AccessManager.shared
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     let root = NSMenu()
 
@@ -46,6 +47,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         }
         store.onChange = changed
         dev.onChange = changed
+        access.onChange = changed
         updateButton()
         rebuild()
     }
@@ -135,11 +137,22 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             let acc = submenu("Access", accessMenu())
             acc.badgeText(m?.liveGrants.count ?? 0)
             root.addItem(acc)
+            if !store.orgRequests.isEmpty {
+                let r = submenu("Requests", requestsMenu())
+                r.badgeText(store.orgRequests.count)
+                root.addItem(r)
+            }
         } else {
             root.addItem(submenu("Request Access", requestMenu()))
             let mine = submenu("My Access", myAccessMenu())
             mine.badgeText(myLive.count + store.requests.count)
             root.addItem(mine)
+        }
+        let devGrants = myLive.filter { !$0.isService && $0.target != nil }
+        if !devGrants.isEmpty || !access.mounts.isEmpty {
+            let shared = submenu("Shared With Me", sharedWithMeMenu())
+            shared.badgeText(devGrants.count)
+            root.addItem(shared)
         }
         let mac = submenu("This Mac", thisMacMenu())
         if let s = dev.statusLine { mac.subtitleText(s) }
@@ -379,6 +392,33 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         return m
     }
 
+    /// Owner / admin: what members asked for, straight from the provider (no links to forward).
+    private func requestsMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
+        m.addItem(label("Members asked for these. You sign each in the dashboard."))
+        for r in store.orgRequests {
+            let title = r.kind == "device" ? "\(r.fromLabel): add device \(short(r.target))" : "\(r.who) → \(short(r.target))"
+            let it = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            var sub = [ago(Date(timeIntervalSince1970: r.at))]
+            if let p = r.path { sub.insert(tilde(p) + (r.mode == "rw" ? " · read-write" : " · read"), at: 0) }
+            if r.kind == "access", r.who != r.fromLabel { sub.append("asked by \(r.fromLabel)") }
+            it.subtitleText(sub.joined(separator: " · "))
+            let sm = NSMenu()
+            sm.autoenablesItems = false
+            if r.kind == "access", let d = r.dur { sm.addItem(label("For \(d >= 3600 ? plural(d / 3600, "hour") : plural(d / 60, "minute"))")) }
+            sm.addItem(open(r.kind == "device" ? "Add Device…" : "Review and Grant…", r.reviewPath))
+            let x = action("Dismiss", #selector(dismissRequest(_:)))
+            x.representedObject = r.id
+            sm.addItem(x)
+            it.submenu = sm
+            m.addItem(it)
+        }
+        return m
+    }
+
+    @objc func dismissRequest(_ s: NSMenuItem) { if let id = s.representedObject as? String { store.dismissRequest(id) } }
+
     // MARK: member / node: Request Access › and My Access ›
 
     private func requestMenu() -> NSMenu {
@@ -413,7 +453,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
     /// Live grants held by this Mac's agents (or the signed-in address).
     private var myLive: [MapGrant] {
-        let mine = Set(store.agentsHere.map { $0.addr.lowercased() } + [store.address?.lowercased() ?? "-"])
+        let mine = Set(store.agentsHere.map { $0.addr.lowercased() } + People.here().filter { $0.org == store.org }.map { $0.addr.lowercased() } + [store.address?.lowercased() ?? "-"])
         return (store.map?.liveGrants ?? []).filter { mine.contains($0.owner?.lowercased() ?? "") }
     }
 
@@ -431,7 +471,11 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             sm.autoenablesItems = false
             sm.addItem(label(g.fullName))
             if let t = g.target {
-                sm.addItem(g.isService ? copyItem("Copy “meshy connect \(short(t))”", "meshy connect \(t)") : copyItem("Copy “meshy ssh \(short(t))”", "meshy ssh \(t)"))
+                if g.isService {
+                    sm.addItem(copyItem("Copy “meshy connect \(short(t))”", "meshy connect \(t)"))
+                } else {
+                    addFinderItems(sm, device: t)
+                }
                 let r = action("Ask for More Time…", #selector(requestAccess(_:)))
                 r.representedObject = t
                 sm.addItem(r)
@@ -461,6 +505,108 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         return m
     }
 
+    // MARK: Shared With Me: granted folders as Finder volumes
+
+    private func sharedWithMeMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
+        let grants = myLive.filter { !$0.isService && $0.target != nil }
+        if grants.isEmpty { m.addItem(label("No folders shared with you right now")) }
+        if !grants.isEmpty, People.inOrg(store.org) == nil, store.agentsHere.isEmpty {
+            m.addItem(linkItem())
+            m.addItem(label("Once, so devices know this Mac is you"))
+            m.addItem(.separator())
+        }
+        for g in grants {
+            guard let t = g.target else { continue }
+            let d = store.map?.devices.first { $0.fullName == t }
+            let it = NSMenuItem(title: "\(short(t)) · \(left(g.expiry))", action: nil, keyEquivalent: "")
+            countdowns.append((it, g))
+            let st = access.mounts[t]
+            it.subtitleText(st?.state == .mounted ? "in Finder" : st?.state == .mounting ? "opening…" : (d?.rootList.map { ($0 as NSString).lastPathComponent }.joined(separator: ", ") ?? "folders"))
+            let sm = NSMenu()
+            sm.autoenablesItems = false
+            sm.addItem(label(t))
+            addFinderItems(sm, device: t)
+            it.submenu = sm
+            m.addItem(it)
+        }
+        for (d, mt) in access.mounts where mt.state == .mounted && !grants.contains(where: { $0.target == d }) {
+            let e = action("Eject \(short(d))", #selector(ejectDevice(_:)))
+            e.representedObject = d
+            m.addItem(e)
+        }
+        return m
+    }
+
+    /// Open in Finder / Show in Finder + Eject, and the terminal command for agents.
+    private func addFinderItems(_ sm: NSMenu, device t: String) {
+        let st = access.mounts[t]
+        switch st?.state {
+        case .mounted:
+            let o = action("Show in Finder", #selector(openInFinder(_:)))
+            o.representedObject = t
+            sm.addItem(o)
+            let e = action("Eject", #selector(ejectDevice(_:)))
+            e.representedObject = t
+            sm.addItem(e)
+        case .mounting:
+            sm.addItem(label("Opening in Finder…"))
+        default:
+            let o = action("Open in Finder", #selector(openInFinder(_:)))
+            o.representedObject = t
+            sm.addItem(o)
+            if let msg = st?.message { sm.addItem(label(msg.count > 80 ? String(msg.prefix(80)) + "…" : msg, color: .systemOrange)) }
+        }
+        sm.addItem(.separator())
+        sm.addItem(copyItem("Copy Terminal Command", "meshy ssh \(t) -- ls"))
+    }
+
+    /// Your member label in the org (from the chain), when this Mac isn't linked yet.
+    private var myMemberLabel: String? { store.org.flatMap { store.role($0)?.name }?.components(separatedBy: ".").first }
+
+    private func linkItem() -> NSMenuItem {
+        if let o = access.linking { return label("Linking this Mac to \(o)… finish in your browser") }
+        return action("Link This Mac to \(org)…", #selector(linkThisMacClicked))
+    }
+
+    @objc func openInFinder(_ s: NSMenuItem) {
+        guard let t = s.representedObject as? String else { return }
+        if People.inOrg(store.org) == nil, store.agentsHere.isEmpty, access.mounts[t] == nil {
+            // First time on this Mac: link it to your name, then open.
+            return linkThisMac(then: t)
+        }
+        access.mount(t) { [weak self] err in
+            guard let self, let err else { return }
+            self.later {
+                if err.contains("Link This Mac") {
+                    if UI.confirm("Link this Mac first", info: err, ok: "Link This Mac…") { self.linkThisMac(then: t) }
+                } else {
+                    UI.alert("Couldn't open \(self.short(t)) in Finder", info: err)
+                }
+            }
+        }
+    }
+
+    @objc func ejectDevice(_ s: NSMenuItem) { if let t = s.representedObject as? String { access.eject(t) } }
+
+    @objc func linkThisMacClicked() { linkThisMac(then: nil) }
+
+    private func linkThisMac(then device: String?) {
+        guard let o = store.org else { return }
+        access.linkThisMac(org: o) { [weak self] r in
+            guard let self else { return }
+            switch r {
+            case .success(let name):
+                self.store.notify(title: "This Mac is linked", body: "Devices now know it as \(name).")
+                if let d = device { self.access.mount(d) { e in if let e { self.later { UI.alert("Couldn't open \(self.short(d)) in Finder", info: e) } } } }
+            case .failure(let e):
+                self.later { UI.alert("Linking this Mac didn't finish", info: e.message) }
+            }
+        }
+        store.notify(title: "Finish in your browser", body: "Connect your wallet and pick \(o). One transaction links this Mac to your name.")
+    }
+
     // MARK: This Mac, Recent, More
 
     private func thisMacMenu() -> NSMenu {
@@ -487,6 +633,18 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         } else {
             m.addItem(label("Add an org to share this Mac"))
         }
+        if let e = dev.status.meshError, e.contains("SEATS") || e.contains("SUBSCRIPTION") {
+            m.addItem(label("The provider refused the mesh: \(e.contains("SEATS") ? "the org needs more seats" : "no subscription")", color: .systemOrange))
+            if manages { m.addItem(open("Add Seats in Billing…", "/org/\(org)/billing")) } else { m.addItem(label("Ask an owner to add seats (Billing)")) }
+        }
+        m.addItem(.separator())
+        m.addItem(sectionHeader("You on this Mac"))
+        if let p = People.inOrg(store.org) {
+            m.addItem(label("Linked as \(short(p.name))"))
+        } else if store.org != nil {
+            m.addItem(linkItem())
+            m.addItem(label("Lets you open shared folders in Finder"))
+        }
         m.addItem(.separator())
         m.addItem(sectionHeader("Agents on this Mac"))
         let here = store.org == nil ? store.localAgents : store.agentsHere
@@ -503,8 +661,9 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         }
         addJoinItems(to: m)
         m.addItem(.separator())
-        let tools = action("Install Command-Line Tools", #selector(installTools))
+        let tools = action(dev.toolsInstalled ? "Command-Line Tools Installed" : "Install Command-Line Tools", #selector(installTools))
         tools.state = dev.toolsInstalled ? .on : .off
+        if dev.toolsInstalled { tools.subtitleText("meshy is on your PATH (~/.local/bin)") }
         m.addItem(tools)
         return m
     }
@@ -727,14 +886,22 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         let full = "\(label).\(network.fullName)"
         if map.devices.contains(where: { $0.fullName == full }) { return UI.alert("\(full) already exists.", info: "Pick another name.") }
         switch dev.share(name: full, org: org, roots: roots) {
-        case .success:
-            if let l = dev.addDeviceLink {
-                if manages { openDashboard(l) } else { UI.copy(Settings.base + l) }
+        case .success(let d):
+            if manages {
+                if let l = dev.addDeviceLink { openDashboard(l) }
+                UI.alert("Finish in your browser", info: "The dashboard opened with this Mac's join code filled in. Sign the 3 transactions. Meshy starts sharing by itself once \(label) is on ENS.")
+                return
             }
-            UI.alert(manages ? "Finish in your browser" : "Send the link to an admin",
-                     info: manages
-                        ? "The dashboard opened with this Mac's join code filled in. Sign the 3 transactions. Meshy starts sharing by itself once \(label) is on ENS."
-                        : "The link to add \(label) is on your clipboard. An owner or admin of \(network.name) opens it and signs. Meshy starts sharing by itself once \(label) is on ENS.")
+            access.sendRequest(["device", full, "--join-code", d.joinCode]) { [weak self] r in
+                guard let self else { return }
+                switch r {
+                case .success:
+                    self.store.notify(title: "Asked the admins to add \(label)", body: "They see it in Meshy. This Mac starts sharing by itself once they add it.")
+                case .failure:
+                    if let l = self.dev.addDeviceLink { UI.copy(Settings.base + l) }
+                    self.later { UI.alert("Send the link to an admin", info: "The link to add \(label) is on your clipboard. An owner or admin of \(network.name) opens it and signs. Meshy starts sharing by itself once \(label) is on ENS.\n\nTip: This Mac › Link This Mac lets Meshy send requests to admins directly next time.") }
+                }
+            }
         case .failure(let e):
             UI.alert("Couldn't prepare this Mac", info: e.message)
         }
@@ -761,18 +928,23 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         let d = map.devices.first { $0.fullName == target }
         let svc = map.services.first { $0.fullName == target }
         guard d != nil || svc != nil else { return UI.alert("\(short(target)) isn't in \(org) any more.") }
-        let agents = store.agentsHere.map(\.agent)
-        var fields: [Field] = [.text("For agent", value: agents.first ?? "", placeholder: "agent name, e.g. claude-1", options: agents)]
+        // For you (your member name in the org) or one of this Mac's agents.
+        let me = People.inOrg(store.org)?.agent ?? myMemberLabel
+        let agents = ([me].compactMap { $0 } + store.agentsHere.map(\.agent)).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        var fields: [Field] = [.text("For", value: agents.first ?? "", placeholder: "you or an agent, e.g. claude-1", options: agents)]
         if let d {
             fields.append(.text("Folder", value: d.rootList.first ?? "", placeholder: "a folder \(d.name) shares", options: d.rootList))
             fields.append(.popup("Access", options: ["Read", "Read and write"], selected: 0))
         }
         let durs: [(String, Int)] = [("15 minutes", 900), ("1 hour", 3600), ("4 hours", 14400), ("1 day", 86400)]
         fields.append(.popup("For how long", options: durs.map(\.0), selected: 1))
-        let info = agents.isEmpty ? "Access goes to an agent identity. If this Mac has none yet, use This Mac › Join with an Invite Link first, or type the agent's name." : "An admin of \(org) opens the link and signs."
+        let info = agents.isEmpty ? "Access goes to you (your member name) or an agent. Type the name." : "Admins of \(org) see it in their Meshy menu and sign it."
         guard let v = UI.form("Request access to \(short(target))", info: info, fields: fields, ok: "Create Request"), v.count == fields.count else { return }
         let agent = v[0].lowercased()
-        guard agent.range(of: "^[a-z0-9][a-z0-9-]*$", options: .regularExpression) != nil else { return UI.alert("Type the agent's name, like claude-1.") }
+        guard agent.range(of: "^[a-z0-9][a-z0-9-]*$", options: .regularExpression) != nil else { return UI.alert("Type a name in \(org), like roshan or claude-1.") }
+        if !map.grantees.isEmpty, !map.grantees.contains(agent), agent != me {
+            guard UI.confirm("\(agent) isn't in \(org)", info: "Nobody called \(agent) is a member or agent of \(org), so a grant for it can't be used. Send the request anyway?", ok: "Send Anyway") else { return }
+        }
         let seconds = durs[min(max(0, Int(v.last!) ?? 1), durs.count - 1)].1
         var path = "/org/\(org)?give=\(q(agent))&target=\(q(target))&dur=\(seconds)"
         var p: String?, m: String?
@@ -783,11 +955,27 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             path += "&path=\(q(folder))&mode=\(m!)"
         }
         let link = Settings.base + path
-        store.addRequest(AccessRequest(agent: agent, target: target, path: p, mode: m, dur: seconds, at: Date().timeIntervalSince1970, link: link))
-        switch UI.choose("Send this to an admin of \(org)", info: link, buttons: ["Copy Link", "Email…", "Done"]) {
-        case 0: UI.copy(link)
-        case 1: emailLink(link)
-        default: break
+        let req = AccessRequest(agent: agent, target: target, path: p, mode: m, dur: seconds, at: Date().timeIntervalSince1970, link: link)
+        if manages { return openDashboard(path) } // you can sign it yourself
+        var args = ["access", target, "--for", agent, "--dur", String(seconds)]
+        if let p, let m { args += ["--path", p, "--mode", m] }
+        access.sendRequest(args) { [weak self] r in
+            guard let self else { return }
+            self.store.addRequest(req)
+            switch r {
+            case .success:
+                self.store.notify(title: "Request sent", body: "Admins of \(self.org) see it in Meshy. It shows under My Access until they grant it.")
+            case .failure(let e):
+                // This Mac isn't linked yet, or the provider is older: fall back to a link.
+                UI.log("REQUEST-FALLBACK: \(e.message)")
+                self.later {
+                    switch UI.choose("Send this to an admin of \(self.org)", info: "Meshy couldn't deliver it directly (\(e.message.components(separatedBy: "\n").last ?? "")). Send the link instead:\n\n\(link)", buttons: ["Copy Link", "Email…", "Done"]) {
+                    case 0: UI.copy(link)
+                    case 1: self.emailLink(link)
+                    default: break
+                    }
+                }
+            }
         }
     }
 

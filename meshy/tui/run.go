@@ -29,7 +29,9 @@ const (
 type Options struct {
 	Mode      string // "daemon" (meshyd top) or "agent" (meshy top)
 	Org       string
-	Me        string // this device or agent, highlighted in the header
+	Orgs      []string                 // every org this machine is in ("g" cycles them)
+	MeFor     func(org string) string // this machine's name in an org, for the header
+	Me        string                  // this device or agent, highlighted in the header
 	API       string // meshy-sync base URL
 	RPC       string // Sepolia JSON-RPC over HTTP(S)
 	Arkiv     string // Arkiv RPC ("" disables)

@@ -55,6 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         MeshyStore.shared.start()
         DeviceManager.shared.start()
+        // `meshy` in Terminal works right after installing the app: link the bundled tools into
+        // ~/.local/bin and put that on PATH, every launch (cheap, and follows app updates).
+        DispatchQueue.global(qos: .utility).async { Tools.ensure() }
         // Signed in from before: pick up orgs created or joined since (chain state).
         if MeshyStore.shared.address != nil { MeshyStore.shared.discoverOrgs { _ in } }
     }
@@ -125,6 +128,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+
+    func applicationWillTerminate(_ note: Notification) { AccessManager.shared.ejectAll() }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { false }
 

@@ -23,6 +23,19 @@ type Identity struct {
 	Agent     string      // agent label (SSH username), e.g. "claude-1"
 	AgentName enskit.Name // claude-1.agents.acme.eth
 	Addr      common.Address
+	// Wallet is the ENS owner of a member's name (<label>.people.<org>). A
+	// member's grants may be owned by that wallet instead of the device key in
+	// the addr record, so they keep working when the member links another Mac.
+	// Zero for agents.
+	Wallet common.Address
+}
+
+// owners are the addresses a grant for id may be owned by.
+func (id *Identity) owners() []common.Address {
+	if id.Wallet != (common.Address{}) && id.Wallet != id.Addr {
+		return []common.Address{id.Addr, id.Wallet}
+	}
+	return []common.Address{id.Addr}
 }
 
 // Authz authorizes a shell/exec session on this resource (device grant).
@@ -157,34 +170,45 @@ func (a *ENSAuthorizer) Authenticate(ctx context.Context, user string, key gossh
 			return nil, deny("MESHY_NOT_HUMAN_BACKED:", "%v (agent=%s)", err, agentName)
 		}
 	}
-	return &Identity{Agent: user, AgentName: agentName, Addr: agentAddr}, nil
+	out := &Identity{Agent: user, AgentName: agentName, Addr: agentAddr}
+	if person {
+		if w, err := a.ENS.ExactOwner(ctx, agentName, nil); err == nil {
+			out.Wallet = w
+		}
+	}
+	return out, nil
 }
 
 // liveGrant checks that grant is registered, unexpired (with ancestors) and
-// owned by owner. It returns the grant's records.
-func (a *ENSAuthorizer) liveGrant(ctx context.Context, grantName enskit.Name, owner common.Address) (*enskit.Records, time.Time, error) {
+// owned by one of owners. It returns the grant's records and its owner.
+func (a *ENSAuthorizer) liveGrant(ctx context.Context, grantName enskit.Name, owners []common.Address) (*enskit.Records, time.Time, common.Address, error) {
+	var none common.Address
 	exact, err := a.ENS.ExactOwner(ctx, grantName, nil)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("meshyd: ens: %w", err)
+		return nil, time.Time{}, none, fmt.Errorf("meshyd: ens: %w", err)
 	}
 	if exact == (common.Address{}) {
-		return nil, time.Time{}, deny("MESHY_NO_GRANT", "grant=%s", grantName)
+		return nil, time.Time{}, none, deny("MESHY_NO_GRANT", "grant=%s", grantName)
 	}
-	if exact != owner {
-		return nil, time.Time{}, deny("MESHY_NO_GRANT", "grant=%s is owned by %s, not the agent %s", grantName, exact.Hex(), owner.Hex())
+	owned := false
+	for _, o := range owners {
+		owned = owned || exact == o
+	}
+	if !owned {
+		return nil, time.Time{}, none, deny("MESHY_NO_GRANT", "grant=%s is owned by %s, not the agent %s", grantName, exact.Hex(), owners[0].Hex())
 	}
 	g, err := a.ENS.Lookup(ctx, grantName)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("meshyd: ens: %w", err)
+		return nil, time.Time{}, none, fmt.Errorf("meshyd: ens: %w", err)
 	}
 	if g.State.Status != enskit.Registered {
-		return nil, time.Time{}, deny("MESHY_NO_GRANT", "grant=%s status=%s", grantName, g.State.Status)
+		return nil, time.Time{}, none, deny("MESHY_NO_GRANT", "grant=%s status=%s", grantName, g.State.Status)
 	}
 	expiry := time.Unix(int64(g.State.Expiry), 0)
 	if !expiry.After(a.now()) {
-		return nil, time.Time{}, deny("MESHY_EXPIRED", "grant=%s", grantName)
+		return nil, time.Time{}, none, deny("MESHY_EXPIRED", "grant=%s", grantName)
 	}
-	return g, expiry, nil
+	return g, expiry, exact, nil
 }
 
 func (a *ENSAuthorizer) AuthorizeSession(ctx context.Context, id *Identity) (*Authz, error) {
@@ -192,7 +216,7 @@ func (a *ENSAuthorizer) AuthorizeSession(ctx context.Context, id *Identity) (*Au
 	if err != nil {
 		return nil, deny("MESHY_BAD_USER", "%v", err)
 	}
-	g, expiry, err := a.liveGrant(ctx, grantName, id.Addr)
+	g, expiry, owner, err := a.liveGrant(ctx, grantName, id.owners())
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +239,7 @@ func (a *ENSAuthorizer) AuthorizeSession(ctx context.Context, id *Identity) (*Au
 	}
 	return &Authz{
 		Agent: id.Agent, AgentName: id.AgentName,
-		Grant:  enskit.Grant{Name: grantName, Owner: id.Addr, TokenID: g.State.TokenID},
+		Grant:  enskit.Grant{Name: grantName, Owner: owner, TokenID: g.State.TokenID},
 		Expiry: expiry, Policy: pol,
 	}, nil
 }
@@ -241,13 +265,13 @@ func (a *ENSAuthorizer) AuthorizeService(ctx context.Context, id *Identity, serv
 		return nil, deny("MESHY_UNKNOWN_SERVICE", "service=%s target %q is not host:port", service, spec.Target)
 	}
 	grantName := enskit.Name(id.Agent + "." + string(service))
-	g, expiry, err := a.liveGrant(ctx, grantName, id.Addr)
+	g, expiry, owner, err := a.liveGrant(ctx, grantName, id.owners())
 	if err != nil {
 		return nil, err
 	}
 	return &ServiceAuthz{
 		Service: service,
-		Grant:   enskit.Grant{Name: grantName, Owner: id.Addr, TokenID: g.State.TokenID},
+		Grant:   enskit.Grant{Name: grantName, Owner: owner, TokenID: g.State.TokenID},
 		Expiry:  expiry, Spec: spec,
 	}, nil
 }

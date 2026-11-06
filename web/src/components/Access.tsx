@@ -43,11 +43,14 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
 
   async function submit() {
     if (!wallet || !tree || !ag) return;
+    // A member's grant belongs to their wallet (the owner of <you>.people.<org>), so it keeps working
+    // on every Mac they link; meshyd accepts either the wallet or the linked device key.
+    const owner = ag.kind === "person" && ag.owner && ag.owner !== zeroAddress ? ag.owner : ag.addr;
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
     if (svc) {
       setSteps([{ label: `Register ${grantName}`, state: "doing", detail: `expires ${exp.toLocaleTimeString()}` }]);
       try {
-        const r = await send(wallet, client, { address: svc.registry, abi: registryAbi, functionName: "register", args: [agent, ag.addr, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)] }, (h) => up(0, { tx: h }));
+        const r = await send(wallet, client, { address: svc.registry, abi: registryAbi, functionName: "register", args: [agent, owner, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)] }, (h) => up(0, { tx: h }));
         up(0, { state: "done", detail: `block ${r.blockNumber}` });
         toast(`Granted ${short(grantName)}`, "ok");
         refresh();
@@ -70,7 +73,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
         address: res.registry,
         abi: registryAbi,
         functionName: "register",
-        args: [agent, ag.addr, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)],
+        args: [agent, owner, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)],
       }, (h) => up(0, { tx: h }));
       up(0, { state: "done", detail: `block ${r1.blockNumber}` });
       up(1, { state: "doing" });

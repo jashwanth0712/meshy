@@ -72,7 +72,10 @@ type Server struct {
 	nb         *netbird.Client
 	rec        *netbird.Reconciler
 	attest     *attestLog
+	requests   *requestBook
 	log        *slog.Logger
+	// actFor overrides the ENS check in mayActFor (tests).
+	actFor func(ctx context.Context, name string, signer common.Address) (bool, error)
 }
 
 // NewServer creates a Server and connects to Sepolia.
@@ -117,9 +120,10 @@ func NewServer(ctx context.Context, cfg Config, signerKey *ecdsa.PrivateKey) (*S
 			FromBlock: fromBlock,
 			Log:       log,
 		},
-		nb:     nb,
-		attest: newAttestLog(cfg.StateDir),
-		log:    log,
+		nb:       nb,
+		attest:   newAttestLog(cfg.StateDir),
+		requests: newRequestBook(cfg.StateDir),
+		log:      log,
 	}
 	if nb != nil {
 		s.rec = &netbird.Reconciler{Client: nb, Log: log}
@@ -142,6 +146,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/attestations", s.handleAttestations)
 	mux.HandleFunc("GET /v1/seats", s.handleSeats)
 	mux.HandleFunc("GET /v1/orgs", s.handleMyOrgs)
+	mux.HandleFunc("GET /v1/requests", s.handleRequestsList)
+	mux.HandleFunc("POST /v1/requests", s.handleRequestsCreate)
+	mux.HandleFunc("POST /v1/requests/withdraw", s.handleRequestsWithdraw)
 
 	return s.corsMiddleware(mux)
 }

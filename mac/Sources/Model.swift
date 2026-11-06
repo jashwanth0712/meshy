@@ -71,6 +71,7 @@ struct OrgMap: Codable {
     let org: String
     let networks: [MapNetwork]?
     let agents: [MapAgent]?
+    let members: [String]?
     let grants: [MapGrant]?
     let block: Int?
     let generatedAt: String?
@@ -79,6 +80,8 @@ struct OrgMap: Codable {
     var services: [MapService] { devices.flatMap { $0.services ?? [] } }
     var liveGrants: [MapGrant] { (grants ?? []).filter(\.isLive).sorted { $0.expiry < $1.expiry } }
     var endedGrants: [MapGrant] { (grants ?? []).filter { !$0.isLive } }
+    /// Labels that can hold a grant: agents and members.
+    var grantees: [String] { (agents ?? []).map { $0.fullName.components(separatedBy: ".").first ?? $0.name } + (members ?? []).map { $0.components(separatedBy: ".").first ?? $0 } }
 }
 
 func jsonStrings(_ s: String?) -> [String: String] {
@@ -120,6 +123,8 @@ struct RoleInfo: Codable {
     let role: String // owner | admin | member
     let adminOf: [String]
     let checkedAt: Double
+    /// Your name in the org when you're a member (roshan.people.acme.eth), from /v1/orgs.
+    var name: String? = nil
     var canSign: Bool { role == "owner" || role == "admin" }
 }
 
@@ -132,6 +137,30 @@ struct AccessRequest: Codable {
     let dur: Int
     let at: Double
     let link: String
+}
+
+/// A member's request to the org's admins, from the provider (GET /v1/requests).
+struct OrgRequest: Codable {
+    let id: String
+    let org: String
+    let from: String
+    let kind: String // access | device
+    let `for`: String?
+    let target: String
+    let path: String?
+    let mode: String?
+    let dur: Int?
+    let joinCode: String?
+    let at: Double
+    var who: String { `for` ?? from.components(separatedBy: ".").first ?? from }
+    var fromLabel: String { from.components(separatedBy: ".").first ?? from }
+    /// The dashboard page where an admin reviews and signs it.
+    var reviewPath: String {
+        if kind == "device" { return "/org/\(org)/directory?add=\(q(joinCode ?? ""))" }
+        var p = "/org/\(org)?give=\(q(who))&target=\(q(target))&dur=\(dur ?? 3600)"
+        if let path { p += "&path=\(q(path))&mode=\(mode ?? "ro")" }
+        return p
+    }
 }
 
 // MARK: - Store
@@ -190,6 +219,10 @@ final class MeshyStore {
     private var primedEvents = false
     private var timer: Timer?
     private var failures = 0
+    /// Pending requests to this org's admins (only fetched when you can sign).
+    private(set) var orgRequests: [OrgRequest] = []
+    private var seenRequests = Set<String>()
+    private var primedRequests = false
 
     private init() {
         session = Keychain.read()
@@ -235,6 +268,8 @@ final class MeshyStore {
     }
 
     private func resetData() {
+        orgRequests = []
+        primedRequests = false
         map = nil
         mapAt = nil
         mapError = nil
@@ -271,7 +306,7 @@ final class MeshyStore {
                 }
                 if let e = j["error"] as? String { return done(.failure(SignInError(message: e))) }
                 guard j["exists"] as? Bool == true, let r = j["role"] as? String else { return done(.success(nil)) }
-                let info = RoleInfo(role: r, adminOf: j["adminOf"] as? [String] ?? [], checkedAt: Date().timeIntervalSince1970)
+                let info = RoleInfo(role: r, adminOf: j["adminOf"] as? [String] ?? [], checkedAt: Date().timeIntervalSince1970, name: self.role(o)?.name)
                 self.saveRole(o, info)
                 done(.success(info))
             }
@@ -321,7 +356,7 @@ final class MeshyStore {
                 for o in list {
                     guard let name = o["org"] as? String, let role = o["role"] as? String else { continue }
                     // admin scope is filled in by checkRole later; "agent"/"member" are both members here
-                    self.saveRole(name, RoleInfo(role: role == "agent" ? "member" : role, adminOf: [], checkedAt: Date().timeIntervalSince1970))
+                    self.saveRole(name, RoleInfo(role: role == "agent" ? "member" : role, adminOf: [], checkedAt: Date().timeIntervalSince1970, name: o["name"] as? String))
                     found.append(name)
                 }
                 let new = found.filter { !self.orgs.contains($0) }
@@ -415,6 +450,7 @@ final class MeshyStore {
                     self.failures = 0
                     self.saveCache(data)
                     self.fetchEvents()
+                    self.fetchRequests()
                 } else {
                     self.failures += 1
                     if let data, let s = String(data: data, encoding: .utf8), s.contains("error") {
@@ -427,6 +463,49 @@ final class MeshyStore {
                 self.onChange?()
             }
         }.resume()
+    }
+
+    /// Requests still waiting: drops access requests that a live grant answers and devices
+    /// that are on ENS now. Admins get a notification for each new one.
+    func fetchRequests() {
+        guard let org, role(org)?.canSign == true else { orgRequests = []; return }
+        var c = URLComponents(string: syncURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/v1/requests")
+        c?.queryItems = [URLQueryItem(name: "org", value: org)]
+        guard let url = c?.url else { return }
+        URLSession.shared.dataTask(with: URLRequest(url: url, timeoutInterval: 20)) { [weak self] data, resp, _ in
+            DispatchQueue.main.async {
+                guard let self, org == self.org, (resp as? HTTPURLResponse)?.statusCode == 200, let data,
+                      let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let raw = try? JSONSerialization.data(withJSONObject: j["requests"] ?? []),
+                      let list = try? JSONDecoder().decode([OrgRequest].self, from: raw) else { return }
+                let live = self.map?.liveGrants ?? []
+                let devices = Set(self.map?.devices.map(\.fullName) ?? [])
+                let dismissed = Set(self.defaults.stringArray(forKey: "dismissed.\(org)") ?? [])
+                let open = list.filter { r in
+                    if dismissed.contains(r.id) { return false }
+                    if r.kind == "device" { return !devices.contains(r.target) }
+                    return !live.contains { $0.agentLabel == r.who && $0.target == r.target && $0.expiry > r.at }
+                }
+                if self.primedRequests && self.notificationsOn {
+                    for r in open where !self.seenRequests.contains(r.id) {
+                        let what = r.kind == "device" ? "wants to add \(r.target.components(separatedBy: ".").first ?? r.target) as a device"
+                            : "asks for \(r.mode == "rw" ? "read-write" : "read") access to \(r.target.components(separatedBy: ".").first ?? r.target)\(r.path.map { " · " + ($0 as NSString).lastPathComponent } ?? "")"
+                        self.notify(title: "Request from \(r.fromLabel)", body: what, id: "req-" + r.id)
+                    }
+                }
+                for r in open { self.seenRequests.insert(r.id) }
+                self.primedRequests = true
+                self.orgRequests = open
+                self.onChange?()
+            }
+        }.resume()
+    }
+
+    func dismissRequest(_ id: String) {
+        guard let org else { return }
+        defaults.set((defaults.stringArray(forKey: "dismissed.\(org)") ?? []) + [id], forKey: "dismissed.\(org)")
+        orgRequests.removeAll { $0.id == id }
+        onChange?()
     }
 
     private func fetchEvents() {

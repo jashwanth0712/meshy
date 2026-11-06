@@ -26,6 +26,7 @@ type Frame struct {
 	Paused bool
 	Status string  // one-line toast (copied, killed, …)
 	Splash float64 // 0..1 while the splash plays, else 0
+	Orgs   int     // how many orgs "g" cycles through
 }
 
 func width(s string) int { return ansi.StringWidth(s) }
@@ -711,7 +712,11 @@ func (f *Frame) footer(w int) string {
 	if f.S.Daemon != nil && f.S.Mode != "agent" {
 		keys = append(keys, [2]string{"k", "kill"})
 	}
-	keys = append(keys, [2]string{"c", "copy ssh"}, [2]string{"o", "dashboard"}, [2]string{"p", "pause"}, [2]string{"?", "help"})
+	keys = append(keys, [2]string{"c", "copy ssh"}, [2]string{"o", "dashboard"})
+	if f.Orgs > 1 {
+		keys = append(keys, [2]string{"g", fmt.Sprintf("org (%d)", f.Orgs)})
+	}
+	keys = append(keys, [2]string{"p", "pause"}, [2]string{"?", "help"})
 	var b strings.Builder
 	for _, k := range keys {
 		b.WriteString(sCobalt.Bold(true).Render(k[0]) + sMuted.Render(" "+k[1]+"  "))
@@ -735,6 +740,7 @@ func (f *Frame) helpLines() []string {
 		"  k  then y     kill the selected session (meshyd only)",
 		"  c             copy `meshy ssh <device> --` for the selected grant (OSC 52)",
 		"  o             open this org on the web dashboard",
+		"  g             switch to the next org this machine is in",
 		"  p             pause the animation (data keeps loading)",
 		"  a             toggle ASCII glyphs",
 		"  q / ctrl-c    quit",

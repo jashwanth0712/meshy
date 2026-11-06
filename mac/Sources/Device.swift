@@ -37,6 +37,9 @@ struct SharedDevice: Codable {
     let joinCode: String
     var running: Bool
     let createdAt: Double
+    /// Set by Stop Sharing: the device stays registered but this Mac doesn't serve it until
+    /// Start Sharing. (Without it, the next status check would start it again by itself.)
+    var paused: Bool?
 }
 
 /// Live status from meshyd's control socket.
@@ -47,6 +50,8 @@ struct DaemonStatus {
     var sessions = 0
     var meshRunning = false
     var meshJoined = false
+    /// The provider's last refusal from the mesh log, e.g. MESHY_SEATS_EXCEEDED … (nil once on the mesh).
+    var meshError: String?
 }
 
 final class DeviceManager {
@@ -117,6 +122,7 @@ final class DeviceManager {
             if let e = installAgent(label: label, args: args, log: "\(logs)/\(log).log") { return e }
         }
         d.running = true
+        d.paused = false
         device = d
         MeshyStore.shared.notify(title: "This Mac is shared", body: "\(d.name) is running and joining the mesh.")
         poll()
@@ -139,7 +145,9 @@ final class DeviceManager {
 
     func stopDaemons() {
         for label in ["live.meshy.meshyd", "live.meshy.mesh"] { removeAgent(label) }
-        if var d = device { d.running = false; device = d }
+        if var d = device { d.running = false; d.paused = true; device = d }
+        MeshyStore.shared.notify(title: "Stopped sharing", body: "Nobody can reach this Mac's folders until you Start Sharing again. Live sessions were ended.")
+        onChange?()
         poll()
     }
 
@@ -195,10 +203,13 @@ final class DeviceManager {
                 s.meshRunning = r.status == 0 && r.stdout.contains("state = running")
             }
             s.meshJoined = FileManager.default.fileExists(atPath: Bins.stateDir + "/mesh/management")
+            if dev?.running == true, let tail = lastLine(of: Bins.home + "/Library/Logs/Meshy/mesh.log"), tail.contains("refused") || tail.contains("MESHY_") {
+                s.meshError = tail.range(of: "MESHY_[A-Z_]+.*", options: .regularExpression).map { String(tail[$0]) } ?? tail
+            }
             DispatchQueue.main.async {
                 self.status = s
                 // finish setup by itself once the dashboard transaction landed
-                if let d = self.device, !d.running, self.registered { self.startDaemonsAsync() }
+                if let d = self.device, !d.running, d.paused != true, self.registered { self.startDaemonsAsync() }
                 self.onChange?()
             }
         }
@@ -207,7 +218,11 @@ final class DeviceManager {
     var statusLine: String? {
         guard let d = device else { return nil }
         let short = d.name.replacingOccurrences(of: ".\(d.org)", with: "")
-        if !d.running { return registered ? "\(short) · starting…" : "\(short) · waiting for it to be added on ENS" }
+        if !d.running {
+            if d.paused == true { return "\(short) · not sharing" }
+            return registered ? "\(short) · starting…" : "\(short) · waiting for an admin to add it"
+        }
+        if let e = status.meshError, !status.meshRunning || e.contains("SEATS") { return "\(short) · mesh refused: \(e.contains("SEATS") ? "org is out of seats" : e)" }
         if !status.reachable { return "\(short) · daemon starting…" }
         let mesh = status.meshRunning ? "on the mesh" : status.meshJoined ? "mesh reconnecting" : "joining the mesh"
         let health = status.healthy ? "healthy" : "chain not live yet"
@@ -276,26 +291,21 @@ final class DeviceManager {
 
     // MARK: Command-line tools
 
-    /// Symlinks the bundled tools into ~/.local/bin. Returns what to tell the user.
-    func installTools() -> String {
-        guard let dir = Bins.dir, Bins.path("meshy") != nil else { return "The tools are missing from Meshy.app. Reinstall Meshy." }
-        let bin = Bins.toolsDir
-        try? FileManager.default.createDirectory(atPath: bin, withIntermediateDirectories: true)
-        var done: [String] = []
-        for t in Bins.tools {
-            let link = "\(bin)/\(t)"
-            try? FileManager.default.removeItem(atPath: link)
-            if (try? FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "\(dir)/\(t)")) != nil { done.append(t) }
-        }
-        // Is ~/.local/bin on the user's PATH? Read their shell profiles instead of spawning a shell.
-        let profiles = [".zshrc", ".zprofile", ".bash_profile", ".bashrc", ".profile"].compactMap { try? String(contentsOfFile: Bins.home + "/" + $0, encoding: .utf8) }
-        let onPath = bin != Bins.home + "/.local/bin" || profiles.contains { $0.contains(".local/bin") }
-        guard done.count == Bins.tools.count else { return "Couldn't link all the tools into \(bin)." }
-        return "Installed \(done.joined(separator: ", ")) in \(bin.replacingOccurrences(of: Bins.home, with: "~"))." + (onPath ? "" : "\n\nAdd it to your PATH, then open a new Terminal window:\n  echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.zshrc")
-    }
+    /// Links the bundled tools into ~/.local/bin and puts it on PATH (also done at every launch).
+    func installTools() -> String { Tools.ensure() }
 
     var toolsInstalled: Bool {
         guard let dir = Bins.dir else { return false }
         return (try? FileManager.default.destinationOfSymbolicLink(atPath: Bins.toolsDir + "/meshy")) == "\(dir)/meshy"
     }
+}
+
+/// The last non-empty line of a (small) log file.
+func lastLine(of path: String) -> String? {
+    guard let h = FileHandle(forReadingAtPath: path) else { return nil }
+    defer { try? h.close() }
+    let size = (try? h.seekToEnd()) ?? 0
+    try? h.seek(toOffset: size > 4096 ? size - 4096 : 0)
+    let s = String(data: h.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    return s.components(separatedBy: "\n").last { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
 }

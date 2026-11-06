@@ -37,7 +37,7 @@ check  "unknown nonce is rejected"           "signin: rejected"
 OUT=$(M --callback "$(node Tests/siwe.mjs "$NONCE" evil.example 2>/dev/null)")
 check  "other domain is rejected"            "signin: rejected"
 GOOD=$(node Tests/siwe.mjs "$NONCE" 2>/dev/null); ADDR=$(node Tests/siwe.mjs x 2>&1 >/dev/null)
-OUT=$(M --callback "${GOOD%??}00")
+OUT=$(M --callback "${GOOD%????}00${GOOD: -2}") # change a byte of s (not v: v=00 can still recover the signer)
 check  "bad signature is rejected"           "signin: rejected"
 OUT=$(M --callback "$GOOD")
 check  "valid signature is accepted"         "signin: accepted $ADDR"
@@ -91,7 +91,14 @@ mkdir -p "$MESHY_HOME/shared"
 OUT=$(MESHY_TEST_INPUT="[[\"$MESHY_HOME/shared\"],[\"test-mac\",\"0\"]]" MESHY_STATE="$MESHY_HOME/meshyd" M --fixture Tests/map.json --click "This Mac › Share this Mac…")
 check  "share runs meshyd init, link for admin" "COPY: https://meshy.live/org/meshydemo.eth/directory?add=meshy-join:"
 OUT=$(M --fixture Tests/map.json --dump-menu)
-check  "shared device waits for ENS"         "test-mac.prod · waiting for it to be added on ENS"
+check  "shared device waits for ENS"         "test-mac.prod · waiting for an admin to add it"
+# a grant you hold (owned by your wallet): folders open in Finder, no terminal
+MINE=$(mktemp); node -e 'const m=require("./Tests/map.json"); m.grants.push({name:"you",fullName:"you.db1.prod.meshydemo.eth",owner:process.argv[1],expiry:4102444800,status:"live",kind:"device",agent:"you.people.meshydemo.eth",target:"db1.prod.meshydemo.eth",device:"db1.prod.meshydemo.eth"}); console.log(JSON.stringify(m))' "$ADDR" > "$MINE"
+OUT=$(M --fixture "$MINE" --dump-menu)
+check  "shared with me lists your grant"     "Shared With Me  ›"
+check  "open your folders in Finder"         "Open in Finder"
+check  "link this Mac offered"               "Link This Mac to meshydemo.eth…"
+absent "stop sharing never auto-restarts"    "test-mac.prod · starting…"
 OUT=$(MESHY_TEST_INPUT='["https://meshy.live/approve?org=meshydemo.eth&agent=mac-test-bot"]' M --fixture Tests/map.json --click "This Mac › Join with an Invite Link…" --wait 12)
 check  "join runs meshy join (times out unapproved)" "MESHY_JOIN_TIMEOUT mac-test-bot.agents.meshydemo.eth"
 OUT=$(MESHY_TEST_INPUT='["not an org"]' M --click "Organizations › Add Organization…")

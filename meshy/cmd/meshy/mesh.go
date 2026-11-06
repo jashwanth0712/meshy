@@ -38,6 +38,11 @@ func cmdMeshJoin(args []string) error {
 	if err != nil {
 		return err
 	}
+	return meshJoin(id, *provider)
+}
+
+// meshJoin admits id to the provider's mesh and records it in agent.json.
+func meshJoin(id *Identity, provider string) error {
 	state := filepath.Join(id.dir, "mesh")
 	pub, err := meshadmit.WGPubKey(state)
 	if err != nil {
@@ -45,15 +50,15 @@ func cmdMeshJoin(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	resp, err := meshadmit.Admit(ctx, *provider, string(id.Name()), pub, id.eth)
+	resp, err := meshadmit.Admit(ctx, provider, string(id.Name()), pub, id.eth)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("admitted %s as mesh peer %s\n", id.Name(), resp.PeerName)
+	fmt.Fprintf(os.Stderr, "admitted %s as mesh peer %s\n", id.Name(), resp.PeerName)
 	// Register the peer once with the setup key; later runs reuse the state.
 	st := exec.Command(meshadmit.MeshBin(), "status", "--state", state, "--ens", string(id.Name()),
 		"--management", resp.ManagementURL, "--setup-key", resp.SetupKey)
-	st.Stdout, st.Stderr = os.Stdout, os.Stderr
+	st.Stdout, st.Stderr = os.Stderr, os.Stderr
 	if err := st.Run(); err != nil {
 		return fmt.Errorf("meshy-mesh status: %w", err)
 	}

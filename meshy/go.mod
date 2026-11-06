@@ -11,7 +11,9 @@ require (
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/hanwen/go-fuse/v2 v2.12.1
 	github.com/muesli/termenv v0.16.0
+	github.com/pkg/sftp v1.13.12
 	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.62.0
 )
 
 require (
@@ -36,6 +38,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect

@@ -5,7 +5,12 @@ import { type GrantPreset, GrantDrawer, RevokeTimeline } from "@/components/Acce
 import { Button, Card, Empty, Modal, PageHeader, Ring, Row, Tabs, ago, fmtLeft, useNow } from "@/components/ui";
 import { type Row as Ev, orgFeed } from "@/lib/arkiv";
 import type { GrantNode, ResourceNode, ServiceNode } from "@/lib/ens";
+import { SetupMacCard } from "@/components/SetupMac";
+import { PROVIDER_API } from "@/lib/config";
 import { useMeshy } from "@/lib/store";
+
+/** A member's ask, sent from Meshy for Mac or `meshy request` (provider /v1/requests). */
+type OrgRequest = { id: string; from: string; kind: "access" | "device"; for?: string; target: string; path?: string; mode?: "ro" | "rw"; dur?: number; joinCode?: string; at: number };
 
 type Target = ResourceNode | ServiceNode;
 type Line = { g: GrantNode; t: Target; kind: "port" | "folders" };
@@ -69,6 +74,7 @@ export default function AccessPage() {
   const [confirming, setConfirming] = useState<Line>();
   const [revoking, setRevoking] = useState<Line>();
   const [feed, setFeed] = useState<Ev[]>();
+  const [requests, setRequests] = useState<OrgRequest[]>([]);
 
   const lines = useMemo<Line[]>(() => {
     if (!tree) return [];
@@ -93,6 +99,31 @@ export default function AccessPage() {
     const t = setInterval(load, 6000);
     return () => clearInterval(t);
   }, [load, writers.length]);
+
+  // Requests from members: no links to forward, they show up here (and in admins' Meshy menu).
+  useEffect(() => {
+    let stop = false;
+    const get = async () => {
+      try {
+        const j = (await (await fetch(`${PROVIDER_API}/v1/requests?org=${encodeURIComponent(org)}`)).json()) as { requests?: OrgRequest[] };
+        if (!stop) setRequests(j.requests ?? []);
+      } catch {}
+    };
+    get();
+    const t = setInterval(get, 15000);
+    return () => {
+      stop = true;
+      clearInterval(t);
+    };
+  }, [org]);
+  const pending = useMemo(() => {
+    const devices = new Set(tree?.networks.flatMap((n) => n.resources.map((r) => r.name)) ?? []);
+    return requests.filter((r) => {
+      if (r.kind === "device") return !devices.has(r.target);
+      const who = r.for ?? r.from.split(".")[0];
+      return !lines.some((l) => l.g.agent === who && l.t.name === r.target && l.g.status === "live" && l.g.expiry > r.at);
+    });
+  }, [requests, lines, tree]);
 
   // Deep links (Approve, the Mac menu bar): ?give=<agent>[&target=<name>][&path=/x&mode=ro|rw&dur=secs] opens the sheet,
   // ?revoke=<grant full name> opens the confirm dialog for that live grant.
@@ -139,6 +170,50 @@ export default function AccessPage() {
           </Button>
         }
       />
+
+      {account && <SetupMacCard org={org} />}
+
+      {pending.length > 0 && (
+        <Card title={`Requests (${pending.length})`} className="mb-8">
+          {pending.map((r) => {
+            const who = r.for ?? r.from.split(".")[0];
+            const folder = r.path?.split("/").filter(Boolean).pop();
+            return (
+              <Row key={r.id}>
+                <div className="min-w-0 flex-1">
+                  <div className="mono truncate text-[15px] font-semibold">
+                    {r.kind === "device" ? (
+                      <>
+                        {r.from.split(".")[0]} <span className="font-normal text-muted">wants to add</span> {short(r.target, org)}
+                      </>
+                    ) : (
+                      <>
+                        {who} <span className="font-normal text-muted">→</span> {short(r.target, org)}
+                      </>
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-[13px] text-muted">
+                    {r.kind === "device"
+                      ? "New device, from Meshy for Mac"
+                      : [folder && `${folder} · ${r.mode === "rw" ? "read and write" : "read"}`, r.dur && `${Math.round(r.dur / 360) / 10} h`, who !== r.from.split(".")[0] && `asked by ${r.from.split(".")[0]}`].filter(Boolean).join(" · ")}
+                    {" · "}
+                    {ago(r.at * 1000, now)}
+                  </div>
+                </div>
+                {r.kind === "device" ? (
+                  <Link href={`/org/${org}/directory?add=${encodeURIComponent(r.joinCode ?? "")}`} className="text-[13px] font-medium text-accent hover:underline">
+                    Add device
+                  </Link>
+                ) : (
+                  <Button className="h-8 px-3.5" disabled={!canWrite} onClick={() => setDrawer({ agent: who, resource: r.target, path: r.path, mode: r.mode, dur: r.dur })}>
+                    Review
+                  </Button>
+                )}
+              </Row>
+            );
+          })}
+        </Card>
+      )}
 
       <Tabs value={tab} onChange={setTab} tabs={[{ v: "live", label: "Live", count: live.length }, { v: "ended", label: "Ended", count: ended.length }]} />
       <Card>
