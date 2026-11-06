@@ -15,6 +15,7 @@ BLOCK_TIME=${BLOCK_TIME:-12}
 RUNS=${RUNS:-5}
 FORK_RPC=${FORK_RPC:-https://ethereum-sepolia-rpc.publicnode.com}
 PORT=${PORT:-8545}
+SSHPORT=${SSHPORT:-2222}
 ARKIV_RPC=${ARKIV_RPC:-}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${WORK:-$(mktemp -d /tmp/meshy-e2e.XXXX)}
@@ -62,12 +63,12 @@ SRV=$(cd "$WORK/srv" && pwd -P)
 say "ENSv2 namespace for $ORG"
 "$BIN/meshy-admin" org init --label "$LABEL" --attestor "$ATT_ADDR"
 "$BIN/meshy-admin" network add --org "$ORG" --name prod
-JOIN=$("$BIN/meshyd" init --name "$RES" --roots "$SRV" --state "$MESHYD_STATE" --endpoint 127.0.0.1:2222 | awk '/^  meshy-join:/{print $1}')
+JOIN=$("$BIN/meshyd" init --name "$RES" --roots "$SRV" --state "$MESHYD_STATE" --endpoint 127.0.0.1:$SSHPORT | awk '/^  meshy-join:/{print $1}')
 "$BIN/meshy-admin" resource add --org "$ORG" --network prod --join "$JOIN"
 
 say "meshyd"
 "$BIN/meshyd" run --name "$RES" --roots "$SRV" --state "$MESHYD_STATE" --sepolia "ws://127.0.0.1:$PORT" \
-  --listen 127.0.0.1:2222 --arkiv "$ARKIV_RPC" --control "$SOCK" >"$WORK/meshyd.log" 2>&1 &
+  --listen 127.0.0.1:$SSHPORT --arkiv "$ARKIV_RPC" --control "$SOCK" >"$WORK/meshyd.log" 2>&1 &
 PIDS+=($!)
 for _ in $(seq 1 30); do grep -q "meshyd ready" "$WORK/meshyd.log" && break; sleep 1; done
 grep -q "meshyd ready" "$WORK/meshyd.log" && ok "ready ($(grep -o 'sandbox=[^ ]*' "$WORK/meshyd.log" | head -1))" || { fail "meshyd did not start"; cat "$WORK/meshyd.log"; exit 1; }
