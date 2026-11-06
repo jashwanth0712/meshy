@@ -8,9 +8,15 @@
 # Asset names are stable, so install.sh can use releases/latest/download/<name>:
 #   <tool>_<os>_<arch>.tar.gz   (tool ∈ meshy meshyd meshy-mesh meshy-admin meshy-sync)
 #   Meshy-mac.zip, Meshy.dmg, checksums.txt
+#
+# The Mac app is notarized when MESHY_SIGN_IDENTITY and MESHY_NOTARY_PROFILE are set
+# (see mac/build.sh); --publish refuses to ship it ad-hoc signed.
 set -euo pipefail
 VERSION=${1:?usage: release.sh <version> [--publish]}
 PUBLISH=${2:-}
+if [[ "$PUBLISH" == --publish && "$(uname)" == Darwin && -z "${MESHY_NOTARY_PROFILE:-}" ]]; then
+  echo "✗ --publish needs a notarized Mac app: set MESHY_SIGN_IDENTITY and MESHY_NOTARY_PROFILE" >&2; exit 1
+fi
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT="$ROOT/dist/$VERSION"
 rm -rf "$OUT" && mkdir -p "$OUT/obj"
@@ -37,7 +43,7 @@ for arch in amd64 arm64; do build meshy-sync meshy ./cmd/meshy-sync linux $arch;
 
 if [[ "$(uname)" == Darwin ]] && command -v swiftc >/dev/null; then
   echo "› Mac app"
-  VERSION="$VERSION" "$ROOT/mac/build.sh" >/dev/null
+  VERSION="$VERSION" "$ROOT/mac/build.sh" | grep -E "^(›|✓|  notarytool)|status:"   # pipefail: a build failure stops the release
   cp "$ROOT/mac/build/Meshy-mac.zip" "$ROOT/mac/build/Meshy.dmg" "$OUT/"
   echo "  ✓ Meshy-mac.zip, Meshy.dmg"
 fi
