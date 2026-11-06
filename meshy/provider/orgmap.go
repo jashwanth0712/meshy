@@ -18,15 +18,17 @@ import (
 
 // OrgMap is the JSON response for GET /v1/map.
 type OrgMap struct {
-	Org         string        `json:"org"`
-	OrgKey      string        `json:"orgKey,omitempty"`
-	Attestors   []string      `json:"attestors,omitempty"`
-	Provider    string        `json:"provider,omitempty"`
-	Networks    []NetworkInfo `json:"networks"`
-	Agents      []AgentInfo   `json:"agents"`
-	Grants      []GrantInfo   `json:"grants"`
-	GeneratedAt time.Time     `json:"generatedAt"`
-	Block       uint64        `json:"block"`
+	Org       string        `json:"org"`
+	OrgKey    string        `json:"orgKey,omitempty"`
+	Attestors []string      `json:"attestors,omitempty"`
+	Provider  string        `json:"provider,omitempty"`
+	Networks  []NetworkInfo `json:"networks"`
+	Agents    []AgentInfo   `json:"agents"`
+	// Members are people.<org> names (orgs created with MeshyOrgFactory).
+	Members     []string    `json:"members,omitempty"`
+	Grants      []GrantInfo `json:"grants"`
+	GeneratedAt time.Time   `json:"generatedAt"`
+	Block       uint64      `json:"block"`
 }
 
 type NetworkInfo struct {
@@ -210,6 +212,16 @@ func (b *MapBuilder) build(ctx context.Context, org string) (*OrgMap, error) {
 	// Find "agents" and networks.
 	for child, childSubreg := range orgChildren {
 		childName := enskit.Name(child + "." + org)
+		if child == "people" {
+			if childSubreg != (common.Address{}) {
+				if ms, err := enskit.ChildSubregs(ctx, b.ETH, childSubreg, b.FromBlock); err == nil {
+					for l := range ms {
+						m.Members = append(m.Members, l+".people."+org)
+					}
+				}
+			}
+			continue
+		}
 		if child == "agents" {
 			agents, err := b.buildAgents(ctx, childName, childSubreg, m.Attestors)
 			if err != nil {

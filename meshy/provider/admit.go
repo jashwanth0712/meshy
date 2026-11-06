@@ -216,7 +216,7 @@ func (s *Server) seats(ctx context.Context, org string) (SeatStatus, error) {
 	if err != nil {
 		return st, err
 	}
-	st.Used = len(m.Agents)
+	st.Used = len(m.Agents) + len(m.Members)
 	for _, n := range m.Networks {
 		st.Used += len(n.Resources)
 	}

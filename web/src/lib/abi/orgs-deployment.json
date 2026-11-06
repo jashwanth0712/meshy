@@ -3,7 +3,11 @@
   "parentName": "meshy.eth",
   "parentRegistry": "0x2fB2Ae6bF9c0c7A6AE46D85BdbBfcEC9bd19ae5A",
   "parentResolver": "0xc7881A67dfeF45BccebbbE97516a0F9c0a5C4BF1",
-  "MeshyOrgFactory": "0x0000000000000000000000000000000000000000",
-  "MeshyInvites": "0x0000000000000000000000000000000000000000",
-  "deployBlock": 12077000
+  "MeshyOrgFactory": "0x0eB7E8DBD2947a5A7769faD210E87944DB513403",
+  "MeshyInvites": "0xA45b558C7851ADA8b730Fc34D0C991561a1E209b",
+  "deployBlock": 12077420,
+  "txs": {
+    "MeshyInvites": "0xdda7953cd5623f078382c1897be90d47612867f9212da0f72640da7fd3e22bee",
+    "MeshyOrgFactory": "0x03f79ee56504990c1c513499aa25dac7a5a6d36711b0b70b5a68f79b0a159167"
+  }
 }

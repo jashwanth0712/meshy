@@ -158,7 +158,7 @@ export default function NewOrg() {
             </Button>
           </div>
           <p className="text-[12px] text-muted">
-            Sepolia gas is paid by your wallet (about 1.5M gas). Need test ETH? Use a Sepolia faucet. Want your own <span className="mono">.eth</span> instead? That&apos;s coming next.
+            Sepolia gas is paid by your wallet (about 7M gas, roughly 0.01 Sepolia ETH). Need test ETH? Use a Sepolia faucet. Want your own <span className="mono">.eth</span> instead? That&apos;s coming next.
           </p>
         </form>
       )}
