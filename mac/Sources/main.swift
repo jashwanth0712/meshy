@@ -1,7 +1,7 @@
 // Meshy for macOS: a native window around the Meshy dashboard (WKWebView).
 //
-// - Two modes (View menu): "New Design", the refined UI bundled inside the app (default), and
-//   "Live Dashboard", the deployed dashboard (https://meshy-bay.vercel.app) for one org.
+// - Loads the live dashboard (https://meshy-next.vercel.app, the redesigned web app) for one org.
+//   Every screen reads ENSv2 on Sepolia and Arkiv; nothing is bundled or hardcoded.
 // - Same-site links stay in the app; Etherscan, ENS, Arkiv, World ID open in your browser.
 // - Wallet signing needs a browser extension (MetaMask), which WebKit apps can't host, so
 //   "Connect wallet" offers to open the current page in your default browser instead.
@@ -15,7 +15,8 @@ import WebKit
 
 enum Settings {
     static let defaults = UserDefaults.standard
-    static let productionURL = "https://meshy-bay.vercel.app"
+    static let productionURL = "https://meshy-next.vercel.app" // redesigned dashboard
+    static let classicURL = "https://meshy-bay.vercel.app" // previous UI (production of main)
     static let localURL = "http://localhost:3000"
 
     static var baseURL: String {
@@ -31,21 +32,15 @@ enum Settings {
         set { defaults.set(newValue, forKey: "lastPath") }
     }
     static var host: String? { URL(string: baseURL)?.host }
-    /// "design" = bundled refined UI (default), "live" = deployed dashboard
-    static var mode: String {
-        get { defaults.string(forKey: "mode") ?? "design" }
-        set { defaults.set(newValue, forKey: "mode") }
-    }
-    static var designDir: URL? { Bundle.main.resourceURL?.appendingPathComponent("ui", isDirectory: true) }
 }
 
-let pages: [(title: String, path: String, file: String, key: String)] = [
-    ("Access", "", "access.html", "1"),
-    ("Directory", "/directory", "directory.html", "2"),
-    ("Activity", "/activity", "activity.html", "3"),
-    ("Billing", "/billing", "billing.html", "4"),
-    ("Provider", "/provider", "provider.html", "5"),
-    ("Settings", "/settings", "settings.html", "6"),
+let pages: [(title: String, path: String, key: String)] = [
+    ("Access", "", "1"),
+    ("Directory", "/directory", "2"),
+    ("Activity", "/activity", "3"),
+    ("Billing", "/billing", "4"),
+    ("Provider", "/provider", "5"),
+    ("Settings", "/settings", "6"),
 ]
 
 // Runs in every page before its own scripts. Catches "Connect wallet" when no wallet is injected.
@@ -147,30 +142,10 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
         webView.load(URLRequest(url: url))
     }
 
-    func openOrgPage(_ subpath: String) {
-        if Settings.mode == "design" {
-            let file = pages.first { $0.path == subpath }?.file ?? "access.html"
-            loadDesign(file)
-        } else {
-            load(path: "/org/\(Settings.org)\(subpath)")
-        }
-    }
-
-    func loadDesign(_ file: String) {
-        guard let dir = Settings.designDir else { return }
-        let url = dir.appendingPathComponent(file)
-        webView.loadFileURL(url, allowingReadAccessTo: dir)
-    }
+    func openOrgPage(_ subpath: String) { load(path: "/org/\(Settings.org)\(subpath)") }
 
     func restoreOrHome() {
-        if Settings.mode == "design" {
-            let f = Settings.defaults.string(forKey: "lastDesignFile") ?? "access.html"
-            loadDesign(f)
-        } else if let p = Settings.lastPath, p.hasPrefix("/org/\(Settings.org)") {
-            load(path: p)
-        } else {
-            openOrgPage("")
-        }
+        if let p = Settings.lastPath, p.hasPrefix("/org/\(Settings.org)") { load(path: p) } else { openOrgPage("") }
     }
 
     func openInBrowser(_ url: URL? = nil) {
@@ -178,7 +153,6 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
     }
 
     private func isInternal(_ url: URL) -> Bool {
-        if url.isFileURL { return true }
         guard let h = url.host else { return url.scheme == "about" || url.scheme == "data" || url.scheme == "blob" }
         return h == Settings.host
     }
@@ -194,9 +168,7 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        if let u = webView.url, u.isFileURL {
-            Settings.defaults.set(u.lastPathComponent, forKey: "lastDesignFile")
-        } else if let u = webView.url, isInternal(u) {
+        if let u = webView.url, isInternal(u) {
             Settings.lastPath = u.path + (u.query.map { "?" + $0 } ?? "")
         }
         snapshotIfAsked()
@@ -318,10 +290,9 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
         openOrgPage("")
     }
 
-    @objc func useDesign(_ sender: Any?) { Settings.mode = "design"; restoreOrHome() }
-    @objc func useLive(_ sender: Any?) { Settings.mode = "live"; restoreOrHome() }
-    @objc func useProduction(_ sender: Any?) { Settings.mode = "live"; Settings.baseURL = Settings.productionURL; restoreOrHome() }
-    @objc func useLocal(_ sender: Any?) { Settings.mode = "live"; Settings.baseURL = Settings.localURL; restoreOrHome() }
+    @objc func useProduction(_ sender: Any?) { Settings.baseURL = Settings.productionURL; restoreOrHome() }
+    @objc func useClassic(_ sender: Any?) { Settings.baseURL = Settings.classicURL; restoreOrHome() }
+    @objc func useLocal(_ sender: Any?) { Settings.baseURL = Settings.localURL; restoreOrHome() }
     @objc func useCustom(_ sender: Any?) {
         let a = NSAlert()
         a.messageText = "Dashboard URL"
@@ -330,7 +301,6 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
         a.accessoryView = field
         a.addButton(withTitle: "Use"); a.addButton(withTitle: "Cancel")
         guard a.runModal() == .alertFirstButtonReturn, let u = URL(string: field.stringValue), u.scheme?.hasPrefix("http") == true else { return }
-        Settings.mode = "live"
         Settings.baseURL = field.stringValue
         restoreOrHome()
     }
@@ -339,11 +309,9 @@ final class BrowserController: NSWindowController, WKNavigationDelegate, WKUIDel
         switch item.action {
         case #selector(back(_:)): return webView.canGoBack
         case #selector(forward(_:)): return webView.canGoForward
-        case #selector(useDesign(_:)): item.state = Settings.mode == "design" ? .on : .off
-        case #selector(useLive(_:)): item.state = Settings.mode == "live" ? .on : .off
-        case #selector(useProduction(_:)): item.state = Settings.mode == "live" && Settings.baseURL == Settings.productionURL ? .on : .off
-        case #selector(useLocal(_:)): item.state = Settings.mode == "live" && Settings.baseURL == Settings.localURL ? .on : .off
-        case #selector(switchOrg(_:)): return Settings.mode == "live"
+        case #selector(useProduction(_:)): item.state = Settings.baseURL == Settings.productionURL ? .on : .off
+        case #selector(useClassic(_:)): item.state = Settings.baseURL == Settings.classicURL ? .on : .off
+        case #selector(useLocal(_:)): item.state = Settings.baseURL == Settings.localURL ? .on : .off
         default: break
         }
         return true
@@ -435,9 +403,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         main.addItem(withTitle: "Edit", action: nil, keyEquivalent: "").submenu = edit
 
         let view = NSMenu(title: "View")
-        view.addItem(item("New Design", #selector(BrowserController.useDesign(_:)), "d", [.command, .option], target: c))
-        view.addItem(item("Live Dashboard", #selector(BrowserController.useLive(_:)), "l", [.command, .option], target: c))
-        view.addItem(.separator())
         view.addItem(item("Reload", #selector(BrowserController.reload(_:)), "r", target: c))
         view.addItem(item("Reload from Network", #selector(BrowserController.hardReload(_:)), "r", [.command, .shift], target: c))
         view.addItem(.separator())
@@ -460,7 +425,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         main.addItem(withTitle: "Go", action: nil, keyEquivalent: "").submenu = go
 
         let dev = NSMenu(title: "Develop")
-        dev.addItem(item("Production (meshy-bay.vercel.app)", #selector(BrowserController.useProduction(_:)), target: c))
+        dev.addItem(item("Meshy (meshy-next.vercel.app)", #selector(BrowserController.useProduction(_:)), target: c))
+        dev.addItem(item("Classic UI (meshy-bay.vercel.app)", #selector(BrowserController.useClassic(_:)), target: c))
         dev.addItem(item("Local Dev Server (localhost:3000)", #selector(BrowserController.useLocal(_:)), target: c))
         dev.addItem(item("Custom URL…", #selector(BrowserController.useCustom(_:)), target: c))
         main.addItem(withTitle: "Develop", action: nil, keyEquivalent: "").submenu = dev

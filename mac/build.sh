@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build Meshy.app (universal arm64 + x86_64), ad-hoc signed, plus a zip and a dmg.
-# The refined UI (docs/ui-revamp/mockups) is bundled in Contents/Resources/ui.
+# The app loads the live dashboard; nothing is bundled.
 #   mac/build.sh            -> mac/build/Meshy.app, Meshy-mac.zip, Meshy.dmg
 #   MESHY_URL=http://localhost:3000 open mac/build/Meshy.app   (point at a dev server)
 set -euo pipefail
@@ -17,11 +17,6 @@ for arch in arm64 x86_64; do
 done
 lipo -create "$OUT/obj/Meshy-arm64" "$OUT/obj/Meshy-x86_64" -output "$APP/Contents/MacOS/Meshy"
 cp Info.plist "$APP/Contents/Info.plist"
-
-echo "› bundling the refined UI"
-python3 ../docs/ui-revamp/mockups/build.py >/dev/null
-mkdir -p "$APP/Contents/Resources/ui"
-cp ../docs/ui-revamp/mockups/*.html "$APP/Contents/Resources/ui/"
 
 echo "› icon"
 # macOS icons sit on an 824 px tile inside a 1024 canvas; the brand tile is full-bleed, so pad it.

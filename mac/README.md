@@ -1,11 +1,8 @@
 # Meshy for macOS
 
-A native window around the Meshy dashboard (AppKit + WKWebView, no dependencies). It has two modes, switched from the **View** menu:
+A native window around the live Meshy dashboard (AppKit + WKWebView, no dependencies). It opens <https://meshy-next.vercel.app>, which runs the redesigned `web/` app from the `ui-revamp-plan` branch, for one org (default `meshydemo.eth`). Every screen reads ENSv2 on Sepolia and Arkiv live; nothing is bundled or hardcoded. The app follows macOS light and dark mode.
 
-- **New Design** (default, ⌥⌘D): the refined, minimal UI from `docs/ui-revamp/mockups`, bundled inside the app. It is a clickable design preview with demo data from `meshydemo.eth`, not the live app. Its styles load from CDNs, so it needs an internet connection.
-- **Live Dashboard** (⌥⌘L): the deployed dashboard at <https://meshy-bay.vercel.app> for one org (default `meshydemo.eth`). Until the redesign lands in `web/`, this still shows the old UI.
-
-The app follows macOS light and dark mode.
+Develop › Classic UI switches to the old dashboard at <https://meshy-bay.vercel.app> (production of `main`).
 
 ## Build
 ```bash
