@@ -50,11 +50,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = StatusMenu()
 
         let args = CommandLine.arguments
-        if ["--dump-menu", "--callback", "--begin-signin", "--sign-out", "--add-org", "--list-actions", "--click", "--click-all"].contains(where: args.contains) {
+        if ["--dump-menu", "--callback", "--begin-signin", "--sign-out", "--add-org", "--discover-orgs", "--list-actions", "--click", "--click-all"].contains(where: args.contains) {
             return runTestCommand(args)
         }
         MeshyStore.shared.start()
         DeviceManager.shared.start()
+        // Signed in from before: pick up orgs created or joined since (chain state).
+        if MeshyStore.shared.address != nil { MeshyStore.shared.discoverOrgs { _ in } }
     }
 
     /// Headless commands for mac/test.sh (always with MESHY_TEST=1):
@@ -72,6 +74,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         func arg(_ k: String) -> String? { args.firstIndex(of: k).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
         func all(_ k: String) -> [String] { args.indices.filter { args[$0] == k && $0 + 1 < args.count }.map { args[$0 + 1] } }
         if args.contains("--sign-out") { store.signOut(); print("signed out") }
+        if args.contains("--discover-orgs") {
+            store.discoverOrgs { found in print("discovered: \(found.joined(separator: ","))"); exit(0) }
+            RunLoop.main.run(until: Date().addingTimeInterval(70))
+        }
         if args.contains("--begin-signin"), let u = store.beginSignIn() { print("signin-url: \(u.absoluteString)") }
         if let c = arg("--callback"), let u = URL(string: c) {
             switch store.completeSignIn(u) {

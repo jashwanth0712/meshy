@@ -62,6 +62,7 @@ func main() {
 	registry := fs.String("provider-registry", env("MESHY_PROVIDER_REGISTRY", "0x8B93557b315E825C657D48A4CB962A3fF7E4eEec"), "ProviderRegistry address (EIP-712 domain)")
 	providerID := fs.Uint64("provider-id", 0, "this provider's id in ProviderRegistry (attested in admissions)")
 	orgFactory := fs.String("org-factory", env("MESHY_ORG_FACTORY", ""), "MeshyOrgFactory address (auto-discover orgs + trial seats)")
+	invites := fs.String("invites", env("MESHY_INVITES", "0xA45b558C7851ADA8b730Fc34D0C991561a1E209b"), "MeshyInvites address (memberships for /v1/orgs)")
 	orgFactoryFrom := fs.Uint64("org-factory-from", 12077000, "block to scan OrgCreated events from")
 	stateDir := fs.String("state", env("MESHY_SYNC_STATE", ""), "state dir for attestations.jsonl (default: dir of the signer key)")
 
@@ -113,6 +114,9 @@ func main() {
 	if *orgFactory != "" {
 		cfg.OrgFactory = common.HexToAddress(*orgFactory)
 		cfg.OrgFactoryFrom = *orgFactoryFrom
+	}
+	if *invites != "" {
+		cfg.Invites = common.HexToAddress(*invites)
 	}
 	if cfg.StateDir == "" {
 		cfg.StateDir = filepath.Dir(*signerKeyFile)

@@ -60,6 +60,7 @@ type Config struct {
 	// automatically and get TrialSeats until they subscribe.
 	OrgFactory     common.Address
 	OrgFactoryFrom uint64
+	Invites        common.Address // MeshyInvites (Claimed events: memberships)
 }
 
 // Server is the meshy-sync HTTP server.
@@ -140,6 +141,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/admit", s.handleAdmit)
 	mux.HandleFunc("GET /v1/attestations", s.handleAttestations)
 	mux.HandleFunc("GET /v1/seats", s.handleSeats)
+	mux.HandleFunc("GET /v1/orgs", s.handleMyOrgs)
 
 	return s.corsMiddleware(mux)
 }

@@ -302,6 +302,42 @@ final class MeshyStore {
         if role(o) == nil { checkRole(o) { _ in } }
     }
 
+    /// Finds every org this wallet belongs to, from chain state via the provider
+    /// (GET /v1/orgs?addr=): orgs it created, orgs where it owns or administers a
+    /// registry, and names it claimed with an invite. Adds them all; returns them.
+    func discoverOrgs(done: @escaping ([String]) -> Void) {
+        guard let a = address else { return done([]) }
+        var c = URLComponents(string: syncURL + "/v1/orgs")
+        c?.queryItems = [URLQueryItem(name: "addr", value: a)]
+        guard let url = c?.url else { return done([]) }
+        var req = URLRequest(url: url, timeoutInterval: 60)
+        req.setValue("MeshyMac/\(appVersion)", forHTTPHeaderField: "User-Agent")
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            DispatchQueue.main.async {
+                guard let self, let data,
+                      let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let list = j["orgs"] as? [[String: Any]] else { return done([]) }
+                var found: [String] = []
+                for o in list {
+                    guard let name = o["org"] as? String, let role = o["role"] as? String else { continue }
+                    // admin scope is filled in by checkRole later; "agent"/"member" are both members here
+                    self.saveRole(name, RoleInfo(role: role == "agent" ? "member" : role, adminOf: [], checkedAt: Date().timeIntervalSince1970))
+                    found.append(name)
+                }
+                let new = found.filter { !self.orgs.contains($0) }
+                if !new.isEmpty { self.orgs = self.orgs + new }
+                if self.org == nil, let first = found.first {
+                    self.setOrg(first)
+                    self.resetData()
+                    self.loadCache()
+                    self.refresh(force: true)
+                }
+                self.onChange?()
+                done(found)
+            }
+        }.resume()
+    }
+
     /// Adds an org after checking ENS: nil = it isn't a Meshy org.
     func addOrg(_ o: String, done: @escaping (Result<RoleInfo?, SignInError>) -> Void) {
         checkRole(o) { [weak self] r in

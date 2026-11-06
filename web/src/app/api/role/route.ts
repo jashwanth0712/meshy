@@ -5,7 +5,7 @@
 import { type Address, type PublicClient, createPublicClient, http, isAddress, zeroAddress } from "viem";
 import { sepolia } from "viem/chains";
 import { ENS, isOrgName } from "@/lib/config";
-import { ADMIN_ROLES, childLabels, eacAbi, exactOwner, firstLabel, getState, subregistryOf } from "@/lib/ens";
+import { ADMIN_ROLES, childLabels, eacAbi, exactOwner, firstLabel, getState, parentRegistry, subregistryOf } from "@/lib/ens";
 
 export async function GET(req: Request) {
   const u = new URL(req.url);
@@ -16,14 +16,16 @@ export async function GET(req: Request) {
   // Our own RPC proxy: it holds the provider key and routes eth_getLogs to a node that allows wide ranges.
   const c = createPublicClient({ chain: sepolia, batch: { multicall: { wait: 10 } }, transport: http(new URL("/api/rpc", u.origin).toString(), { batch: { wait: 10 }, retryCount: 2 }) }) as PublicClient;
   try {
-    const orgRegistry = await subregistryOf(c, ENS.ethRegistry, firstLabel(org));
+    // acme.eth sits in the .eth registry; acme.meshy.eth (MeshyOrgFactory) in meshy.eth's.
+    const parent = org.split(".").length === 2 ? ENS.ethRegistry : await parentRegistry(c, org);
+    const orgRegistry = parent === zeroAddress ? zeroAddress : await subregistryOf(c, parent, firstLabel(org));
     if (orgRegistry === zeroAddress) return Response.json({ org, exists: false, role: null, adminOf: [] }, { headers: { "cache-control": "s-maxage=30" } });
     const owner = await exactOwner(c, org);
     const me = address.toLowerCase();
     const adminOf: string[] = [];
     if (owner.toLowerCase() !== me) {
       const now = Math.floor(Date.now() / 1000);
-      const labels = (await childLabels(c, orgRegistry)).filter((l) => l.label !== "agents" && !l.unregistered);
+      const labels = (await childLabels(c, orgRegistry)).filter((l) => l.label !== "agents" && l.label !== "people" && !l.unregistered);
       await Promise.all(
         labels.map(async ({ label }) => {
           const [st, reg] = await Promise.all([getState(c, orgRegistry, label), subregistryOf(c, orgRegistry, label)]);

@@ -645,7 +645,16 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     /// After a successful meshy://auth callback (the menu is closed: the browser had focus).
     func signedIn(_ addr: String) {
         store.notify(title: "Signed in to Meshy", body: "as \(shortAddr(addr))")
-        if store.orgs.isEmpty { later { self.addOrgPrompt() } }
+        // Your orgs come from the chain: created, administered, or joined by invite.
+        store.discoverOrgs { [weak self] found in
+            guard let self else { return }
+            if found.isEmpty {
+                if self.store.orgs.isEmpty { self.later { self.addOrgPrompt() } }
+            } else {
+                self.store.notify(title: found.count == 1 ? "Found your org" : "Found \(found.count) orgs", body: found.joined(separator: ", "))
+                if !self.isOpen { self.rebuild() }
+            }
+        }
     }
 
     @objc func addOrgPrompt() {
