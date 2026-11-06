@@ -1,0 +1,31 @@
+<!-- {"title": "Activity", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10">
+  <h1 class="display">Activity</h1>
+  <p class="lede">1 live session · 7 refused · 3 revocations in the last 24 hours</p>
+</section>
+
+<main class="mx-auto max-w-5xl px-6">
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true">All</button>
+    <button role="tab">Refused</button>
+    <button role="tab">Sessions</button>
+    <button role="tab">Revocations</button>
+  </div>
+
+  <div class="card mt-4 overflow-x-auto">
+    <table class="tbl">
+      <thead><tr><th class="w-20">Time</th><th>Event</th><th>Agent</th><th>Device</th></tr></thead>
+      <tbody>
+        <tr><td class="mono text-[13px] muted">14:05</td><td>Session started</td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+        <tr><td class="mono text-[13px] muted">12:02</td><td><span class="badge b-bad">Refused</span></td><td class="mono">claude-1</td><td class="mono">pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">12:01</td><td>Session ended</td><td class="mono">claude-1</td><td class="mono">pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">11:58</td><td>Session started</td><td class="mono">claude-1</td><td class="mono">pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">11:57</td><td><span class="badge b-bad">Refused</span></td><td class="mono">claude-1</td><td class="mono">camera.pi.home</td></tr>
+        <tr><td class="mono text-[13px] muted">10:12</td><td><span class="badge b-bad">Refused</span></td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+        <tr><td class="mono text-[13px] muted">10:03</td><td><span class="badge b-warn">Revoked</span> <span class="text-[13px] muted">ended in 132 ms</span></td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+        <tr><td class="mono text-[13px] muted">10:01</td><td>Session started</td><td class="mono">claude-1</td><td class="mono">db1.prod</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-4 text-[13px] muted">Commands and paths are encrypted. <a href="settings.html" class="link">Import the org key</a> to read them. Every row is a public Arkiv record. <a href="#" class="link">Verify on Arkiv</a></p>
+</main>

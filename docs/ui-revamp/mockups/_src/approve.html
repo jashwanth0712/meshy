@@ -1,0 +1,30 @@
+<!-- {"title": "Approve an agent", "shell": "bare"} -->
+<header class="topbar"><div class="mx-auto flex h-14 max-w-xl items-center justify-between px-6">
+  <a href="index.html" class="text-foreground">{{lockup:h-6 w-auto}}</a>
+  <span class="mono text-[13px] muted">0x45e8…E0EA</span>
+</div></header>
+
+<main class="mx-auto max-w-xl px-6 pb-24 pt-12">
+  <h1 class="display text-[1.875rem]">Approve claude-2</h1>
+  <p class="lede mt-2">An agent wants to join <span class="mono text-foreground">meshydemo.eth</span>. Approving gives it a name only. It can't reach anything until you give it access.</p>
+
+  <section class="mt-10">
+    <h2 class="label">1 · Check the key</h2>
+    <p class="mt-1 text-[13px] muted">It should match what the agent printed in its terminal.</p>
+    <div class="mono mt-3 rounded-xl bg-muted px-4 py-3 text-[15px] tracking-wide">SHA256:Kp7Q 2mXv 8ZcN wLr1 e4Tg Ya0s</div>
+    <label class="mt-3 flex items-center gap-2.5 text-[14px]"><input type="checkbox" checked class="h-4 w-4 accent-[var(--primary)]">It matches</label>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="label">2 · Prove a human is behind it</h2>
+    <div class="mt-3 flex flex-wrap items-center gap-3">
+      <button class="btn btn-primary">Verify with World ID</button>
+      <button class="link text-[14px]">Use dev attestation</button>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="label muted">3 · Approve</h2>
+    <button class="btn btn-outline mt-3" disabled>Approve claude-2</button>
+  </section>
+</main>

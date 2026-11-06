@@ -1,9 +1,8 @@
 "use client";
-import { Gavel, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { type Hex, parseEther } from "viem";
 import { type Step, Steps } from "@/components/Steps";
-import { Badge, Button, Card, Ext, Field, Short, inputCls, links } from "@/components/ui";
+import { Badge, Button, Card, Empty, Ext, Field, PageHeader, Row, Sheet, Short, cx, inputCls, links } from "@/components/ui";
 import { PROVIDER_API } from "@/lib/config";
 import { send } from "@/lib/ens";
 import { type Provider, REGISTRY, STATUS, eth, registryAbi, usdc } from "@/lib/contracts";
@@ -15,6 +14,7 @@ export default function ProviderPage() {
   const { client, wallet, account, toast } = useMeshy();
   const [list, setList] = useState<(Provider & { id: bigint })[]>();
   const [health, setHealth] = useState<Health | "down">();
+  const [sheet, setSheet] = useState<"register" | "challenge" | null>(null);
   const [form, setForm] = useState({ endpoint: "https://", signer: "", price: "2", stake: "0.01" });
   const [att, setAtt] = useState("");
   const [steps, setSteps] = useState<Step[]>();
@@ -41,118 +41,137 @@ export default function ProviderPage() {
       setSteps((s) => s!.map((x) => ({ ...x, state: "fail", detail: msg })));
     }
   }
+  const busy = steps?.some((s) => s.state === "doing");
+  const close = () => (setSheet(null), setSteps(undefined));
 
   return (
-    <div className="space-y-5">
-      <Card title={<span className="flex items-center gap-2"><ShieldCheck size={15} /> Staked providers</span>} actions={<Ext href={links.addr(REGISTRY)}>ProviderRegistry</Ext>}>
-        <p className="mb-4 text-sm text-muted">
-          Anyone can run a Meshy provider (NetBird mesh + meshy-sync). Paid providers stake ETH; if a provider attests access for a name that ENS shows was already revoked, anyone
-          can submit the signed attestation as a fraud proof and the stake is slashed (50% to the reporter).
-        </p>
+    <>
+      <PageHeader title="Provider" sub="The mesh your devices and agents connect through. Providers stake ETH and lose it if they cheat." />
+
+      <Card>
         {!list ? (
-          <div className="text-sm text-muted">Reading ProviderRegistry…</div>
+          <Empty>Reading the provider registry…</Empty>
+        ) : list.length === 0 ? (
+          <Empty>No providers yet.</Empty>
         ) : (
-          <div className="divide-y divide-line">
-            {list.map((p) => (
-              <div key={p.id.toString()} className="grid grid-cols-[50px_1fr_auto] items-center gap-4 py-3 text-sm">
-                <span className="mono text-muted">#{p.id.toString()}</span>
-                <div>
-                  <div className="mono">{p.endpoint}</div>
-                  <div className="text-xs text-muted">
-                    owner <Short v={p.owner} n={4} /> · signer <Short v={p.signer} n={4} /> · {usdc(p.pricePerSeatPerMonth)} USDC/seat/mo
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge tone={p.status === 0 ? "ok" : p.status === 3 ? "bad" : "warn"}>{STATUS[p.status] ?? p.status}</Badge>
-                  <div className="mt-1 text-xs text-muted">{eth(p.stake)} ETH staked</div>
+          list.map((p) => (
+            <Row key={p.id.toString()}>
+              <div className="min-w-0 flex-1">
+                <div className="mono truncate font-semibold">{p.endpoint.replace(/^https?:\/\//, "")}</div>
+                <div className="mt-0.5 text-[13px] text-muted">
+                  #{p.id.toString()} · {eth(p.stake)} ETH staked · {usdc(p.pricePerSeatPerMonth)} USDC per seat per month
                 </div>
               </div>
-            ))}
-          </div>
+              <Badge tone={p.status === 0 ? "ok" : p.status === 3 ? "bad" : "warn"}>{STATUS[p.status] ?? p.status}</Badge>
+            </Row>
+          ))
         )}
       </Card>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card title="This dashboard's provider (meshy-sync)">
-          {health === "down" ? (
-            <p className="text-sm text-bad">Unreachable at {PROVIDER_API}</p>
-          ) : !health ? (
-            <p className="text-sm text-muted">…</p>
-          ) : (
-            <div className="grid grid-cols-[110px_1fr] gap-y-1.5 text-sm">
-              <span className="text-muted">endpoint</span>
-              <span className="mono">{PROVIDER_API}</span>
-              <span className="text-muted">attestor</span>
-              <Short v={health.attestor} />
-              <span className="text-muted">World ID</span>
-              <span>{health.world}</span>
-              <span className="text-muted">dev attest</span>
-              <span>{health.devAttest ? <Badge tone="warn">on</Badge> : <Badge tone="ok">off</Badge>}</span>
-            </div>
-          )}
-        </Card>
-        <Card title="Register as a provider">
-          <div className="space-y-3">
-            <Field label="Endpoint">
-              <input className={inputCls} value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} />
-            </Field>
-            <Field label="Signer address" hint="Key that signs admissions and World ID attestations (meshy-sync --signer-key-file).">
-              <input className={inputCls} value={form.signer} onChange={(e) => setForm({ ...form, signer: e.target.value })} placeholder={account} />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Price (USDC / seat / month)">
-                <input className={inputCls} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-              </Field>
-              <Field label="Stake (ETH, min 0.01)">
-                <input className={inputCls} value={form.stake} onChange={(e) => setForm({ ...form, stake: e.target.value })} />
-              </Field>
-            </div>
-            <Button
-              kind="primary"
-              disabled={!wallet}
-              onClick={() =>
-                run("Register provider", {
-                  address: REGISTRY,
-                  abi: registryAbi as never,
-                  functionName: "register",
-                  args: [form.endpoint, (form.signer || account) as Hex, BigInt(Math.round(Number(form.price) * 1e6)), ""],
-                  value: parseEther(form.stake),
-                } as never)
-              }
-            >
-              Stake & register
-            </Button>
-          </div>
-        </Card>
-      </div>
-      <Card title={<span className="flex items-center gap-2"><Gavel size={15} /> Challenge a provider (fraud proof)</span>}>
-        <p className="mb-3 text-sm text-muted">
-          Paste a provider-signed admission attestation <span className="mono">{"{providerId, dnsName, resource, issuedAt, validUntil, peerKey, sig}"}</span>. The contract checks ENSv2
-          on-chain: if the name was dead at <span className="mono">issuedAt</span>, the stake is slashed.
-        </p>
-        <textarea className={inputCls + " h-28"} value={att} onChange={(e) => setAtt(e.target.value)} />
-        <div className="mt-3">
-          <Button
-            kind="danger"
-            disabled={!wallet || !att.trim()}
-            onClick={() => {
-              try {
-                const a = JSON.parse(att);
-                run("Submit fraud proof", {
-                  address: REGISTRY,
-                  abi: registryAbi,
-                  functionName: "slash",
-                  args: [{ providerId: BigInt(a.providerId), dnsName: a.dnsName, resource: BigInt(a.resource), issuedAt: BigInt(a.issuedAt), validUntil: BigInt(a.validUntil), peerKey: a.peerKey }, a.sig],
-                });
-              } catch {
-                toast("Attestation must be JSON", "err");
-              }
-            }}
-          >
-            Submit slash
-          </Button>
-        </div>
-        {steps && <div className="mt-4"><Steps steps={steps} /></div>}
+
+      <Card title="Status" className="mt-10">
+        {health === "down" ? (
+          <Row><span className="text-bad">meshy-sync is unreachable</span><span className="mono ml-auto text-[13px] text-muted">{PROVIDER_API}</span></Row>
+        ) : !health ? (
+          <Empty>Checking…</Empty>
+        ) : (
+          <>
+            <Row><span className="flex-1">meshy-sync</span><span className="text-muted">Online{health.version ? ` · v${health.version}` : ""}</span></Row>
+            <Row><span className="flex-1">Attestor</span><Short v={health.attestor} /></Row>
+            <Row><span className="flex-1">World ID</span>{health.world === "disabled" ? <Badge tone="warn">Off</Badge> : <Badge tone="ok">On</Badge>}</Row>
+            <Row><span className="flex-1">Dev attestation</span>{health.devAttest ? <Badge tone="warn">On · demo only</Badge> : <Badge tone="ok">Off</Badge>}</Row>
+          </>
+        )}
       </Card>
-    </div>
+
+      <p className="mt-6 text-[13px] text-muted">
+        Think a provider admitted a revoked name?{" "}
+        <button onClick={() => setSheet("challenge")} className="font-medium text-accent hover:underline">Submit a fraud proof</button>. Want to run one?{" "}
+        <button onClick={() => setSheet("register")} className="font-medium text-accent hover:underline">Register as a provider</button>.{" "}
+        <Ext href={links.addr(REGISTRY)}>Registry contract</Ext>
+      </p>
+
+      {sheet === "register" && (
+        <Sheet
+          title="Register as a provider"
+          onClose={close}
+          locked={busy}
+          footer={
+            <>
+              <span className="text-[13px] text-muted">Stakes {form.stake} ETH</span>
+              <Button
+                kind="primary"
+                disabled={!wallet || busy}
+                onClick={() =>
+                  run("Register provider", {
+                    address: REGISTRY,
+                    abi: registryAbi as never,
+                    functionName: "register",
+                    args: [form.endpoint, (form.signer || account) as Hex, BigInt(Math.round(Number(form.price) * 1e6)), ""],
+                    value: parseEther(form.stake),
+                  } as never)
+                }
+              >
+                {wallet ? "Stake and register" : "Connect a wallet"}
+              </Button>
+            </>
+          }
+        >
+          {steps ? (
+            <Steps steps={steps} />
+          ) : (
+            <>
+              <Field label="Endpoint"><input className={inputCls} value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} /></Field>
+              <Field label="Signer address" hint="The key that signs admissions and World ID attestations.">
+                <input className={inputCls} value={form.signer} onChange={(e) => setForm({ ...form, signer: e.target.value })} placeholder={account} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="USDC per seat per month"><input className={inputCls} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></Field>
+                <Field label="Stake (ETH, at least 0.01)"><input className={inputCls} value={form.stake} onChange={(e) => setForm({ ...form, stake: e.target.value })} /></Field>
+              </div>
+            </>
+          )}
+        </Sheet>
+      )}
+
+      {sheet === "challenge" && (
+        <Sheet
+          title="Submit a fraud proof"
+          onClose={close}
+          locked={busy}
+          footer={
+            <>
+              <span className="text-[13px] text-muted">Half the stake goes to you</span>
+              <Button
+                kind="danger"
+                disabled={!wallet || !att.trim() || busy}
+                onClick={() => {
+                  try {
+                    const a = JSON.parse(att);
+                    run("Submit fraud proof", {
+                      address: REGISTRY,
+                      abi: registryAbi,
+                      functionName: "slash",
+                      args: [{ providerId: BigInt(a.providerId), dnsName: a.dnsName, resource: BigInt(a.resource), issuedAt: BigInt(a.issuedAt), validUntil: BigInt(a.validUntil), peerKey: a.peerKey }, a.sig],
+                    });
+                  } catch {
+                    toast("The attestation must be JSON", "err");
+                  }
+                }}
+              >
+                Submit
+              </Button>
+            </>
+          }
+        >
+          {steps ? (
+            <Steps steps={steps} />
+          ) : (
+            <Field label="Signed admission" hint="Paste what the provider signed. The contract checks ENS itself: if the name was already revoked at issuedAt, the stake is slashed.">
+              <textarea className={cx(inputCls, "h-40 text-[12px]")} value={att} onChange={(e) => setAtt(e.target.value)} placeholder='{"providerId":1,"dnsName":"…","sig":"0x…"}' />
+            </Field>
+          )}
+        </Sheet>
+      )}
+    </>
   );
 }

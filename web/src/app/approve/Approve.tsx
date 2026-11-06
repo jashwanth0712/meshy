@@ -1,10 +1,10 @@
 "use client";
-import { Bot, CheckCircle2, Fingerprint, Network, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { type Address, isAddress, zeroAddress } from "viem";
 import { type Step, Steps } from "@/components/Steps";
-import { Badge, Button, Card, Ext, Name, Short } from "@/components/ui";
+import { Logo } from "@/components/Shell";
+import { Button, Ext, Short, cx } from "@/components/ui";
 import { PROVIDER_API } from "@/lib/config";
 import { deployResolver, eacAbi, getState, recordCalls, registryAbi, resolverAbi, resolverOf, send, textKeySetter, yearFromNow } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
@@ -124,107 +124,85 @@ export function Approve({ org, agent, addr, ssh }: { org: string; agent: string;
     }
   }
 
+  const step = !account ? 1 : !attestation ? 2 : 3;
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent">
-          <Network size={20} />
+    <div className="min-h-screen">
+      <header className="border-b border-line">
+        <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-6">
+          <Logo />
+          {account ? <Short v={account} /> : <Button className="h-8 px-3" onClick={connect}>Connect wallet</Button>}
         </div>
-        <div>
-          <h1 className="text-xl font-semibold">Approve an agent</h1>
-          <p className="text-sm text-muted">An AI agent is asking to join {org}</p>
-        </div>
-      </div>
-      {!valid ? (
-        <Card title="Invalid request">
-          <p className="text-sm text-bad">This approval link is missing the agent&apos;s keys. Ask the agent to run <span className="mono">meshy join &lt;invite&gt;</span> and send you the link it prints.</p>
-        </Card>
-      ) : (
-        <div className="space-y-5">
-          <Card title={<span className="flex items-center gap-2"><Bot size={15} className="text-warn" /> Requesting agent</span>}>
-            <div className="grid grid-cols-[120px_1fr] gap-y-2 text-sm">
-              <span className="text-muted">ENS name</span>
-              <Name name={name} />
-              <span className="text-muted">address</span>
-              <Short v={addr} />
-              <span className="text-muted">SSH key</span>
-              <span className="mono text-xs">{fp}</span>
-              <span className="text-muted">status</span>
-              <span>{already ? <Badge tone="warn">already exists — approving updates its keys</Badge> : <Badge>new</Badge>}</span>
-            </div>
-            <p className="mt-3 text-xs text-muted">Check that the SSH fingerprint matches what the agent printed in its terminal.</p>
-          </Card>
+      </header>
+      <main className="mx-auto max-w-xl px-6 pb-24 pt-12">
+        <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.025em]">Approve {agent || "an agent"}</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">
+          An agent wants to join <span className="mono text-fg">{org}</span>. Approving gives it a name only. It can&apos;t reach anything until you give it access.
+        </p>
 
-          <Card title={<span className="flex items-center gap-2"><Wallet size={15} /> 1. Sign in as an org admin</span>}>
-            {error && <p className="mb-2 text-sm text-bad">{error}</p>}
-            {account ? (
-              <div className="text-sm">
-                <Short v={account} /> {tree && tree.owner.toLowerCase() === account.toLowerCase() ? <Badge tone="ok">org owner</Badge> : <Badge tone="info">must be the owner or a delegated admin</Badge>}
-              </div>
-            ) : (
-              <Button kind="primary" onClick={connect}>
-                <Wallet size={14} /> Connect wallet
-              </Button>
-            )}
-          </Card>
+        {!valid ? (
+          <p className="mt-10 text-[14px] text-bad">
+            This link is missing the agent&apos;s keys. Ask the agent to run <span className="mono">meshy join &lt;invite&gt;</span> and send you the link it prints.
+          </p>
+        ) : (
+          <>
+            <section className="mt-10">
+              <h2 className="text-[14px] font-semibold">1 · Check the key</h2>
+              <p className="mt-1 text-[13px] text-muted">It should match what the agent printed in its terminal.</p>
+              <div className="mono mt-3 break-all rounded-xl bg-panel-2 px-4 py-3 text-[14px]">{fp || "…"}</div>
+              <p className="mono mt-2 text-[13px] text-muted">{name} · <Short v={addr} /></p>
+              {already && <p className="mt-2 text-[13px] text-warn">This agent already exists. Approving updates its keys.</p>}
+            </section>
 
-          <Card title={<span className="flex items-center gap-2"><Fingerprint size={15} /> 2. Prove a human backs this agent (World ID)</span>}>
-            {health === "down" ? (
-              <p className="text-sm text-bad">Provider API unreachable at {PROVIDER_API}. Start meshy-sync.</p>
-            ) : !health ? (
-              <p className="text-sm text-muted">Contacting provider…</p>
-            ) : attestation ? (
-              <div className="flex items-center gap-2 text-sm text-accent">
-                <ShieldCheck size={16} /> {dev ? "Dev attestation issued (demo mode — not a real World ID proof)" : "World ID verified — attestation signed by the provider"}
-                <Badge>{health.attestor.slice(0, 10)}…</Badge>
-              </div>
-            ) : (
-              <div className="space-y-3 text-sm">
-                {health.world !== "disabled" && (
-                  <>
-                    {!flow ? (
-                      <Button kind="primary" onClick={startWorld} disabled={flowStatus === "starting"}>
-                        <Fingerprint size={14} /> Verify with World ID Agent Pass
-                      </Button>
+            <section className="mt-10">
+              <h2 className={cx("text-[14px] font-semibold", step < 2 && "text-muted")}>2 · Prove a human is behind it</h2>
+              {error && <p className="mt-2 text-[13px] text-bad">{error}</p>}
+              {!account ? (
+                <p className="mt-2 text-[13px] text-muted">Connect the owner&apos;s or an admin&apos;s wallet first.</p>
+              ) : health === "down" ? (
+                <p className="mt-2 text-[13px] text-bad">The provider is unreachable at {PROVIDER_API}.</p>
+              ) : !health ? (
+                <p className="mt-2 text-[13px] text-muted">Contacting the provider…</p>
+              ) : attestation ? (
+                <p className="mt-2 text-[14px]">{dev ? "Dev attestation issued (demo only)." : "World ID verified."}</p>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {health.world !== "disabled" &&
+                    (!flow ? (
+                      <Button kind="primary" onClick={startWorld} disabled={flowStatus === "starting"}>Verify with World ID</Button>
                     ) : (
-                      <div className="rounded-lg border border-line bg-bg p-4">
-                        <div className="text-xs uppercase tracking-wider text-muted">Your code</div>
-                        <div className="mono mt-1 text-2xl tracking-widest text-accent">{flow.userCode}</div>
-                        <div className="mt-2">
-                          <Ext href={flow.verificationUriComplete ?? flow.verificationUri}>Open World ID verification</Ext>
-                        </div>
-                        <div className="mt-2 text-xs text-muted">Status: {flowStatus}</div>
+                      <div className="rounded-xl bg-panel-2 p-4">
+                        <div className="mono text-[22px] font-semibold tracking-[0.2em]">{flow.userCode}</div>
+                        <div className="mt-2 text-[13px]"><Ext href={flow.verificationUriComplete ?? flow.verificationUri}>Open World ID</Ext> <span className="text-muted">· {flowStatus}</span></div>
                       </div>
-                    )}
-                  </>
-                )}
-                {health.devAttest && (
-                  <div className="space-y-1">
-                    <Button onClick={devAttest}>Use dev attestation (demo)</Button>
-                    <div className="text-xs text-muted">Provider runs with --dev-attest. Clearly labelled; production uses World ID only.</div>
-                  </div>
-                )}
-                {health.world === "disabled" && !health.devAttest && <p className="text-bad">Provider has World ID disabled.</p>}
-              </div>
-            )}
-          </Card>
+                    ))}
+                  {health.devAttest && (
+                    <button onClick={devAttest} className="block text-[14px] font-medium text-accent hover:underline">Use dev attestation (demo)</button>
+                  )}
+                  {health.world === "disabled" && !health.devAttest && <p className="text-[13px] text-bad">This provider has World ID turned off.</p>}
+                </div>
+              )}
+            </section>
 
-          <Card title={<span className="flex items-center gap-2"><CheckCircle2 size={15} /> 3. Approve</span>}>
-            {done ? (
-              <div className="space-y-2 text-sm">
-                <p className="text-accent">Approved. The agent&apos;s terminal will now print MESHY_JOINED.</p>
-                <Link href={`/org/${org}/grants`} className="text-accent-2 hover:underline">Grant it access to a resource →</Link>
+            <section className="mt-10">
+              <h2 className={cx("text-[14px] font-semibold", step < 3 && "text-muted")}>3 · Approve</h2>
+              <div className="mt-3">
+                {done ? (
+                  <div className="space-y-2 text-[14px]">
+                    <p>Approved. The agent&apos;s terminal will now print MESHY_JOINED.</p>
+                    <Link href={`/org/${org}?give=${agent}`} className="font-medium text-accent hover:underline">Give it access</Link>
+                  </div>
+                ) : steps ? (
+                  <Steps steps={steps} />
+                ) : (
+                  <Button kind="primary" disabled={!isOwner || !attestation || !tree || tree.agentsRegistry === zeroAddress} onClick={approve}>
+                    Approve {agent} · {already ? "1 transaction" : "3 transactions"}
+                  </Button>
+                )}
               </div>
-            ) : steps ? (
-              <Steps steps={steps} />
-            ) : (
-              <Button kind="primary" disabled={!isOwner || !attestation || !tree || tree.agentsRegistry === zeroAddress} onClick={approve}>
-                Approve {agent} (3 transactions)
-              </Button>
-            )}
-          </Card>
-        </div>
-      )}
-    </main>
+            </section>
+          </>
+        )}
+      </main>
+    </div>
   );
 }

@@ -1,9 +1,8 @@
 "use client";
-import { CreditCard, Plus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { namehash } from "viem";
 import { type Step, Steps } from "@/components/Steps";
-import { Badge, Button, Card, Ext, Field, Short, inputCls, links } from "@/components/ui";
+import { Badge, Button, Ext, PageHeader, Seg, cx, dateFmt, inputCls, links } from "@/components/ui";
 import { send } from "@/lib/ens";
 import { type Provider, SUBSCRIPTION, USDC, erc20Abi, registryAbi, REGISTRY, subscriptionAbi, usdc } from "@/lib/contracts";
 import { useMeshy } from "@/lib/store";
@@ -13,6 +12,7 @@ export default function BillingPage() {
   const node = namehash(org);
   const [sub, setSub] = useState<{ seats: number; paidUntil: number; providerId: bigint }>();
   const [prov, setProv] = useState<Provider>();
+  const [mode, setMode] = useState<"seats" | "renew" | null>(null);
   const [extra, setExtra] = useState(5);
   const [months, setMonths] = useState(1);
   const [steps, setSteps] = useState<Step[]>();
@@ -25,20 +25,22 @@ export default function BillingPage() {
     load().catch((e) => toast(String(e), "err"));
   }, [load, toast]);
 
-  const used = tree ? tree.agents.length + tree.networks.reduce((n, x) => n + x.resources.length, 0) : 0;
+  const devices = tree ? tree.networks.reduce((n, x) => n + x.resources.length, 0) : 0;
+  const agents = tree?.agents.length ?? 0;
+  const used = devices + agents;
   const active = sub && sub.paidUntil > Date.now() / 1000;
   const isOwner = !!account && !!tree && tree.owner.toLowerCase() === account.toLowerCase();
+  const daysLeft = sub ? Math.max(0, Math.round((sub.paidUntil - Date.now() / 1000) / 86400)) : 0;
+  const remainingMonths = sub ? Math.max(1, Math.ceil((sub.paidUntil - Date.now() / 1000) / (30 * 86400))) : 1;
+  const cost = prov && sub ? (mode === "seats" ? prov.pricePerSeatPerMonth * BigInt(extra) * BigInt(remainingMonths) : prov.pricePerSeatPerMonth * BigInt(sub.seats) * BigInt(months)) : 0n;
 
-  async function pay(kind: "seats" | "renew") {
-    if (!wallet || !account || !sub || !prov) return;
-    const price = prov.pricePerSeatPerMonth;
-    const remainingMonths = Math.max(1, Math.ceil((sub.paidUntil - Date.now() / 1000) / (30 * 86400)));
-    const cost = kind === "seats" ? price * BigInt(extra) * BigInt(remainingMonths) : price * BigInt(sub.seats) * BigInt(months);
+  async function pay() {
+    if (!wallet || !account || !sub || !prov || !mode) return;
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
     setSteps([
-      { label: `Mint test USDC (MockUSDC is public on Sepolia)`, state: "doing" },
+      { label: `Mint ${usdc(cost)} test USDC`, state: "doing" },
       { label: `Approve ${usdc(cost)} USDC`, state: "todo" },
-      { label: kind === "seats" ? `Add ${extra} seats` : `Renew ${months} month(s)`, state: "todo" },
+      { label: mode === "seats" ? `Add ${extra} seats` : `Renew for ${months} month${months === 1 ? "" : "s"}`, state: "todo" },
     ]);
     try {
       await send(wallet, client, { address: USDC, abi: erc20Abi, functionName: "mint", args: [account, cost] }, (h) => up(0, { tx: h }));
@@ -50,7 +52,7 @@ export default function BillingPage() {
       await send(
         wallet,
         client,
-        kind === "seats"
+        mode === "seats"
           ? { address: SUBSCRIPTION, abi: subscriptionAbi, functionName: "addSeats", args: [node, extra] }
           : { address: SUBSCRIPTION, abi: subscriptionAbi, functionName: "renew", args: [node, months] },
         (h) => up(2, { tx: h }),
@@ -65,69 +67,68 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <Card title={<span className="flex items-center gap-2"><CreditCard size={15} /> Subscription</span>} actions={<Button kind="ghost" onClick={load}><RefreshCw size={14} /></Button>}>
+    <>
+      <PageHeader title="Billing" sub={prov ? `Paid in test USDC to provider #${sub?.providerId.toString()}.` : "Seats are paid to a staked provider. Self-hosting is free."} />
+      <div className="max-w-xl rounded-2xl border border-line bg-panel p-6">
         {!sub ? (
-          <div className="text-sm text-muted">Reading MeshySubscription…</div>
+          <p className="text-[14px] text-muted">Reading the subscription…</p>
         ) : sub.providerId === 0n ? (
-          <div className="text-sm text-muted">No subscription. Self-hosting a provider is free; paid providers are for convenience.</div>
+          <p className="text-[14px] text-muted">No subscription. Self-hosting a provider is free.</p>
         ) : (
-          <div className="space-y-4 text-sm">
-            <div className="flex items-center gap-2">{active ? <Badge tone="ok">active</Badge> : <Badge tone="bad">lapsed</Badge>} paid until {new Date(sub.paidUntil * 1000).toLocaleDateString()}</div>
-            <div>
-              <div className="mb-1 flex justify-between text-xs text-muted">
-                <span>Seats used (resources + agents)</span>
-                <span>
-                  {used} / {sub.seats}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-panel-2">
-                <div className={used > sub.seats ? "h-full bg-bad" : "h-full bg-accent"} style={{ width: `${Math.min(100, (used / Math.max(1, sub.seats)) * 100)}%` }} />
-              </div>
-              {used > sub.seats && <div className="mt-1 text-xs text-bad">Over your paid seats: the provider will refuse new device admissions.</div>}
+          <>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-[20px] font-semibold tracking-[-0.015em]">Paid until {dateFmt(sub.paidUntil)}</h2>
+              {active ? <Badge tone="ok">Active</Badge> : <Badge tone="bad">Lapsed</Badge>}
             </div>
-            {prov && (
-              <div className="grid grid-cols-[110px_1fr] gap-y-1.5 text-xs">
-                <span className="text-muted">provider</span>
-                <span>#{sub.providerId.toString()} · <span className="mono">{prov.endpoint}</span></span>
-                <span className="text-muted">price</span>
-                <span>{usdc(prov.pricePerSeatPerMonth)} USDC / seat / month</span>
-                <span className="text-muted">stake</span>
-                <span>{(Number(prov.stake) / 1e18).toFixed(3)} ETH (slashable)</span>
-                <span className="text-muted">contract</span>
-                <Ext href={links.addr(SUBSCRIPTION)}><Short v={SUBSCRIPTION} n={4} /></Ext>
+            <p className="mt-1 text-[14px] text-muted">{active ? `${daysLeft} days left` : "New devices can't join until you renew."}</p>
+
+            <div className="mt-6 flex items-baseline justify-between text-[14px]">
+              <span>Seats</span>
+              <span>
+                <b>{used}</b> <span className="text-muted">of {sub.seats}</span>
+              </span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-panel-2">
+              <div className={cx("h-full rounded-full", used > sub.seats ? "bg-bad" : "bg-accent")} style={{ width: `${Math.min(100, (used / Math.max(1, sub.seats)) * 100)}%` }} />
+            </div>
+            <p className="mt-2 text-[13px] text-muted">
+              {devices} device{devices === 1 ? "" : "s"} and {agents} agent{agents === 1 ? "" : "s"}. Services are free.
+            </p>
+
+            {steps ? (
+              <div className="mt-6 space-y-4">
+                <Steps steps={steps} />
+                {!steps.some((s) => s.state === "doing") && <Button onClick={() => (setSteps(undefined), setMode(null))}>Done</Button>}
+              </div>
+            ) : mode ? (
+              <div className="mt-6 space-y-4">
+                <Seg value={mode} onChange={setMode} options={[{ v: "seats", label: "Add seats" }, { v: "renew", label: "Renew" }]} />
+                <div className="flex items-center gap-2">
+                  <input type="number" min={1} className={cx(inputCls, "w-24 text-center")} value={mode === "seats" ? extra : months} onChange={(e) => (mode === "seats" ? setExtra : setMonths)(Math.max(1, +e.target.value))} />
+                  <span className="text-[14px] text-muted">{mode === "seats" ? "seats" : "months"} · {usdc(cost)} USDC</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button kind="primary" disabled={!isOwner || (mode === "seats" && !active)} onClick={pay}>
+                    Pay {usdc(cost)} USDC
+                  </Button>
+                  <Button kind="ghost" onClick={() => setMode(null)}>Cancel</Button>
+                </div>
+                {!isOwner && <p className="text-[13px] text-muted">Only the org owner can pay.</p>}
+              </div>
+            ) : (
+              <div className="mt-6 flex gap-2">
+                <Button kind="primary" onClick={() => setMode("seats")} disabled={!active}>Add seats</Button>
+                <Button onClick={() => setMode("renew")}>Renew</Button>
               </div>
             )}
-          </div>
+          </>
         )}
-      </Card>
-      <Card title="Change plan">
-        {steps ? (
-          <div className="space-y-4">
-            <Steps steps={steps} />
-            <Button onClick={() => setSteps(undefined)}>Done</Button>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <Field label="Add seats" hint="Prorated to your current period.">
-              <div className="flex gap-2">
-                <input type="number" min={1} className={inputCls} value={extra} onChange={(e) => setExtra(Math.max(1, +e.target.value))} />
-                <Button kind="primary" disabled={!isOwner || !active} onClick={() => pay("seats")}>
-                  <Plus size={14} /> Add
-                </Button>
-              </div>
-            </Field>
-            <Field label="Renew" hint="Funds are held in escrow and released to the provider month by month; cancelling refunds unused months.">
-              <div className="flex gap-2">
-                <input type="number" min={1} className={inputCls} value={months} onChange={(e) => setMonths(Math.max(1, +e.target.value))} />
-                <Button disabled={!isOwner || !sub || sub.providerId === 0n} onClick={() => pay("renew")}>
-                  Renew
-                </Button>
-              </div>
-            </Field>
-          </div>
-        )}
-      </Card>
-    </div>
+      </div>
+      {prov && (
+        <p className="mt-4 text-[13px] text-muted">
+          {usdc(prov.pricePerSeatPerMonth)} USDC per seat per month, held in escrow. Unused months are refunded if you cancel. <Ext href={links.addr(SUBSCRIPTION)}>Contract</Ext>
+        </p>
+      )}
+    </>
   );
 }

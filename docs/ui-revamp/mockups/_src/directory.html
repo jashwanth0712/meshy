@@ -1,0 +1,44 @@
+<!-- {"title": "Directory", "active": "directory", "shell": "app"} -->
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">Directory</h1>
+      <p class="lede">Your devices, services and agents.</p>
+    </div>
+    <button class="btn btn-primary">Add device</button>
+  </div>
+</section>
+
+<main class="mx-auto grid max-w-5xl gap-6 px-6 md:grid-cols-[220px_minmax(0,1fr)]">
+  <nav class="text-[14px]" aria-label="Directory">
+    <div class="eyebrow px-3 pb-1">home</div>
+    <a href="#" aria-current="true" class="mono block rounded-lg bg-accent px-3 py-1.5 font-medium text-accent-foreground">pi</a>
+    <a href="#" class="mono block rounded-lg px-3 py-1.5 pl-6 muted hover:text-foreground">camera</a>
+    <a href="#" class="mono block rounded-lg px-3 py-1.5 hover:bg-muted">rig1</a>
+    <div class="eyebrow px-3 pb-1 pt-5">prod</div>
+    <a href="#" class="mono block rounded-lg px-3 py-1.5 hover:bg-muted">db1</a>
+    <div class="eyebrow px-3 pb-1 pt-5">agents</div>
+    <a href="agent.html" class="mono block rounded-lg px-3 py-1.5 hover:bg-muted">claude-1</a>
+  </nav>
+
+  <section class="space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="ens text-xl font-semibold">pi<span class="rest">.home.meshydemo.eth</span></h2>
+        <p class="mt-1 text-[14px] muted">Raspberry Pi 5 · front door · online</p>
+      </div>
+      <a href="give-access.html" class="btn btn-outline btn-sm">Give access</a>
+    </div>
+
+    <div class="flex items-center gap-3 rounded-xl bg-muted px-4 py-3 text-[13px]">
+      <code class="flex-1">meshy ssh pi.home.meshydemo.eth</code>
+      <button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button>
+    </div>
+
+    <dl class="card text-[14px]">
+      <div class="row"><dt class="w-36 muted">Shared folder</dt><dd class="mono">~/meshy-demo/pi-srv</dd></div>
+      <div class="row"><dt class="w-36 muted">Who can reach it</dt><dd>Nobody right now</dd></div>
+      <div class="row"><dt class="w-36 muted">Service</dt><dd><span class="mono">camera</span> <span class="muted">· http 127.0.0.1:8001</span></dd></div>
+    </dl>
+  </section>
+</main>
