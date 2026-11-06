@@ -1,6 +1,7 @@
 "use client";
 import { KeyRound, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Admins } from "@/components/Admins";
 import { Badge, Button, Card, Field, Name, OnChain, Short, inputCls } from "@/components/ui";
 import { publicKeyOf } from "@/lib/envelope";
 import { useMeshy } from "@/lib/store";
@@ -73,6 +74,7 @@ export default function SettingsPage() {
           </div>
         )}
       </Card>
+      <Admins />
     </div>
   );
 }

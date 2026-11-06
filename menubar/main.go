@@ -107,26 +107,36 @@ func loadMap(ctx context.Context, s *snapshot) {
 	s.agents = map[string]bool{}
 	for _, a := range list(m["agents"]) {
 		am := obj(a)
-		label := str(am["label"])
-		if label == "" {
-			label = strings.SplitN(str(am["name"]), ".", 2)[0]
+		label := str(am["name"])
+		if fn := str(am["fullName"]); fn != "" {
+			label = strings.SplitN(fn, ".", 2)[0]
 		}
-		s.agents[label] = truthy(am["worldidValid"]) || truthy(am["humanBacked"]) || str(am["worldid"]) != ""
+		s.agents[label] = truthy(am["worldIdValid"])
 	}
 	for _, n := range list(m["networks"]) {
 		for _, r := range list(obj(n)["resources"]) {
 			rm := obj(r)
-			rn := str(rm["name"])
-			s.resources = append(s.resources, rn)
-			for _, g := range list(rm["grants"]) {
-				gm := obj(g)
-				gr := grant{Name: str(gm["name"]), Agent: str(gm["agent"]), Resource: rn, Status: str(gm["status"]), Expiry: num(gm["expiry"])}
-				if gr.Agent == "" {
-					gr.Agent = strings.SplitN(gr.Name, ".", 2)[0]
-				}
-				s.grants = append(s.grants, gr)
+			rn := str(rm["fullName"])
+			if rn == "" {
+				rn = str(rm["name"])
 			}
+			s.resources = append(s.resources, rn)
 		}
+	}
+	// meshy-sync lists grants flat: fullName = <agent>.<target>. Keep only
+	// those whose first label is a known agent (children of a device registry
+	// can also be services).
+	for _, g := range list(m["grants"]) {
+		gm := obj(g)
+		full := str(gm["fullName"])
+		parts := strings.SplitN(full, ".", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if _, isAgent := s.agents[parts[0]]; !isAgent {
+			continue
+		}
+		s.grants = append(s.grants, grant{Name: full, Agent: parts[0], Resource: parts[1], Status: str(gm["status"]), Expiry: num(gm["expiry"])})
 	}
 }
 

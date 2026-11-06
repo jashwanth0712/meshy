@@ -184,6 +184,22 @@ export type ResourceNode = {
   sshHost: string;
   roots: string[];
   endpoint: string;
+  kind: string;
+  meta: Record<string, string>;
+  grants: GrantNode[];
+  services: ServiceNode[];
+};
+
+/** A network service published under a device, e.g. camera.pi.home.acme.eth. */
+export type ServiceNode = {
+  name: string;
+  label: string;
+  device: string;
+  registry: Address; // its grants registry
+  parentRegistry: Address; // the device's registry
+  proto: string;
+  target: string;
+  desc: string;
   grants: GrantNode[];
 };
 
@@ -212,6 +228,22 @@ export type OrgTree = {
   block: bigint;
   blockTime: number;
 };
+
+async function grantsIn(c: PublicClient, registry: Address, parent: string, now: number, labels?: { label: string; unregistered: boolean }[]): Promise<GrantNode[]> {
+  const gl = labels ?? (await childLabels(c, registry));
+  return Promise.all(
+    gl.map(async ({ label: g, unregistered }) => {
+      const gn = `${g}.${parent}`;
+      const gst = await getState(c, registry, g);
+      const exp = Number(gst.expiry);
+      const live = gst.status === 2 && exp > now;
+      const status: GrantNode["status"] = live ? "live" : unregistered ? "revoked" : "expired";
+      const gres = live ? await resolverOf(c, registry, g) : zeroAddress;
+      const pol = live ? await text(c, gres, gn, "meshy.policy") : "";
+      return { name: gn, agent: g, registry, owner: gst.latestOwner, expiry: exp, status, tokenId: gst.tokenId, policySet: !!pol };
+    }),
+  );
+}
 
 export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
   const label = firstLabel(org);
@@ -278,12 +310,14 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
               const rst = await getState(c, sub, r);
               if (rst.status !== 2) return null;
               const [rres, grantsReg] = await Promise.all([resolverOf(c, sub, r), subregistryOf(c, sub, r)]);
-              const [addr, encKey, sshHost, roots, endpoint] = await Promise.all([
+              const [addr, encKey, sshHost, roots, endpoint, kind, meta] = await Promise.all([
                 addrRecord(c, rres, rn),
                 text(c, rres, rn, "meshy.enckey"),
                 text(c, rres, rn, "meshy.ssh-host"),
                 text(c, rres, rn, "meshy.roots"),
                 text(c, rres, rn, "meshy.endpoint"),
+                text(c, rres, rn, "meshy.kind"),
+                text(c, rres, rn, "meshy.meta"),
               ]);
               const node: ResourceNode = {
                 name: rn,
@@ -296,21 +330,44 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
                 sshHost,
                 roots: safeJSON<string[]>(roots, []),
                 endpoint,
+                kind,
+                meta: safeJSON<Record<string, string>>(meta, {}),
                 grants: [],
+                services: [],
               };
               if (grantsReg !== zeroAddress) {
-                const gl = await childLabels(c, grantsReg);
-                node.grants = await Promise.all(
-                  gl.map(async ({ label: g, unregistered }) => {
-                    const gn = `${g}.${rn}`;
-                    const gst = await getState(c, grantsReg, g);
-                    const exp = Number(gst.expiry);
-                    const live = gst.status === 2 && exp > now;
-                    const status: GrantNode["status"] = live ? "live" : unregistered ? "revoked" : "expired";
-                    const gres = live ? await resolverOf(c, grantsReg, g) : zeroAddress;
-                    const pol = live ? await text(c, gres, gn, "meshy.policy") : "";
-                    return { name: gn, agent: g, registry: grantsReg, owner: gst.latestOwner, expiry: exp, status, tokenId: gst.tokenId, policySet: !!pol };
+                // The device's registry holds both agent grants and services;
+                // services carry a meshy.service record.
+                const children = await childLabels(c, grantsReg);
+                const classified = await Promise.all(
+                  children.map(async (ch) => {
+                    const st = await getState(c, grantsReg, ch.label);
+                    if (st.status !== 2) return { ch, svc: null as null | { spec: string; res: Address } };
+                    const res = await resolverOf(c, grantsReg, ch.label);
+                    const spec = await text(c, res, `${ch.label}.${rn}`, "meshy.service");
+                    return { ch, svc: spec ? { spec, res } : null };
                   }),
+                );
+                node.grants = await grantsIn(c, grantsReg, rn, now, classified.filter((x) => !x.svc).map((x) => x.ch));
+                node.services = await Promise.all(
+                  classified
+                    .filter((x) => x.svc)
+                    .map(async ({ ch, svc }) => {
+                      const sn = `${ch.label}.${rn}`;
+                      const spec = safeJSON<{ proto?: string; target?: string; desc?: string }>(svc!.spec, {});
+                      const sreg = await subregistryOf(c, grantsReg, ch.label);
+                      return {
+                        name: sn,
+                        label: ch.label,
+                        device: rn,
+                        registry: sreg,
+                        parentRegistry: grantsReg,
+                        proto: spec.proto ?? "tcp",
+                        target: spec.target ?? "",
+                        desc: spec.desc ?? "",
+                        grants: sreg === zeroAddress ? [] : await grantsIn(c, sreg, sn, now),
+                      } as ServiceNode;
+                    }),
                 );
               }
               return node;
@@ -367,6 +424,36 @@ export function randomSalt(): bigint {
 export async function deployRegistry(w: WalletClient, c: PublicClient, admin: Address): Promise<Address> {
   const init = encodeFunctionData({ abi: registryAbi, functionName: "initialize", args: [[{ account: admin, roleBitmap: ALL_ROLES }]] });
   const r = await send(w, c, { address: ENS.factory, abi: factoryAbi, functionName: "deployProxy", args: [ENS.userRegistryImpl, randomSalt(), init] });
+  for (const l of r.logs) {
+    try {
+      const ev = decodeEventLog({ abi: factoryAbi, data: l.data, topics: l.topics });
+      if (ev.eventName === "ProxyDeployed") return getAddress(ev.args.proxyAddress);
+    } catch {}
+  }
+  throw new Error("ProxyDeployed not found");
+}
+
+export const ROLE_REGISTRAR = 1n;
+export const ROLE_UNREGISTER = 1n << 12n;
+export const ROLE_RENEW = 1n << 16n;
+export const ADMIN_ROLES = ROLE_REGISTRAR | ROLE_UNREGISTER | ROLE_RENEW;
+
+export const eacAbi = parseAbi([
+  "function grantRootRoles(uint256 roleBitmap, address account) returns (bool)",
+  "function hasRootRoles(uint256 roleBitmap, address account) view returns (bool)",
+  "function grantSetterRoles(bytes setter, address account) returns (bool)",
+  "function revokeRootRoles(uint256 roleBitmap, address account) returns (bool)",
+]);
+
+/** setText calldata used as the EAC "setter" selector: scopes a role to one text key. */
+export function textKeySetter(key: string): Hex {
+  return encodeFunctionData({ abi: resolverAbi, functionName: "setText", args: ["0x00", key, ""] });
+}
+
+/** Deploy a PermissionedResolver where admin holds every role; initial records are written in the same tx. */
+export async function deployResolver(w: WalletClient, c: PublicClient, admin: Address, calls: Hex[] = []): Promise<Address> {
+  const init = encodeFunctionData({ abi: resolverAbi, functionName: "initialize", args: [[{ account: admin, roleBitmap: ALL_ROLES }], calls] });
+  const r = await send(w, c, { address: ENS.factory, abi: factoryAbi, functionName: "deployProxy", args: [ENS.resolverImpl, randomSalt(), init] });
   for (const l of r.logs) {
     try {
       const ev = decodeEventLog({ abi: factoryAbi, data: l.data, topics: l.topics });

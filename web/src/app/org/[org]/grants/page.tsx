@@ -6,7 +6,7 @@ import { type Step, Steps } from "@/components/Steps";
 import { Badge, Button, Card, Countdown, Empty, Field, Name, Ring, cx, inputCls, useNow } from "@/components/ui";
 import { revokesFor } from "@/lib/arkiv";
 import { type PathRule, sealPolicy } from "@/lib/envelope";
-import { type GrantNode, type ResourceNode, getState, labelId, recordCalls, registryAbi, resolverAbi, send } from "@/lib/ens";
+import { type GrantNode, type ResourceNode, type ServiceNode, getState, labelId, recordCalls, registryAbi, resolverAbi, send } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 const DURATIONS = [
@@ -18,23 +18,40 @@ const DURATIONS = [
 function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { resource?: string; agent?: string } }) {
   const { tree, wallet, client, account, refresh, toast } = useMeshy();
   const resources = useMemo(() => tree?.networks.flatMap((n) => n.resources) ?? [], [tree]);
+  const services = useMemo(() => resources.flatMap((r) => r.services), [resources]);
   const [resName, setResName] = useState(preset?.resource ?? resources[0]?.name ?? "");
   const [agent, setAgent] = useState(preset?.agent ?? tree?.agents[0]?.label ?? "");
   const res = resources.find((r) => r.name === resName);
+  const svc = services.find((x) => x.name === resName);
   const [paths, setPaths] = useState<PathRule[]>(() => (res?.roots[0] ? [{ p: `${res.roots[0]}/reports`, m: "ro" }] : []));
   const [dur, setDur] = useState(3600);
   const [steps, setSteps] = useState<Step[]>();
   const busy = steps?.some((s) => s.state === "doing");
-  const grantName = agent && res ? `${agent}.${res.name}` : "";
+  const grantName = agent && (svc || res) ? `${agent}.${(svc ?? res)!.name}` : "";
   const exp = new Date(Date.now() + dur * 1000);
   const ag = tree?.agents.find((a) => a.label === agent);
   const isOwner = !!account && !!tree && tree.owner.toLowerCase() === account.toLowerCase();
 
-  const valid = !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/") && !!res.encKey && !!tree?.orgKey;
+  const valid = svc ? !!ag : !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/") && !!res.encKey && !!tree?.orgKey;
 
   async function submit() {
-    if (!wallet || !tree || !res || !ag) return;
+    if (!wallet || !tree || !ag) return;
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
+    if (svc) {
+      setSteps([{ label: `Register ENS subname ${grantName} (port-level access to ${svc.proto}://${svc.target})`, state: "doing", detail: `owner ${ag.addr} · expires ${exp.toLocaleTimeString()}` }]);
+      try {
+        const r = await send(wallet, client, { address: svc.registry, abi: registryAbi, functionName: "register", args: [agent, ag.addr, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)] }, (h) => up(0, { tx: h }));
+        up(0, { state: "done", detail: `block ${r.blockNumber}` });
+        toast(`Granted ${grantName}`, "ok");
+        refresh();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
+        setSteps((s) => s?.map((x) => (x.state === "doing" ? { ...x, state: "fail", detail: msg } : x)));
+        toast(msg, "err");
+      }
+      return;
+    }
+    if (!res) return;
     setSteps([
       { label: `Register ENS subname ${grantName}`, state: "doing", detail: `owner ${ag.addr} · expires ${exp.toLocaleTimeString()}` },
       { label: "Read the grant's token id (binds the policy)", state: "todo" },
@@ -93,7 +110,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
               ))}
             </select>
           </Field>
-          <Field label="Resource">
+          <Field label="Target" hint="A device (folder-sandboxed shell) or one of its services (a single port).">
             <select
               className={inputCls}
               value={resName}
@@ -103,11 +120,26 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
                 setPaths(r?.roots[0] ? [{ p: r.roots[0], m: "ro" }] : []);
               }}
             >
-              {resources.map((r) => (
-                <option key={r.name}>{r.name}</option>
-              ))}
+              <optgroup label="Devices — folders">
+                {resources.map((r) => (
+                  <option key={r.name} value={r.name}>{r.name}</option>
+                ))}
+              </optgroup>
+              {services.length > 0 && (
+                <optgroup label="Services — one port">
+                  {services.map((x) => (
+                    <option key={x.name} value={x.name}>{x.name} ({x.proto} → {x.target})</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </Field>
+          {svc ? (
+            <div className="rounded-lg border border-accent-2/30 bg-accent-2/5 p-3 text-sm">
+              Port-level grant: the agent can reach <span className="mono">{svc.proto}://{svc.target}</span> on <span className="mono">{svc.device}</span> through{" "}
+              <span className="mono">meshy connect {svc.name}</span> — nothing else on the device.
+            </div>
+          ) : (
           <Field label="Folders" hint={res?.roots.length ? <>Advertised roots: <span className="mono">{res.roots.join(", ")}</span></> : "This resource advertises no roots."}>
             <div className="space-y-2">
               {paths.map((p, i) => (
@@ -130,6 +162,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
               </Button>
             </div>
           </Field>
+          )}
           <Field label="Duration" hint="Agent grants are capped at 4 hours. Expiry is native ENSv2 — no one has to remember to revoke.">
             <div className="flex gap-2">
               {DURATIONS.map((d) => (
@@ -142,13 +175,19 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
           <div className="rounded-lg border border-line bg-bg p-3 text-sm">
             <div className="text-xs uppercase tracking-wider text-muted">Preview</div>
             <div className="mt-1">
-              Creates <Name name={grantName || "—"} /> owned by the agent, expiring <b>{exp.toLocaleTimeString()}</b>. Policy (
-              {paths.map((p) => `${p.p}:${p.m}`).join(", ") || "no folders"}) is encrypted to <span className="mono">{res?.label}</span> + the org key — folder paths never
-              appear on-chain in clear.
+              Creates <Name name={grantName || "—"} /> owned by the agent, expiring <b>{exp.toLocaleTimeString()}</b>.{" "}
+              {svc ? (
+                <>The service&apos;s daemon forwards only to the target in its ENS record while this name is live.</>
+              ) : (
+                <>
+                  Policy ({paths.map((p) => `${p.p}:${p.m}`).join(", ") || "no folders"}) is encrypted to <span className="mono">{res?.label}</span> + the org key — folder paths never
+                  appear on-chain in clear.
+                </>
+              )}
             </div>
           </div>
           {!tree?.orgKey && <div className="text-sm text-bad">Org has no meshy.orgkey record.</div>}
-          {res && !res.encKey && <div className="text-sm text-bad">Resource has no meshy.enckey record.</div>}
+          {!svc && res && !res.encKey && <div className="text-sm text-bad">Resource has no meshy.enckey record.</div>}
           {ag && !ag.worldid && <div className="text-sm text-warn">This agent has no World ID attestation: meshyd will refuse it (MESHY_NOT_HUMAN_BACKED).</div>}
           {steps ? (
             <Steps steps={steps} />
@@ -156,7 +195,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
             <div className="text-sm text-muted">Connect the org owner's wallet to grant.</div>
           ) : (
             <Button kind="primary" disabled={!valid || busy || !isOwner} onClick={submit}>
-              <KeyRound size={14} /> {isOwner ? "Grant (2 transactions)" : "Only the org owner can grant"}
+              <KeyRound size={14} /> {isOwner ? (svc ? "Grant (1 transaction)" : "Grant (2 transactions)") : "Only the org owner can grant"}
             </Button>
           )}
         </div>
@@ -165,7 +204,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
   );
 }
 
-function RevokeTimeline({ grant, res, onDone }: { grant: GrantNode; res: ResourceNode; onDone: () => void }) {
+function RevokeTimeline({ grant, res, onDone }: { grant: GrantNode; res: { label: string; name: string }; onDone: () => void }) {
   const { wallet, client, org, refresh, toast } = useMeshy();
   const [steps, setSteps] = useState<Step[]>([
     { label: "Send unregister() for the grant", state: "doing" },
@@ -237,10 +276,14 @@ export default function GrantsPage() {
   const { tree, account } = useMeshy();
   const now = useNow();
   const [drawer, setDrawer] = useState<{ resource?: string; agent?: string } | null>(null);
-  const [revoking, setRevoking] = useState<{ g: GrantNode; r: ResourceNode }>();
+  const [revoking, setRevoking] = useState<{ g: GrantNode; r: ResourceNode | ServiceNode }>();
   if (!tree) return null;
   const isOwner = !!account && tree.owner.toLowerCase() === account.toLowerCase();
-  const rows = tree.networks.flatMap((n) => n.resources).flatMap((r) => r.grants.map((g) => ({ g, r })));
+  const devs = tree.networks.flatMap((n) => n.resources);
+  const rows: { g: GrantNode; r: ResourceNode | ServiceNode }[] = [
+    ...devs.flatMap((r) => r.grants.map((g) => ({ g, r }))),
+    ...devs.flatMap((r) => r.services).flatMap((sv) => sv.grants.map((g) => ({ g, r: sv }))),
+  ];
   rows.sort((a, b) => Number(b.g.status === "live") - Number(a.g.status === "live") || b.g.expiry - a.g.expiry);
   return (
     <div className="space-y-5">
@@ -268,7 +311,8 @@ export default function GrantsPage() {
                   <div className="min-w-0 flex-1">
                     <Name name={g.name} />
                     <div className="text-xs text-muted">
-                      agent <span className="mono">{g.agent}</span> on <span className="mono">{r.label}</span> · policy {g.policySet ? "sealed" : "—"}
+                      agent <span className="mono">{g.agent}</span> on <span className="mono">{r.label}</span> ·{" "}
+                      {"target" in r ? <>port {r.proto}://{r.target}</> : <>folders {g.policySet ? "(sealed policy)" : "—"}</>}
                     </div>
                   </div>
                   {live ? <Countdown until={g.expiry} /> : <Badge tone={g.status === "revoked" ? "bad" : "muted"}>{g.status}</Badge>}

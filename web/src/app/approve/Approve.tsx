@@ -6,7 +6,7 @@ import { type Address, isAddress, zeroAddress } from "viem";
 import { type Step, Steps } from "@/components/Steps";
 import { Badge, Button, Card, Ext, Name, Short } from "@/components/ui";
 import { PROVIDER_API } from "@/lib/config";
-import { getState, recordCalls, registryAbi, resolverAbi, send, yearFromNow } from "@/lib/ens";
+import { deployResolver, eacAbi, getState, recordCalls, registryAbi, resolverAbi, resolverOf, send, textKeySetter, yearFromNow } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 type Health = { ok: boolean; attestor: string; world: string; devAttest: boolean };
@@ -86,42 +86,36 @@ export function Approve({ org, agent, addr, ssh }: { org: string; agent: string;
   async function approve() {
     if (!wallet || !tree || !account || !attestation) return;
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
-    setSteps([
-      { label: `Register ${name}`, state: "doing" },
-      { label: "Publish the agent's address, SSH key and World ID attestation", state: "todo" },
-    ]);
+    const records = {
+      "meshy.ssh": ssh.trim(),
+      "meshy.owner": account,
+      "meshy.worldid": attestation,
+      "agent-context": `Meshy agent ${agent}. Access is granted per resource via ENS subnames <agent>.<resource>.`,
+    };
+    const calls = recordCalls(name, records, addr as Address);
     try {
       const st = await getState(client, tree.agentsRegistry, agent);
       if (st.status === 2) {
-        up(0, { state: "done", detail: "already registered — updating records" });
-      } else {
-        await send(wallet, client, { address: tree.agentsRegistry, abi: registryAbi, functionName: "register", args: [agent, account, zeroAddress, tree.resolver, 0n, yearFromNow()] }, (h) => up(0, { tx: h }));
+        // Existing agent: update the records on whatever resolver it already uses.
+        setSteps([{ label: `Update ${name}'s records (new keys + attestation)`, state: "doing" }]);
+        const res = await resolverOf(client, tree.agentsRegistry, agent);
+        await send(wallet, client, { address: res, abi: resolverAbi, functionName: "multicall", args: [calls] }, (h) => up(0, { tx: h }));
         up(0, { state: "done" });
+      } else {
+        setSteps([
+          { label: "Deploy the agent's own PermissionedResolver (records written in the same tx)", state: "doing" },
+          { label: `Register ${name} → that resolver`, state: "todo" },
+          { label: "Let the agent rotate only its meshy.ssh key (EAC setter role)", state: "todo" },
+        ]);
+        const res = await deployResolver(wallet, client, account, calls);
+        up(0, { state: "done", detail: res });
+        up(1, { state: "doing" });
+        await send(wallet, client, { address: tree.agentsRegistry, abi: registryAbi, functionName: "register", args: [agent, account, zeroAddress, res, 0n, yearFromNow()] }, (h) => up(1, { tx: h }));
+        up(1, { state: "done" });
+        up(2, { state: "doing" });
+        await send(wallet, client, { address: res, abi: eacAbi, functionName: "grantSetterRoles", args: [textKeySetter("meshy.ssh"), addr as Address] }, (h) => up(2, { tx: h }));
+        up(2, { state: "done", detail: "the org keeps membership (it can unregister the name); the agent's data is its own" });
       }
-      up(1, { state: "doing" });
-      await send(
-        wallet,
-        client,
-        {
-          address: tree.resolver,
-          abi: resolverAbi,
-          functionName: "multicall",
-          args: [
-            recordCalls(
-              name,
-              {
-                "meshy.ssh": ssh.trim(),
-                "meshy.owner": account,
-                "meshy.worldid": attestation,
-                "agent-context": `Meshy agent ${agent}. Access is granted per resource via ENS subnames <agent>.<resource>.`,
-              },
-              addr as Address,
-            ),
-          ],
-        },
-        (h) => up(1, { tx: h }),
-      );
-      up(1, { state: "done" });
       setDone(true);
       toast(`${name} approved`, "ok");
     } catch (e) {
@@ -226,7 +220,7 @@ export function Approve({ org, agent, addr, ssh }: { org: string; agent: string;
               <Steps steps={steps} />
             ) : (
               <Button kind="primary" disabled={!isOwner || !attestation || !tree || tree.agentsRegistry === zeroAddress} onClick={approve}>
-                Approve {agent} (2 transactions)
+                Approve {agent} (3 transactions)
               </Button>
             )}
           </Card>

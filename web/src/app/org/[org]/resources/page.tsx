@@ -1,5 +1,5 @@
 "use client";
-import { Network, Plus, Server, Terminal } from "lucide-react";
+import { Camera, Network, Plus, Server, Terminal } from "lucide-react";
 import { useState } from "react";
 import { type Address, getAddress } from "viem";
 import { type Step, Steps } from "@/components/Steps";
@@ -16,7 +16,8 @@ function parseJoin(code: string): Join {
 
 export default function ResourcesPage() {
   const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
-  const [mode, setMode] = useState<"none" | "network" | "resource">("none");
+  const [mode, setMode] = useState<"none" | "network" | "resource" | "service">("none");
+  const [svcForm, setSvcForm] = useState({ device: "", name: "camera", target: "127.0.0.1:8001", proto: "http", desc: "" });
   const [netLabel, setNetLabel] = useState("");
   const [code, setCode] = useState("");
   const [steps, setSteps] = useState<Step[]>();
@@ -42,6 +43,38 @@ export default function ResourcesPage() {
       await send(wallet, client, { address: tree!.orgRegistry, abi: registryAbi, functionName: "register", args: [netLabel, account, reg, tree!.resolver, 0n, yearFromNow()] });
       up(1, { state: "done" });
       toast(`Network ${netLabel}.${org} created`, "ok");
+      refresh();
+    } catch (e) {
+      fail(e);
+    }
+  }
+
+  async function addService() {
+    if (!wallet || !account) return;
+    const dev = tree!.networks.flatMap((n) => n.resources).find((r) => r.name === svcForm.device);
+    if (!dev) return toast("Pick a device", "err");
+    const name = `${svcForm.name}.${dev.name}`;
+    setSteps([
+      { label: `Deploy ${svcForm.name}'s grants registry`, state: "doing" },
+      { label: `Register ${name}`, state: "todo" },
+      { label: `Publish meshy.service → ${svcForm.proto}://${svcForm.target}`, state: "todo" },
+    ]);
+    try {
+      const reg = await deployRegistry(wallet, client, account);
+      up(0, { state: "done", detail: reg });
+      up(1, { state: "doing" });
+      await send(wallet, client, { address: dev.registry, abi: registryAbi, functionName: "register", args: [svcForm.name, account, reg, tree!.resolver, 0n, yearFromNow()] });
+      up(1, { state: "done" });
+      up(2, { state: "doing" });
+      const texts: Record<string, string> = {
+        "meshy.service": JSON.stringify({ proto: svcForm.proto, target: svcForm.target, desc: svcForm.desc }),
+        "meshy.kind": "service",
+        url: `${svcForm.proto}://${name}`,
+      };
+      if (svcForm.desc) texts.description = svcForm.desc;
+      await send(wallet, client, { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(name, texts)] });
+      up(2, { state: "done" });
+      toast(`Service ${name} published`, "ok");
       refresh();
     } catch (e) {
       fail(e);
@@ -96,8 +129,11 @@ export default function ResourcesPage() {
             <Button onClick={() => (setMode("network"), setSteps(undefined))} disabled={!isOwner}>
               <Network size={14} /> Add network
             </Button>
+            <Button onClick={() => (setMode("service"), setSteps(undefined), setSvcForm((f) => ({ ...f, device: tree.networks[0]?.resources[0]?.name ?? "" })))} disabled={!isOwner}>
+              <Camera size={14} /> Add service
+            </Button>
             <Button kind="primary" onClick={() => (setMode("resource"), setSteps(undefined))} disabled={!isOwner}>
-              <Plus size={14} /> Add resource
+              <Plus size={14} /> Add device
             </Button>
           </>
         }
@@ -108,6 +144,40 @@ export default function ResourcesPage() {
               <input className={inputCls} value={netLabel} onChange={(e) => setNetLabel(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="staging" />
             </Field>
             {steps ? <Steps steps={steps} /> : <Button kind="primary" disabled={!netLabel} onClick={addNetwork}>Create network (2 tx)</Button>}
+          </div>
+        )}
+        {mode === "service" && (
+          <div className="mb-5 space-y-3 rounded-lg border border-line bg-bg p-4">
+            <div className="text-sm text-muted">
+              Publish a port on a device under a clean ENS name — e.g. a camera on a Raspberry Pi, an inference API on a GPU box. Agents reach it with{" "}
+              <span className="mono">meshy connect &lt;name&gt;</span>, only while they hold a grant on that service.
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Device">
+                <select className={inputCls} value={svcForm.device} onChange={(e) => setSvcForm({ ...svcForm, device: e.target.value })}>
+                  {tree.networks.flatMap((n) => n.resources).map((r) => (
+                    <option key={r.name}>{r.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Service label" hint={<span className="mono">{svcForm.name || "camera"}.{svcForm.device}</span>}>
+                <input className={inputCls} value={svcForm.name} onChange={(e) => setSvcForm({ ...svcForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
+              </Field>
+              <Field label="Target on the device (host:port)">
+                <input className={inputCls} value={svcForm.target} onChange={(e) => setSvcForm({ ...svcForm, target: e.target.value })} />
+              </Field>
+              <Field label="Protocol">
+                <select className={inputCls} value={svcForm.proto} onChange={(e) => setSvcForm({ ...svcForm, proto: e.target.value })}>
+                  {["http", "tcp", "rtsp", "grpc", "postgres"].map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Description">
+              <input className={inputCls} value={svcForm.desc} onChange={(e) => setSvcForm({ ...svcForm, desc: e.target.value })} placeholder="front door camera" />
+            </Field>
+            {steps ? <Steps steps={steps} /> : <Button kind="primary" disabled={!svcForm.device || !svcForm.name || !svcForm.target} onClick={addService}>Publish service (3 tx)</Button>}
           </div>
         )}
         {mode === "resource" && (
@@ -144,6 +214,7 @@ export default function ResourcesPage() {
                             <div className="flex items-center gap-2">
                               <Server size={15} />
                               <Name name={r.name} />
+                              {r.kind && <Badge tone="info">{r.kind}</Badge>}
                             </div>
                             {live ? <Badge tone="ok">{live} live grant{live > 1 ? "s" : ""}</Badge> : <Badge>idle</Badge>}
                           </div>
@@ -157,6 +228,31 @@ export default function ResourcesPage() {
                             <span className="text-muted">host key</span>
                             <Short v={r.sshHost.split(" ")[1] ?? ""} n={8} />
                           </div>
+                          {Object.keys(r.meta).length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {Object.entries(r.meta).map(([k, v]) => (
+                                <Badge key={k}>{k}: {v}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          {r.services.length > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                              {r.services.map((sv) => {
+                                const sl = sv.grants.filter((g) => g.status === "live" && g.expiry > Date.now() / 1000).length;
+                                return (
+                                  <div key={sv.name} className="flex items-center justify-between rounded-lg border border-line bg-panel px-3 py-2 text-xs">
+                                    <span className="flex items-center gap-2">
+                                      <Camera size={13} className="text-accent" />
+                                      <span className="mono">{sv.name}</span>
+                                    </span>
+                                    <span className="mono text-muted">
+                                      {sv.proto}://{sv.target} {sl ? <Badge tone="ok">{sl} live</Badge> : null}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                           <div className="mt-3 rounded-lg border border-line bg-panel px-3 py-2 text-[11px] text-muted">
                             agents connect with <span className="mono text-fg">meshy ssh {r.name} -- &lt;cmd&gt;</span>
                           </div>
