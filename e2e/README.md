@@ -17,4 +17,13 @@ All scripts build the binaries themselves. Fork scripts use **real ENSv2 contrac
 
 - Over the mesh (`mesh-live.sh` steps, first run): session killed 9.03 s after the tx was sent (0.75 s after mining), and the NetBird policy was removed at about 27 s.
 
+- **Fresh-user run** (6 Nov, 19:35 IST), from the **released v0.3.1 tools** installed with `curl -fsSL https://get.meshy.live | sh`, on public Sepolia RPC with no API key, via `api.meshy.live`:
+  1. A new device `e2e.home.meshydemo.eth` (`meshyd init` → `meshy-admin resource add`, 33 s → `meshyd run` → `mesh-join`)
+  2. A new agent `e2e-agent` (`meshy join` → approved → `MESHY_JOINED` → `mesh-join`)
+  3. A grant on `projects` read-only becomes a mesh policy; `cat projects/README.txt` works over WireGuard
+  4. `private/` → `MESHY_BLOCKED reason="outside grant"`; a write into `projects` → `MESHY_BLOCKED reason="read-only grant"`
+  5. A live revoke: mined at 7.9 s, the stream killed at 10.7 s (`MESHY_REVOKED block=12077065`), the mesh policy gone at 26.9 s, and the reconnect refused (`MESHY_UNREACHABLE`)
+
+  The dashboard home on a fresh browser shows an empty org box; the demo org opens only through an explicit link.
+
 **Not implemented from the test plan:** toxiproxy RPC chaos, provider kill, clock skew, load tests.
