@@ -126,7 +126,7 @@ final class DeviceManager {
         try? FileManager.default.createDirectory(atPath: logs, withIntermediateDirectories: true)
         let common = ["--name", d.name, "--state", d.stateDir]
         let jobs: [(String, [String], String)] = [
-            ("live.meshy.meshyd", [meshyd, "run"] + common + ["--roots", d.roots.joined(separator: ","), "--sepolia", Settings.sepoliaWS, "--arkiv=", "--listen", "127.0.0.1:2222", "--control", d.controlSocket], "meshyd"),
+            ("live.meshy.meshyd", [meshyd, "run"] + common + ["--roots", d.roots.joined(separator: ","), "--sepolia", Settings.sepoliaWS, "--listen", "127.0.0.1:2222", "--control", d.controlSocket], "meshyd"),
             ("live.meshy.mesh", [meshyd, "mesh-join"] + common + ["--provider", MeshyStore.shared.syncURL], "mesh"),
         ]
         for (label, args, log) in jobs {

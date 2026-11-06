@@ -38,6 +38,18 @@ export type Row = {
   block?: number;
   latencyMs?: number;
   nOps?: number;
+  /** session: shell | exec | files (Finder volume) | connect (a port) */
+  channel?: string;
+  /** session.end: bytes both ways and how long it ran */
+  bytes?: number;
+  durationMs?: number;
+  /** audit chunk: file telemetry that can be read without the org key */
+  nRead?: number;
+  nWrite?: number;
+  nList?: number;
+  nDelete?: number;
+  bytesRead?: number;
+  bytesWritten?: number;
   payload?: string; // sealed envelope (hex-decoded string) or plaintext JSON
   event?: AuditEvent; // decrypted
   ops?: AuditEvent[]; // decrypted audit chunk
@@ -80,6 +92,8 @@ function hexToBytes(h: string): Uint8Array {
   return out;
 }
 
+const num = (v: string | number | undefined) => (v === undefined || v === "" ? undefined : Number(v));
+
 export function toRow(e: Entity): Row {
   const a = e.attrs;
   return {
@@ -96,6 +110,15 @@ export function toRow(e: Entity): Row {
     block: a.block !== undefined ? Number(a.block) : undefined,
     latencyMs: a.latencyMs !== undefined ? Number(a.latencyMs) : undefined,
     nOps: a.nOps !== undefined ? Number(a.nOps) : undefined,
+    channel: typeof a.channel === "string" ? a.channel : undefined,
+    bytes: num(a.bytes),
+    durationMs: num(a.durationMs),
+    nRead: num(a.nRead),
+    nWrite: num(a.nWrite),
+    nList: num(a.nList),
+    nDelete: num(a.nDelete),
+    bytesRead: num(a.bytesRead),
+    bytesWritten: num(a.bytesWritten),
     payload: typeof a.payload === "string" ? a.payload : undefined,
     path: typeof a.path === "string" ? a.path : undefined,
   };

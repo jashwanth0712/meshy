@@ -262,11 +262,11 @@ type remoteDir struct {
 	read bool
 }
 
-func (d *remoteDir) Close() error                       { return nil }
-func (d *remoteDir) Read([]byte) (int, error)           { return 0, os.ErrInvalid }
-func (d *remoteDir) Write([]byte) (int, error)          { return 0, os.ErrInvalid }
-func (d *remoteDir) Seek(int64, int) (int64, error)     { return 0, nil }
-func (d *remoteDir) Stat() (fs.FileInfo, error)         { return d.fi, nil }
+func (d *remoteDir) Close() error                   { return nil }
+func (d *remoteDir) Read([]byte) (int, error)       { return 0, os.ErrInvalid }
+func (d *remoteDir) Write([]byte) (int, error)      { return 0, os.ErrInvalid }
+func (d *remoteDir) Seek(int64, int) (int64, error) { return 0, nil }
+func (d *remoteDir) Stat() (fs.FileInfo, error)     { return d.fi, nil }
 func (d *remoteDir) Readdir(count int) ([]fs.FileInfo, error) {
 	if !d.read {
 		l, err := d.f.r.ReadDir(d.p)

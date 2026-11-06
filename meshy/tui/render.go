@@ -451,7 +451,7 @@ func (f *Frame) sessions(w int) []string {
 		if s.DaemonErr != "" {
 			return []string{sMuted.Render(s.DaemonErr)}
 		}
-		return []string{sMuted.Render("(sessions are shown by `meshyd top` on the device)")}
+		return []string{sMuted.Render("(this machine shares no device: sessions show on the device sharing it)")}
 	}
 	var out []string
 	if fl := s.Flash; fl.Active(f.Now) && fl.Session != "" {
@@ -709,7 +709,7 @@ func (f *Frame) feed(w, n int) []string {
 
 func (f *Frame) footer(w int) string {
 	keys := [][2]string{{"q", "quit"}, {"↑↓", "select"}, {"tab", "pane"}}
-	if f.S.Daemon != nil && f.S.Mode != "agent" {
+	if f.S.Daemon != nil {
 		keys = append(keys, [2]string{"k", "kill"})
 	}
 	keys = append(keys, [2]string{"c", "copy ssh"}, [2]string{"o", "dashboard"})

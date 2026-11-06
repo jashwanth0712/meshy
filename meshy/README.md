@@ -54,10 +54,12 @@ meshy grants db1.prod.acme.eth
 meshy ssh db1.prod.acme.eth -- cat /srv/reports/q3.csv
 meshy mount jash.sample1.acme.eth        # the granted folders as a Finder volume (WebDAV on 127.0.0.1)
 meshy request access jash.sample1.acme.eth --path /Users/jash/oct26 --mode rw --dur 3600
-meshy top                                # every org this machine is in; g switches org
+meshy top                                # live: every org this machine is in (g switches), its own
+                                         # meshyd sessions if it shares a device, and the org's Arkiv feed
 ```
 - **`meshy mount`** opens one session on the device, like `meshy ssh`, and runs the system `sftp-server` inside meshyd's sandbox. The device's folder policy and audit apply to every file, and the volume is ejected when the grant is revoked or expires. Finder's `._*` and `.DS_Store` files stay in memory on your Mac. Code: `davfs/`, `cmd/meshy/mount.go`.
 - **`meshy request`** signs a request with this machine's key (the addr record of your name) and posts it to the provider's `/v1/requests`. Admins see it in Meshy for Mac (Requests) and on the dashboard (Access). Nothing is granted until an admin signs.
+- **Telemetry on Arkiv:** sessions carry `channel` (shell, exec, files, connect), plus `bytes` and `durationMs` when they end. File chunks carry `nRead`, `nWrite`, `nList`, `nDelete`, `bytesRead` and `bytesWritten`. Commands and paths stay sealed to the org key. Finder volumes are decoded from the SFTP stream (`meshyd/sftptap.go`), so Macs get file-level events without root.
 - `ssh`, `mount` and `connect` join the mesh on first use (`meshy mesh-join` is no longer a separate step).
 
 ## Deviation from the plan

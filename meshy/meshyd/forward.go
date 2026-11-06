@@ -87,7 +87,7 @@ func (s *Server) directTCPIP(_ *ssh.Server, conn *gossh.ServerConn, newChan goss
 	if s.Watcher != nil {
 		s.Watcher.Unwatch(fw.id)
 	}
-	s.emit(audit.Event{Kind: audit.SessionEnd, Session: fw.id, Agent: id.Agent, Grant: string(sa.Grant.Name), Op: "connect", Path: string(sa.Service), Bytes: in.Load() + out.Load(), Reason: fmt.Sprintf("closed (%d B in, %d B out)", in.Load(), out.Load())})
+	s.emit(audit.Event{Kind: audit.SessionEnd, Session: fw.id, Agent: id.Agent, Grant: string(sa.Grant.Name), Op: "connect", Path: string(sa.Service), Bytes: in.Load() + out.Load(), DurationMs: time.Since(fw.started).Milliseconds(), Reason: fmt.Sprintf("closed (%d B in, %d B out)", in.Load(), out.Load())})
 }
 
 func (f *forward) close() {

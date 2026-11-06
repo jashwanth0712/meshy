@@ -38,14 +38,18 @@ function GrantLine({ l, org, canWrite, onRevoke, onRegrant }: { l: Line; org: st
             <div className="mono tnum font-semibold">{fmtLeft(left)}</div>
             <div className="text-[12px] text-muted">until {new Date(l.g.expiry * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
           </div>
-          <Button kind="danger" className="h-8 px-3.5" disabled={!canWrite} title={canWrite ? undefined : "Connect the owner's or an admin's wallet"} onClick={onRevoke}>
-            Revoke
-          </Button>
+          {canWrite && (
+            <Button kind="danger" className="h-8 px-3.5" onClick={onRevoke}>
+              Revoke
+            </Button>
+          )}
         </>
       ) : (
-        <Button className="h-8 px-3.5" disabled={!canWrite} onClick={onRegrant}>
-          Grant again
-        </Button>
+        canWrite && (
+          <Button className="h-8 px-3.5" onClick={onRegrant}>
+            Grant again
+          </Button>
+        )
       )}
     </Row>
   );
@@ -67,7 +71,7 @@ function sentence(r: Ev, org: string): { text: React.ReactNode; grant?: { agent:
 }
 
 export default function AccessPage() {
-  const { tree, org, orgKey, account, error, loading } = useMeshy();
+  const { tree, org, orgKey, account, error, loading, canManage } = useMeshy();
   const now = useNow(5000);
   const [tab, setTab] = useState<"live" | "ended">("live");
   const [drawer, setDrawer] = useState<GrantPreset | null>(null);
@@ -153,7 +157,8 @@ export default function AccessPage() {
     }
   }, [tree, lines]);
 
-  const canWrite = !!account;
+  // Only the owner and delegated admins give, revoke and approve. Members request access instead.
+  const canWrite = canManage;
   if (error) return <p className="text-[14px] text-bad">{error}</p>;
   if (!tree) return <p className="pt-14 text-[14px] text-muted">{loading ? "Reading the org from ENS…" : ""}</p>;
 
@@ -166,9 +171,11 @@ export default function AccessPage() {
         title="Access"
         sub={sub}
         action={
-          <Button kind="primary" onClick={() => setDrawer({})} disabled={!tree.agents.length || !canWrite} title={canWrite ? undefined : "Connect a wallet first"}>
-            Give access
-          </Button>
+          canWrite ? (
+            <Button kind="primary" onClick={() => setDrawer({})} disabled={!tree.agents.length}>
+              Give access
+            </Button>
+          ) : undefined
         }
       />
 
@@ -205,10 +212,12 @@ export default function AccessPage() {
                   <Link href={`/org/${org}/directory?add=${encodeURIComponent(r.joinCode ?? "")}`} className="text-[13px] font-medium text-accent hover:underline">
                     Add device
                   </Link>
-                ) : (
-                  <Button kind="primary" className="h-8 px-3.5" onClick={() => setDrawer({ agent: who, resource: r.target, path: r.path, mode: r.mode, dur: r.dur, sign: canWrite })}>
+                ) : canWrite ? (
+                  <Button kind="primary" className="h-8 px-3.5" onClick={() => setDrawer({ agent: who, resource: r.target, path: r.path, mode: r.mode, dur: r.dur, sign: true })}>
                     Approve
                   </Button>
+                ) : (
+                  <span className="text-[12px] text-muted">waiting for an admin</span>
                 )}
               </Row>
             );
@@ -226,7 +235,11 @@ export default function AccessPage() {
           ))
         )}
       </Card>
-      {!canWrite && <p className="mt-3 text-[13px] text-muted">Read-only. Connect the owner&apos;s or a delegated admin&apos;s wallet to give or revoke access.</p>}
+      {!canWrite && (
+        <p className="mt-3 text-[13px] text-muted">
+          {account ? "You're a member here: request access from Meshy for Mac, and an owner or admin approves it." : "Read-only. Connect the owner's or a delegated admin's wallet to give or revoke access."}
+        </p>
+      )}
 
       <Card title="Recent activity" actions={<Link href={`/org/${org}/activity`} className="text-[13px] font-medium text-accent hover:underline">View all</Link>} className="mt-10">
         {!feed ? (
@@ -251,7 +264,7 @@ export default function AccessPage() {
         )}
       </Card>
 
-      {drawer && <GrantDrawer preset={drawer} onClose={() => setDrawer(null)} />}
+      {drawer && canWrite && <GrantDrawer preset={drawer} onClose={() => setDrawer(null)} />}
       {confirming && (
         <Modal onClose={() => setConfirming(undefined)}>
           <h2 className="text-[20px] font-semibold tracking-[-0.015em]">

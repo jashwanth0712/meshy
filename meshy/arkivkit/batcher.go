@@ -237,6 +237,12 @@ func (b *Batcher) build(evs []audit.Event) []Create {
 			out = append(out, Create{MinLifetime: Lifetime30Days, Flags: FlagReadOnly, Attrs: attrs})
 		case audit.SessionStart, audit.SessionEnd, audit.SessionRevoke:
 			attrs := append(b.common(SchemaSession, e), Str("kind", string(e.Kind), true))
+			if e.Op != "" { // shell | exec | files | connect
+				attrs = append(attrs, Str("channel", trunc(e.Op, 16), true))
+			}
+			if e.Kind == audit.SessionEnd {
+				attrs = append(attrs, U64("bytes", uint64(max(0, e.Bytes)), true), U64("durationMs", uint64(max(0, e.DurationMs)), true))
+			}
 			if e.Kind == audit.SessionRevoke {
 				attrs = append(attrs,
 					U64("block", e.Block, true),
@@ -266,9 +272,26 @@ func (b *Batcher) build(evs []audit.Event) []Create {
 		}
 		gz.Close()
 		first, last := ops[0], ops[len(ops)-1]
+		var nRead, nWrite, nList, nDelete, bRead, bWrite uint64
+		for _, e := range ops {
+			switch e.Op {
+			case "read", "open":
+				nRead++
+				bRead += uint64(max(0, e.Bytes))
+			case "write", "create", "mkdir", "rename":
+				nWrite++
+				bWrite += uint64(max(0, e.Bytes))
+			case "readdir":
+				nList++
+			case "unlink", "rmdir":
+				nDelete++
+			}
+		}
 		attrs := append(b.common(SchemaChunk, first),
 			U64("tsEnd", uint64(last.TS.UnixMilli()), true),
 			U64("nOps", uint64(len(ops)), true),
+			U64("nRead", nRead, true), U64("nWrite", nWrite, true), U64("nList", nList, true), U64("nDelete", nDelete, true),
+			U64("bytesRead", bRead, true), U64("bytesWritten", bWrite, true),
 			Bytes("payload", b.seal(raw.Bytes(), SchemaChunk)),
 		)
 		// meshy.audit-chunk: 30-day compliance window

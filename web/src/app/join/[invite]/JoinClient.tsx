@@ -27,20 +27,19 @@ export function JoinClient() {
   const [stage, setStage] = useState<"" | "claim" | "device">("");
 
   useEffect(() => {
-    try {
-      const b = decodeInvite(invite);
-      setBlob(b);
-      const q = new URLSearchParams(window.location.search);
-      if (b.inv.label) setLabel(b.inv.label);
-      else if (q.get("name")) setLabel((q.get("name") ?? "").toLowerCase());
-      const ssh = q.get("ssh") ?? "";
-      const dev = q.get("device") ?? "";
-      if (ssh.startsWith("ssh-ed25519 ")) setDevice({ ssh, addr: isAddress(dev) ? (dev as Address) : undefined });
-    } catch {
-      setBlob(null);
-    }
+    decodeInvite(invite, client)
+      .then((b) => {
+        setBlob(b);
+        const q = new URLSearchParams(window.location.search);
+        if (b.inv.label) setLabel(b.inv.label);
+        else if (q.get("name")) setLabel((q.get("name") ?? "").toLowerCase());
+        const ssh = q.get("ssh") ?? "";
+        const dev = q.get("device") ?? "";
+        if (ssh.startsWith("ssh-ed25519 ")) setDevice({ ssh, addr: isAddress(dev) ? (dev as Address) : undefined });
+      })
+      .catch(() => setBlob(null));
     silentAccount().then((a) => a && setAccount(a));
-  }, [invite]);
+  }, [invite, client]);
 
   // Live on-chain check for this claimer + name.
   useEffect(() => {

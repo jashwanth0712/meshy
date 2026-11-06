@@ -25,7 +25,7 @@ type OrgRegs = { owner: Address; peopleRegistry: Address; agentsRegistry: Addres
 type Person = { label: string; kind: "member" | "agent"; name: string };
 
 export default function PeoplePage() {
-  const { org, client, wallet, account, connect, toast } = useMeshy();
+  const { org, client, wallet, account, connect, toast, canManage } = useMeshy();
   const [regs, setRegs] = useState<OrgRegs | null>();
   const [people, setPeople] = useState<Person[]>();
   const [inviting, setInviting] = useState(false);
@@ -86,9 +86,15 @@ export default function PeoplePage() {
         title="People"
         sub={regs ? <>Owner <Short v={regs.owner} /></> : "Reading the org from ENS…"}
         action={
-          <Button kind="primary" disabled={!regs} onClick={() => (account ? setInviting(true) : connect())}>
-            {account ? "Invite" : "Connect wallet to invite"}
-          </Button>
+          !account ? (
+            <Button kind="primary" disabled={!regs} onClick={() => connect()}>
+              Connect wallet to invite
+            </Button>
+          ) : canManage ? (
+            <Button kind="primary" disabled={!regs} onClick={() => setInviting(true)}>
+              Invite
+            </Button>
+          ) : undefined
         }
       />
       <div className="mt-6 overflow-hidden rounded-2xl border border-line">

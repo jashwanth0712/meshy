@@ -283,7 +283,25 @@ func cmdTop(args []string) error {
 		return errors.New("MESHY_NO_ORG this machine isn't in an org yet: run `meshy login` (or open Meshy for Mac and sign in), or pass --org <org.eth>")
 	}
 	o.Me = o.MeFor(o.Org)
+	// This machine also shares a device (Meshy for Mac › Share this Mac, or meshyd run):
+	// show its live sessions, kill switch and events too.
+	if o.Control == "" {
+		o.Control = localControlSocket()
+	}
 	return tui.Run(context.Background(), o)
+}
+
+// localControlSocket finds a running meshyd's control socket under ~/.meshy.
+func localControlSocket() string {
+	h, _ := os.UserHomeDir()
+	socks, _ := filepath.Glob(filepath.Join(h, ".meshy", "*", "control.sock"))
+	for _, s := range socks {
+		if c, err := net.DialTimeout("unix", s, 500*time.Millisecond); err == nil {
+			c.Close()
+			return s
+		}
+	}
+	return ""
 }
 
 // localIdentities is every Meshy identity on this machine: the agent in

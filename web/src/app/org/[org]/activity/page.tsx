@@ -2,13 +2,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Ext, PageHeader, Tabs, cx, links, useNow } from "@/components/ui";
+import { AgentTelemetry, fmtBytes } from "@/components/insights/AgentTelemetry";
 import { KillLatency } from "@/components/insights/KillLatency";
 import { ViewSwitch } from "@/components/insights/ViewSwitch";
 import { type Row, liveSessions, orgFeed, runnableQuery } from "@/lib/arkiv";
 import { kills } from "@/lib/insights";
 import { useMeshy } from "@/lib/store";
 
-type F = "all" | "refused" | "sessions" | "revocations";
+type F = "all" | "refused" | "sessions" | "files" | "revocations";
+const CHANNEL: Record<string, string> = { shell: "Shell", exec: "Command", files: "Finder volume", connect: "Port" };
 
 function event(r: Row, hasKey: boolean): { label: React.ReactNode; detail: string } {
   const e = r.event;
@@ -18,14 +20,25 @@ function event(r: Row, hasKey: boolean): { label: React.ReactNode; detail: strin
       return { label: <Badge tone="bad">Refused</Badge>, detail: r.reason.startsWith("MESHY_") ? r.reason.split(" ")[0] : `${r.op} ${path ?? (hasKey ? "" : "(encrypted)")}`.trim() };
     case "denied":
       return { label: <Badge tone="bad">Refused</Badge>, detail: r.reason.split(" ")[0] };
-    case "session.start":
-      return { label: "Session started", detail: e?.argv ? e.argv.slice(2).join(" ") || e.argv.join(" ") : hasKey ? "" : "(encrypted)" };
-    case "session.end":
-      return { label: "Session ended", detail: e?.reason ?? "" };
+    case "session.start": {
+      const ch = CHANNEL[r.channel ?? e?.op ?? ""];
+      return { label: ch ? `${ch} opened` : "Session started", detail: r.channel === "files" ? "files over the mesh" : e?.argv ? e.argv.slice(2).join(" ") || e.argv.join(" ") : hasKey ? "" : "(encrypted)" };
+    }
+    case "session.end": {
+      const parts = [e?.reason, r.bytes ? fmtBytes(r.bytes) : "", r.durationMs ? `${Math.round(r.durationMs / 1000)}s` : ""].filter(Boolean);
+      return { label: `${CHANNEL[r.channel ?? ""] ?? "Session"} closed`, detail: parts.join(" · ") };
+    }
     case "session.revoke":
       return { label: <Badge tone="warn">Revoked</Badge>, detail: `ended ${r.latencyMs} ms after block ${r.block}` };
     default:
-      return { label: "Files", detail: r.ops ? r.ops.slice(0, 2).map((o) => `${o.op} ${o.path}`).join(", ") + (r.ops.length > 2 ? " …" : "") : `${r.nOps} file op${r.nOps === 1 ? "" : "s"}${hasKey ? "" : " (encrypted)"}` };
+      return {
+        label: "Files",
+        detail: r.ops
+          ? r.ops.slice(0, 2).map((o) => `${o.op} ${o.path}`).join(", ") + (r.ops.length > 2 ? " …" : "")
+          : r.nRead !== undefined
+            ? `${r.nRead} read (${fmtBytes(r.bytesRead ?? 0)}) · ${r.nWrite} written (${fmtBytes(r.bytesWritten ?? 0)})${r.nList ? ` · ${r.nList} listed` : ""}${r.nDelete ? ` · ${r.nDelete} deleted` : ""}`
+            : `${r.nOps} file op${r.nOps === 1 ? "" : "s"}${hasKey ? "" : " (encrypted)"}`,
+      };
   }
 }
 
@@ -57,7 +70,8 @@ export default function ActivityPage() {
   const refused = all.filter((r) => r.kind === "blocked" || r.kind === "denied");
   const sessions = all.filter((r) => r.kind.startsWith("session"));
   const revokes = all.filter((r) => r.kind === "session.revoke");
-  const shown = f === "all" ? all : f === "refused" ? refused : f === "sessions" ? sessions : revokes;
+  const files = all.filter((r) => r.schema === "meshy.audit-chunk");
+  const shown = f === "all" ? all : f === "refused" ? refused : f === "sessions" ? sessions : f === "files" ? files : revokes;
   const live = liveSessions(all).length;
 
   return (
@@ -67,6 +81,7 @@ export default function ActivityPage() {
         sub={rows ? `${live} live session${live === 1 ? "" : "s"} · ${refused.length} refused · ${revokes.length} revocation${revokes.length === 1 ? "" : "s"}` : "Reading Arkiv…"}
         action={<ViewSwitch org={org} current="feed" />}
       />
+      {rows && <AgentTelemetry rows={all} org={org} hasKey={!!orgKey} />}
       {rows && revokes.length > 0 && (
         <div className="mb-8">
           <KillLatency kills={kills(all)} />
@@ -79,6 +94,7 @@ export default function ActivityPage() {
           { v: "all", label: "All" },
           { v: "refused", label: "Refused" },
           { v: "sessions", label: "Sessions" },
+          { v: "files", label: "Files" },
           { v: "revocations", label: "Revocations" },
         ]}
       />

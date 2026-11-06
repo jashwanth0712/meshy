@@ -20,6 +20,7 @@ import (
 // bounded by a short timeout so a dead endpoint never stalls the UI.
 
 var httpc = &http.Client{Timeout: 8 * time.Second}
+var mapClient = &http.Client{Timeout: 45 * time.Second}
 
 // ---- provider map (GET /v1/map?org=) ----
 
@@ -33,7 +34,8 @@ type mapResult struct {
 func fetchMap(ctx context.Context, api, org string) mapResult {
 	u := strings.TrimRight(api, "/") + "/v1/map?org=" + url.QueryEscape(org)
 	req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
-	resp, err := httpc.Do(req)
+	// The provider builds the map from ENS logs: it can take ~20 s for a busy org.
+	resp, err := mapClient.Do(req)
 	if err != nil {
 		return mapResult{Err: err}
 	}

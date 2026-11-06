@@ -32,7 +32,7 @@ Every write is signed in the browser by an owner or admin and enforced on-chain.
 2. The app runs `meshyd init` (keys in `~/.meshy/meshyd`). It then opens the dashboard's **Add device** sheet with the join code filled in: `/org/<org>/directory?add=meshy-join:…`.
 3. An owner or admin signs 3 transactions.
 4. When the device shows up on ENS, the app installs two LaunchAgents:
-   - `live.meshy.meshyd`: `meshyd run` with `wss://ethereum-sepolia-rpc.publicnode.com`, `--arkiv=`, and the control socket at `~/.meshy/meshyd/control.sock`
+   - `live.meshy.meshyd`: `meshyd run` with `wss://ethereum-sepolia-rpc.publicnode.com`, Arkiv audit on (Rabdi), and the control socket at `~/.meshy/meshyd/control.sock`. The device key writes to Arkiv, so fund it once on the Rabdi faucet (This Mac › Copy Arkiv Writer Address).
    - `live.meshy.mesh`: `meshyd mesh-join --provider https://api.meshy.live`
 
    Logs are in `~/Library/Logs/Meshy`. **Stop Sharing** removes both LaunchAgents, ends live sessions and keeps the keys. The device stays stopped until **Start Sharing**. If the provider refuses the mesh (for example `MESHY_SEATS_EXCEEDED`), This Mac says so, and owners get **Add Seats in Billing…**.

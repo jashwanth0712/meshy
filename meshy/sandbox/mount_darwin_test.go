@@ -94,6 +94,25 @@ func TestMountThroughSeatbelt(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(rw, "new.txt")); err != nil {
 		t.Fatal("rw write did not land")
 	}
+	// Telemetry: the tap saw the file traffic (works without root on macOS).
+	sc.Close()
+	time.Sleep(300 * time.Millisecond)
+	var read, wrote, blocked, files bool
+	for _, e := range ring.Snapshot() {
+		switch {
+		case e.Kind == audit.Op && e.Op == "read" && filepath.Base(e.Path) == "q3.csv" && e.Bytes == int64(len("revenue,42\n")):
+			read = true
+		case e.Kind == audit.Op && e.Op == "write" && filepath.Base(e.Path) == "new.txt" && e.Bytes == 2:
+			wrote = true
+		case e.Kind == audit.Blocked && filepath.Base(e.Path) == "nope.txt":
+			blocked = true
+		case e.Kind == audit.SessionStart && e.Op == "files":
+			files = true
+		}
+	}
+	if !read || !wrote || !blocked || !files {
+		t.Fatalf("telemetry read=%v write=%v blocked=%v files-session=%v: %+v", read, wrote, blocked, files, ring.Snapshot())
+	}
 }
 
 func readAll(c *sftp.Client, p string) (string, error) {

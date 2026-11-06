@@ -617,6 +617,10 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             m.addItem(label(d.name))
             if let s = dev.statusLine { m.addItem(label(s.components(separatedBy: " · ").dropFirst().joined(separator: " · "))) }
             m.addItem(label("Folders: " + d.roots.map(tilde).joined(separator: ", ")))
+            // Every file op, command and block is written to Arkiv by this device's key (needs Rabdi gas).
+            let ak = copyItem("Copy Arkiv Writer Address", d.addr)
+            ak.subtitleText("Fund it on the Arkiv faucet so activity shows on the dashboard")
+            m.addItem(ak)
             if !d.running && !dev.registered, let l = dev.addDeviceLink {
                 m.addItem(open("Finish Adding in the Dashboard…", l))
                 m.addItem(copyItem("Copy Link for an Admin", Settings.base + l))

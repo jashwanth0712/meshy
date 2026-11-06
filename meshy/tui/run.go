@@ -29,13 +29,13 @@ const (
 type Options struct {
 	Mode      string // "daemon" (meshyd top) or "agent" (meshy top)
 	Org       string
-	Orgs      []string                 // every org this machine is in ("g" cycles them)
+	Orgs      []string                // every org this machine is in ("g" cycles them)
 	MeFor     func(org string) string // this machine's name in an org, for the header
 	Me        string                  // this device or agent, highlighted in the header
-	API       string // meshy-sync base URL
-	RPC       string // Sepolia JSON-RPC over HTTP(S)
-	Arkiv     string // Arkiv RPC ("" disables)
-	Control   string // meshyd control socket ("" for agent mode)
+	API       string                  // meshy-sync base URL
+	RPC       string                  // Sepolia JSON-RPC over HTTP(S)
+	Arkiv     string                  // Arkiv RPC ("" disables)
+	Control   string                  // meshyd control socket ("" for agent mode)
 	Dashboard string
 
 	Demo     bool          // canned, animated scenario (no network)
@@ -124,7 +124,7 @@ func collect(ctx context.Context, o Options) *State {
 	if o.Demo {
 		return demoState(o.At, time.Now())
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
 	if o.Org == "" && o.Control != "" {
 		if dr := fetchDaemon(ctx, o.Control); dr.Err == nil {
@@ -147,7 +147,7 @@ func collect(ctx context.Context, o Options) *State {
 		wg.Add(1)
 		go func() { defer wg.Done(); dr = fetchDaemon(ctx, o.Control) }()
 	}
-	if o.Arkiv != "" && o.Org != "" && o.Control == "" { // daemon mode: its own events are the feed
+	if o.Arkiv != "" && o.Org != "" { // the whole org's audit trail (a device's own events also stream live)
 		wg.Add(1)
 		go func() { defer wg.Done(); fr = fetchArkiv(ctx, o.Arkiv, o.Org) }()
 	}

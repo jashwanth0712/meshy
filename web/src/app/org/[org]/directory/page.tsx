@@ -12,7 +12,7 @@ type Sel = { kind: "device"; d: ResourceNode } | { kind: "service"; s: ServiceNo
 const tilde = (p: string) => p.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~");
 
 export default function DirectoryPage() {
-  const { tree, org, account, wallet, client, refresh, toast } = useMeshy();
+  const { tree, org, account, wallet, client, refresh, toast, canManage } = useMeshy();
   const [removingDev, setRemovingDev] = useState(false);
   async function removeDevice(d: ResourceNode) {
     if (!wallet) return;
@@ -102,7 +102,7 @@ export default function DirectoryPage() {
                 name={cur.d.name}
                 sub={[cur.d.kind, cur.d.meta.model, cur.d.meta.location].filter(Boolean).join(" · ") || "Device"}
                 right={
-                  account && (
+                  canManage && (
                     <div className="flex gap-2">
                       <Button className="h-8 px-3.5" onClick={() => setGiving({ resource: cur.d.name })}>Give access</Button>
                       <Button kind="danger" className="h-8 px-3.5" disabled={removingDev} onClick={() => removeDevice(cur.d)}>
@@ -131,7 +131,7 @@ export default function DirectoryPage() {
 
           {cur?.kind === "service" && (
             <>
-              <Head name={cur.s.name} sub={`${cur.s.proto} → ${cur.s.target}${cur.s.desc ? ` · ${cur.s.desc}` : ""}`} right={account && <Button className="h-8 px-3.5" onClick={() => setGiving({ resource: cur.s.name })}>Give access</Button>} />
+              <Head name={cur.s.name} sub={`${cur.s.proto} → ${cur.s.target}${cur.s.desc ? ` · ${cur.s.desc}` : ""}`} right={canManage && <Button className="h-8 px-3.5" onClick={() => setGiving({ resource: cur.s.name })}>Give access</Button>} />
               <Command text={`meshy connect ${cur.s.name}`} />
               <Card>
                 <Fact k="On device">{short(cur.s.device)}</Fact>
@@ -145,7 +145,7 @@ export default function DirectoryPage() {
 
           {cur?.kind === "agent" && (
             <>
-              <Head name={cur.a.name} sub={cur.a.worldid ? "Human-backed with World ID" : "No World ID attestation, so devices will refuse it"} badge={cur.a.worldid ? undefined : <Badge tone="bad">No World ID</Badge>} right={account && <Button className="h-8 px-3.5" onClick={() => setGiving({ agent: cur.a.label })}>Give access</Button>} />
+              <Head name={cur.a.name} sub={cur.a.worldid ? "Human-backed with World ID" : "No World ID attestation, so devices will refuse it"} badge={cur.a.worldid ? undefined : <Badge tone="bad">No World ID</Badge>} right={canManage && <Button className="h-8 px-3.5" onClick={() => setGiving({ agent: cur.a.label })}>Give access</Button>} />
               <Card title="Can reach now">
                 {(() => {
                   const gs = [...devices, ...services].flatMap((r) => liveOn(r.grants).filter((g) => g.agent === cur.a.label).map((g) => ({ g, r })));

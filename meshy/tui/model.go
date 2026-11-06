@@ -24,8 +24,8 @@ const (
 )
 
 type (
-	tickMsg   time.Time
-	mapMsg    struct {
+	tickMsg time.Time
+	mapMsg  struct {
 		mapResult
 		gen int
 	}
@@ -36,8 +36,8 @@ type (
 		feedResult
 		gen int
 	}
-	eventMsg  audit.Event
-	toastMsg  string
+	eventMsg audit.Event
+	toastMsg string
 )
 
 type model struct {
@@ -129,7 +129,7 @@ func (m *model) switchOrg() tea.Cmd {
 	m.sel = 0
 	m.say("org " + m.o.Org)
 	cmds := []tea.Cmd{m.cmdMap(0)}
-	if m.o.Control == "" && m.o.Arkiv != "" {
+	if m.o.Arkiv != "" {
 		cmds = append(cmds, m.cmdArkiv(0))
 	}
 	return tea.Batch(cmds...)
@@ -156,7 +156,8 @@ func (m *model) Init() tea.Cmd {
 	cmds = append(cmds, m.cmdHead(0))
 	if m.o.Control != "" {
 		cmds = append(cmds, m.cmdDaemon(0), m.cmdEvent())
-	} else if m.o.Arkiv != "" && m.o.Org != "" {
+	}
+	if m.o.Arkiv != "" && m.o.Org != "" {
 		cmds = append(cmds, m.cmdArkiv(0))
 	}
 	return tea.Batch(cmds...)
@@ -331,7 +332,7 @@ func (m *model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		m.sel = min(max(0, m.listLen()-1), m.sel+1)
 	case "k":
-		if m.focus != 0 || m.s.Daemon == nil || m.sel >= len(m.s.Daemon.Sessions) || m.o.Mode == "agent" {
+		if m.focus != 0 || m.s.Daemon == nil || m.sel >= len(m.s.Daemon.Sessions) {
 			m.say("select a session first (tab)")
 			return m, nil
 		}

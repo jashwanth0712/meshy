@@ -59,9 +59,9 @@ func cmdJoinOrg(args []string) error {
 	if err != nil {
 		return fmt.Errorf("bad invite link: %w", err)
 	}
-	var b inviteBlob
-	if err := json.Unmarshal(raw, &b); err != nil || b.Org == "" {
-		return errors.New("bad invite link: can't read the invite")
+	b, err := parseInvite(raw)
+	if err != nil {
+		return err
 	}
 	if b.Role != "member" {
 		return errors.New("this invite is for an agent; run `meshy join` from Directory → Invite agent instead")
@@ -122,4 +122,38 @@ func cmdJoinOrg(args []string) error {
 			fmt.Print(".")
 		}
 	}
+}
+
+// parseInvite reads a /join/ link: the compact v2 form (web/src/lib/orgs.ts
+// encodeInvite: [0]=2, [1]=flags, …, signature to byte 91, optional 20-byte
+// invitee, then "org\0label") or the older base64url JSON.
+func parseInvite(raw []byte) (inviteBlob, error) {
+	var b inviteBlob
+	if len(raw) > 0 && raw[0] == 2 {
+		if len(raw) < 92 {
+			return b, errors.New("bad invite link: too short")
+		}
+		at := 91
+		if raw[1]&2 != 0 {
+			at += 20
+		}
+		if len(raw) <= at {
+			return b, errors.New("bad invite link: no org")
+		}
+		org, label, _ := strings.Cut(string(raw[at:]), "\x00")
+		b.Org, b.Role = org, "member"
+		if raw[1]&1 != 0 {
+			b.Role = "agent"
+		}
+		b.Inv.Label = label
+		b.Inv.ParentName = "people." + org
+		if b.Role == "agent" {
+			b.Inv.ParentName = "agents." + org
+		}
+		return b, nil
+	}
+	if err := json.Unmarshal(raw, &b); err != nil || b.Org == "" {
+		return b, errors.New("bad invite link: can't read the invite")
+	}
+	return b, nil
 }

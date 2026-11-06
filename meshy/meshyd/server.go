@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -240,7 +241,17 @@ func (s *Server) handle(sess ssh.Session) {
 	if prep.WrapStderr != nil {
 		stderr = prep.WrapStderr(stderr)
 	}
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = sess, sess, stderr
+	// Bytes both ways (telemetry), and file-level events for Finder volumes (sftp-server).
+	in, out := &countReader{r: sess}, &countWriter{w: sess}
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = in, out, stderr
+	channel := "shell"
+	if IsSFTP(sess.RawCommand()) {
+		channel = "files"
+		tap := NewSFTPTap(sink.Emit)
+		cmd.Stdin, cmd.Stdout = tap.Client(in), tap.Server(out)
+	} else if sess.RawCommand() != "" {
+		channel = "exec"
+	}
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -261,7 +272,7 @@ func (s *Server) handle(sess ssh.Session) {
 	if s.Watcher != nil {
 		s.Watcher.Watch(ss.id, az.Grant)
 	}
-	s.emit(audit.Event{Kind: audit.SessionStart, Session: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name), Argv: argv, GrantExpiry: az.Expiry})
+	s.emit(audit.Event{Kind: audit.SessionStart, Session: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name), Op: channel, Argv: argv, GrantExpiry: az.Expiry})
 	s.log().Info("session started", "session", ss.id, "agent", az.Agent, "argv", argv, "expires", az.Expiry)
 
 	// Local expiry timer: sub-block precision. The watcher also catches
@@ -295,7 +306,8 @@ func (s *Server) handle(sess ssh.Session) {
 	if s.Watcher != nil {
 		s.Watcher.Unwatch(ss.id)
 	}
-	s.emit(audit.Event{Kind: audit.SessionEnd, Session: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name), Reason: fmt.Sprintf("exit %d", exitCode)})
+	s.emit(audit.Event{Kind: audit.SessionEnd, Session: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name), Op: channel, Reason: fmt.Sprintf("exit %d", exitCode),
+		Bytes: in.n.Load() + out.n.Load(), DurationMs: time.Since(ss.started).Milliseconds()})
 	sess.Exit(exitCode)
 }
 
@@ -433,4 +445,26 @@ func sandboxEnv(az *Authz) []string {
 		"MESHY_ALLOWED=" + az.Policy.AllowedSummary(),
 		"MESHY_EXPIRES=" + az.Expiry.UTC().Format(time.RFC3339),
 	}
+}
+
+type countReader struct {
+	r io.Reader
+	n atomic.Int64
+}
+
+func (c *countReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n.Add(int64(n))
+	return n, err
+}
+
+type countWriter struct {
+	w io.Writer
+	n atomic.Int64
+}
+
+func (c *countWriter) Write(p []byte) (int, error) {
+	n, err := c.w.Write(p)
+	c.n.Add(int64(n))
+	return n, err
 }

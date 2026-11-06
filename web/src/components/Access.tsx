@@ -20,7 +20,7 @@ const DURATIONS = [
 export type GrantPreset = { resource?: string; agent?: string; path?: string; mode?: "ro" | "rw"; dur?: number; sign?: boolean };
 
 export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: GrantPreset }) {
-  const { tree, wallet, client, account, refresh, toast, org, connect } = useMeshy();
+  const { tree, wallet, client, account, refresh, toast, org, connect, canManage } = useMeshy();
   const resources = useMemo(() => tree?.networks.flatMap((n) => n.resources) ?? [], [tree]);
   const services = useMemo(() => resources.flatMap((r) => r.services), [resources]);
   const [resName, setResName] = useState(preset?.resource ?? resources[0]?.name ?? "");
@@ -42,7 +42,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
   const valid = svc ? !!ag : !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/") && !!res.encKey && !!tree?.orgKey;
 
   async function submit() {
-    if (!wallet || !tree || !ag) return;
+    if (!wallet || !tree || !ag || !canManage) return;
     // A member's grant belongs to their wallet (the owner of <you>.people.<org>), so it keeps working
     // on every Mac they link; meshyd accepts either the wallet or the linked device key.
     const owner = ag.kind === "person" && ag.owner && ag.owner !== zeroAddress ? ag.owner : ag.addr;
@@ -102,11 +102,11 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
   // Approve from the Mac menu bar (?sign=1): start signing as soon as the sheet is filled in.
   const autoSigned = useRef(false);
   useEffect(() => {
-    if (!preset?.sign || autoSigned.current || !valid || !wallet || steps) return;
+    if (!preset?.sign || autoSigned.current || !valid || !wallet || !canManage || steps) return;
     autoSigned.current = true;
     submit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preset?.sign, valid, wallet, steps]);
+  }, [preset?.sign, valid, wallet, canManage, steps]);
 
   const pathNames = paths.map((p) => p.p.split("/").filter(Boolean).pop() ?? p.p).join(", ");
   const writes = paths.some((p) => p.m === "rw");
@@ -126,8 +126,8 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
         ) : (
           <>
             <span className="text-[13px] text-muted">{svc ? "1 transaction" : "2 transactions"}</span>
-            <Button kind="primary" disabled={account ? !valid || busy : false} onClick={account ? submit : connect}>
-              {account ? "Give access" : "Connect a wallet"}
+            <Button kind="primary" disabled={account ? !valid || busy || !canManage : false} onClick={account ? submit : connect} title={account && !canManage ? "Only the owner or an admin can give access" : undefined}>
+              {!account ? "Connect a wallet" : canManage ? "Give access" : "Owners and admins only"}
             </Button>
           </>
         )
