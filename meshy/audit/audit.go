@@ -37,7 +37,8 @@ type Event struct {
 	Reason   string    `json:"reason,omitempty"`
 	Block    uint64    `json:"block,omitempty"`     // chain block that triggered a revoke
 	Latency  float64   `json:"latencyMs,omitempty"` // revoke: head seen -> session killed
-	Argv     []string  `json:"argv,omitempty"`
+	Argv        []string  `json:"argv,omitempty"`
+	GrantExpiry time.Time `json:"grantExpiry,omitempty"` // set on SessionStart; drives per-session Arkiv lifetime
 }
 
 // Sink receives events. Implementations must not block for long.

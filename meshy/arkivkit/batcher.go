@@ -151,6 +151,32 @@ func (b *Batcher) life() uint64 {
 	return b.Lifetime
 }
 
+// sessionLife returns the MinLifetime (blocks) for a session entity:
+//   - On SessionStart/SessionEnd: grant expiry + 1 day, converted to Rabdi
+//     blocks (2 s each), so the entity lives exactly as long as the grant's
+//     evidence window.  Falls back to 30 days when expiry is not set or is
+//     already past.
+//   - On SessionRevoke: 90 days (3,888,000 blocks) for dispute / slashing
+//     evidence.
+func sessionLife(e audit.Event) uint64 {
+	if e.Kind == audit.SessionRevoke {
+		return Lifetime90Days
+	}
+	if !e.GrantExpiry.IsZero() && e.GrantExpiry.After(time.Now()) {
+		margin := time.Duration(24 * time.Hour) // 1-day buffer after grant ends
+		remaining := time.Until(e.GrantExpiry) + margin
+		blocks := uint64(remaining.Seconds()) / RabdiBlockSecs
+		if blocks < 1 {
+			blocks = 1
+		}
+		if blocks > MaxLifetime {
+			blocks = MaxLifetime
+		}
+		return blocks
+	}
+	return Lifetime30Days
+}
+
 func (b *Batcher) seal(plain []byte, aad string) []byte {
 	if b.OrgKey == nil {
 		return plain
@@ -207,7 +233,8 @@ func (b *Batcher) build(evs []audit.Event) []Create {
 			}
 			payload, _ := json.Marshal(e)
 			attrs = append(attrs, Bytes("payload", b.seal(payload, SchemaBlocked)))
-			out = append(out, Create{MinLifetime: b.life(), Flags: FlagReadOnly, Attrs: attrs})
+			// meshy.blocked: 30-day compliance window
+			out = append(out, Create{MinLifetime: Lifetime30Days, Flags: FlagReadOnly, Attrs: attrs})
 		case audit.SessionStart, audit.SessionEnd, audit.SessionRevoke:
 			attrs := append(b.common(SchemaSession, e), Str("kind", string(e.Kind), true))
 			if e.Kind == audit.SessionRevoke {
@@ -219,7 +246,9 @@ func (b *Batcher) build(evs []audit.Event) []Create {
 			}
 			payload, _ := json.Marshal(e)
 			attrs = append(attrs, Bytes("payload", b.seal(payload, SchemaSession)))
-			out = append(out, Create{MinLifetime: b.life(), Flags: FlagReadOnly, Attrs: attrs})
+			// session.start/end: live until grant expiry + 1 day (falls back to 30d)
+			// session.revoke: 90 days for dispute / slashing evidence
+			out = append(out, Create{MinLifetime: sessionLife(e), Flags: FlagReadOnly, Attrs: attrs})
 		}
 	}
 	sessions := make([]string, 0, len(chunks))
@@ -242,7 +271,8 @@ func (b *Batcher) build(evs []audit.Event) []Create {
 			U64("nOps", uint64(len(ops)), true),
 			Bytes("payload", b.seal(raw.Bytes(), SchemaChunk)),
 		)
-		out = append(out, Create{MinLifetime: b.life(), Flags: FlagReadOnly, Attrs: attrs})
+		// meshy.audit-chunk: 30-day compliance window
+		out = append(out, Create{MinLifetime: Lifetime30Days, Flags: FlagReadOnly, Attrs: attrs})
 	}
 	return out
 }

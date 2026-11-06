@@ -8,11 +8,23 @@ Each resource daemon (meshyd) writes audit entities to **Arkiv Rabdi** (chain 77
 
 ## Entity types
 
-| `arkiv.schema` | Written when | Lifetime | Owner |
-|---|---|---|---|
-| `meshy.session` | session start, end, revoke | 30 days (1,296,000 blocks), read-only | resource daemon |
-| `meshy.blocked` | every blocked file op, blocked command, or denied login | 30 days, read-only | resource daemon |
-| `meshy.audit-chunk` | each flush, one per session | 30 days, read-only | resource daemon |
+Owner of every entity is **the resource daemon** — the EVM address stored in the ENS
+`addr` record of the resource name (e.g. `db1.prod.acme.eth`). For the demo:
+`0x7Dec34A86907eeF26c70A6578df7bAaE7F223384`.
+
+The dashboard filters all queries with `$owner = addr(<daemon-address>)` to prevent
+spoofed writes (anyone can write `org = 'meshydemo.eth'`, but only the real daemon is
+the `$owner`).
+
+All entities are created with `FlagReadOnly` (`creationFlags = 0x01`). No patch, extend,
+transfer or delete is accepted.
+
+| `arkiv.schema` | Written when | `MinLifetime` (blocks at 2 s) | Owner | Flags |
+|---|---|---|---|---|
+| `meshy.session` (start / end) | session start or clean end | grant lifetime + 1 day (falls back to 30 days / 1,296,000 blocks when `GrantExpiry` not set) | resource daemon `addr` | read-only |
+| `meshy.session` (revoke) | on grant unregister detected | 90 days (3,888,000 blocks) — dispute / slashing evidence window | resource daemon `addr` | read-only |
+| `meshy.blocked` | every blocked file op, blocked command, or denied login | 30 days (1,296,000 blocks) — compliance window | resource daemon `addr` | read-only |
+| `meshy.audit-chunk` | each flush, one per session | 30 days (1,296,000 blocks) — compliance window | resource daemon `addr` | read-only |
 
 ## Attributes
 

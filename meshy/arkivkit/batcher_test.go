@@ -90,6 +90,86 @@ func TestBatcherBuildsEntities(t *testing.T) {
 	}
 }
 
+// TestSessionLifetimes verifies per-type entity lifetimes match compliance windows.
+func TestSessionLifetimes(t *testing.T) {
+	now := time.Now()
+
+	t.Run("blocked_30days", func(t *testing.T) {
+		ex := &fakeExec{}
+		b := &Batcher{Exec: ex, Org: "acme.eth", Resource: "db1.acme.eth"}
+		b.Emit(audit.Event{Kind: audit.Blocked, TS: now, Op: "open", Reason: "outside grant"})
+		b.Flush(context.Background())
+		if len(ex.calls) == 0 {
+			t.Fatal("no calls")
+		}
+		c := ex.calls[0][0]
+		if c.MinLifetime != Lifetime30Days {
+			t.Fatalf("blocked lifetime = %d, want %d", c.MinLifetime, Lifetime30Days)
+		}
+	})
+
+	t.Run("chunk_30days", func(t *testing.T) {
+		ex := &fakeExec{}
+		b := &Batcher{Exec: ex, Org: "acme.eth", Resource: "db1.acme.eth"}
+		b.Emit(audit.Event{Kind: audit.Op, TS: now, Session: "s1", Op: "read"})
+		b.Flush(context.Background())
+		if len(ex.calls) == 0 {
+			t.Fatal("no calls")
+		}
+		c := ex.calls[0][0]
+		if c.MinLifetime != Lifetime30Days {
+			t.Fatalf("chunk lifetime = %d, want %d", c.MinLifetime, Lifetime30Days)
+		}
+	})
+
+	t.Run("revoke_90days", func(t *testing.T) {
+		ex := &fakeExec{}
+		b := &Batcher{Exec: ex, Org: "acme.eth", Resource: "db1.acme.eth"}
+		b.Emit(audit.Event{Kind: audit.SessionRevoke, TS: now, Session: "s1", Block: 100, Latency: 150})
+		b.Flush(context.Background())
+		if len(ex.calls) == 0 {
+			t.Fatal("no calls")
+		}
+		c := ex.calls[0][0]
+		if c.MinLifetime != Lifetime90Days {
+			t.Fatalf("revoke lifetime = %d, want %d", c.MinLifetime, Lifetime90Days)
+		}
+	})
+
+	t.Run("session_start_grant_expiry", func(t *testing.T) {
+		ex := &fakeExec{}
+		b := &Batcher{Exec: ex, Org: "acme.eth", Resource: "db1.acme.eth"}
+		grantExpiry := now.Add(2 * time.Hour) // grant expires in 2 hours
+		b.Emit(audit.Event{Kind: audit.SessionStart, TS: now, Session: "s1", GrantExpiry: grantExpiry})
+		b.Flush(context.Background())
+		if len(ex.calls) == 0 {
+			t.Fatal("no calls")
+		}
+		c := ex.calls[0][0]
+		// Expected: (2h + 1d) / 2s = (7200 + 86400) / 2 = 46800 blocks
+		wantMin := uint64((2*3600 + 86400) / 2)
+		wantMax := uint64((2*3600 + 86400) / 2)
+		// Allow ±5 blocks for timing jitter in tests
+		if c.MinLifetime < wantMin-5 || c.MinLifetime > wantMax+5 {
+			t.Fatalf("session start lifetime = %d, want ~%d", c.MinLifetime, wantMin)
+		}
+	})
+
+	t.Run("session_start_no_expiry_fallback", func(t *testing.T) {
+		ex := &fakeExec{}
+		b := &Batcher{Exec: ex, Org: "acme.eth", Resource: "db1.acme.eth"}
+		b.Emit(audit.Event{Kind: audit.SessionStart, TS: now, Session: "s1"}) // no GrantExpiry
+		b.Flush(context.Background())
+		if len(ex.calls) == 0 {
+			t.Fatal("no calls")
+		}
+		c := ex.calls[0][0]
+		if c.MinLifetime != Lifetime30Days {
+			t.Fatalf("fallback lifetime = %d, want %d", c.MinLifetime, Lifetime30Days)
+		}
+	})
+}
+
 func TestBatcherRetriesOnFailure(t *testing.T) {
 	ex := &fakeExec{fail: true}
 	b := &Batcher{Exec: ex, Org: "acme.eth", Resource: "db1.prod.acme.eth"}

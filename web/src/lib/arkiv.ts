@@ -124,11 +124,24 @@ export function decryptRow(r: Row, orgPriv?: string): Row {
 
 const esc = (s: string) => s.replace(/'/g, "");
 
-export async function orgFeed(org: string, orgPriv?: string, limit = 60): Promise<Row[]> {
+/** Build an owner-filter clause from verified writer addresses.
+ *  Arkiv entities are public: anyone can write org = 'meshydemo.eth'.
+ *  By filtering on $owner we only trust entities written by the resource
+ *  daemon addresses published in ENS (the resource's `addr` record).
+ *  If no writers are provided the filter is omitted (dev / unknown orgs). */
+function ownerClause(writers: string[]): string {
+  const addrs = writers.filter((w) => /^0x[0-9a-fA-F]{40}$/.test(w));
+  if (addrs.length === 0) return "";
+  const parts = addrs.map((a) => `$owner = addr(${a})`);
+  return ` AND (${parts.join(" OR ")})`;
+}
+
+export async function orgFeed(org: string, orgPriv?: string, limit = 60, writers: string[] = []): Promise<Row[]> {
+  const ownerFilter = ownerClause(writers);
   const [sessions, blocked, chunks] = await Promise.all([
-    query(`arkiv.schema = str('meshy.session') AND org = str('${esc(org)}') ORDER BY ts:u64 DESC`, limit),
-    query(`arkiv.schema = str('meshy.blocked') AND org = str('${esc(org)}') ORDER BY ts:u64 DESC`, limit),
-    query(`arkiv.schema = str('meshy.audit-chunk') AND org = str('${esc(org)}') ORDER BY ts:u64 DESC`, limit),
+    query(`arkiv.schema = str('meshy.session') AND org = str('${esc(org)}')${ownerFilter} ORDER BY ts:u64 DESC`, limit),
+    query(`arkiv.schema = str('meshy.blocked') AND org = str('${esc(org)}')${ownerFilter} ORDER BY ts:u64 DESC`, limit),
+    query(`arkiv.schema = str('meshy.audit-chunk') AND org = str('${esc(org)}')${ownerFilter} ORDER BY ts:u64 DESC`, limit),
   ]);
   return [...sessions, ...blocked, ...chunks]
     .map(toRow)
