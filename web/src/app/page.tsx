@@ -25,6 +25,9 @@ export default function Home() {
         <input value={org} onChange={(e) => setOrg(e.target.value)} placeholder="your-org.eth" aria-label="Org name" className="mono h-9 flex-1 bg-transparent text-[15px] outline-none" />
         <button className="h-9 rounded-full bg-accent px-5 text-[14px] font-semibold text-on-accent hover:opacity-90">Open</button>
       </form>
+      <p className="mt-6 text-[14px] text-muted">
+        <a href="/download" className="text-accent hover:underline">Download the CLI, daemon and Mac app</a> · <span className="mono">curl -fsSL https://get.meshy.live | sh</span>
+      </p>
     </main>
   );
 }
