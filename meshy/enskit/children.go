@@ -41,7 +41,8 @@ type LogFilter interface {
 // SubregAddr extracts the subregistry address from the State.Resource field.
 //
 // ENSv2's RegistryDatastore packs the subregistry as:
-//   resource = address(subregistry) << 96 | flags
+//
+//	resource = address(subregistry) << 96 | flags
 //
 // So the address is in bits [255:96]: address(uint160(resource >> 96)).
 func SubregAddr(resource *big.Int) common.Address {
@@ -171,9 +172,9 @@ func ChildSubregs(ctx context.Context, lf LogFilter, registry common.Address, fr
 		tokenID *big.Int
 	}
 
-	registered := map[string]labelEntry{}       // tokenId.String() → labelEntry
-	unregistered := map[string]struct{}{}        // tokenId.String() → revoked
-	subregs := map[string]common.Address{}       // tokenId.String() → subregistry
+	registered := map[string]labelEntry{}  // tokenId.String() → labelEntry
+	unregistered := map[string]struct{}{}  // tokenId.String() → revoked
+	subregs := map[string]common.Address{} // tokenId.String() → subregistry
 
 	chunkSize := uint64(initialChunkSize)
 
@@ -251,7 +252,9 @@ func ChildSubregs(ctx context.Context, lf LogFilter, registry common.Address, fr
 
 // decodeStringFromLog decodes the first string from ABI-encoded log data.
 // ABI encoding of (string, address, uint64):
-//   offset (32 bytes) | address (32 bytes) | expiry (32 bytes) | length (32 bytes) | data...
+//
+//	offset (32 bytes) | address (32 bytes) | expiry (32 bytes) | length (32 bytes) | data...
+//
 // But for (string, ...) the first word is the offset to the string data.
 func decodeStringFromLog(data []byte) string {
 	if len(data) < 64 {

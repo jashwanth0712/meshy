@@ -69,7 +69,7 @@ func (s *Server) directTCPIP(_ *ssh.Server, conn *gossh.ServerConn, newChan goss
 	if s.Watcher != nil {
 		s.Watcher.Watch(fw.id, sa.Grant)
 	}
-	s.emit(audit.Event{Kind: audit.SessionStart, Session: fw.id, Agent: id.Agent, Grant: string(sa.Grant.Name), Op: "connect", Path: string(sa.Service), Argv: []string{"connect", string(sa.Service), sa.Spec.Proto + "://" + sa.Spec.Target}})
+	s.emit(audit.Event{Kind: audit.SessionStart, Session: fw.id, Agent: id.Agent, Grant: string(sa.Grant.Name), GrantExpiry: sa.Expiry, Op: "connect", Path: string(sa.Service), Argv: []string{"connect", string(sa.Service), sa.Spec.Proto + "://" + sa.Spec.Target}})
 	s.log().Info("forward opened", "id", fw.id, "agent", id.Agent, "service", sa.Service, "target", sa.Spec.Target, "expires", sa.Expiry)
 
 	expTimer := time.AfterFunc(time.Until(sa.Expiry), func() { fw.close() })

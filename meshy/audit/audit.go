@@ -25,18 +25,18 @@ const (
 
 // Event is one audit record.
 type Event struct {
-	Kind     Kind      `json:"kind"`
-	TS       time.Time `json:"ts"`
-	Resource string    `json:"resource"`
-	Agent    string    `json:"agent,omitempty"`   // agent label, e.g. claude-1
-	Grant    string    `json:"grant,omitempty"`   // full grant name
-	Session  string    `json:"session,omitempty"` // session id
-	Op       string    `json:"op,omitempty"`      // open, read, write, create, unlink, rename, readdir, exec, ...
-	Path     string    `json:"path,omitempty"`
-	Bytes    int64     `json:"bytes,omitempty"`
-	Reason   string    `json:"reason,omitempty"`
-	Block    uint64    `json:"block,omitempty"`     // chain block that triggered a revoke
-	Latency  float64   `json:"latencyMs,omitempty"` // revoke: head seen -> session killed
+	Kind        Kind      `json:"kind"`
+	TS          time.Time `json:"ts"`
+	Resource    string    `json:"resource"`
+	Agent       string    `json:"agent,omitempty"`   // agent label, e.g. claude-1
+	Grant       string    `json:"grant,omitempty"`   // full grant name
+	Session     string    `json:"session,omitempty"` // session id
+	Op          string    `json:"op,omitempty"`      // open, read, write, create, unlink, rename, readdir, exec, ...
+	Path        string    `json:"path,omitempty"`
+	Bytes       int64     `json:"bytes,omitempty"`
+	Reason      string    `json:"reason,omitempty"`
+	Block       uint64    `json:"block,omitempty"`     // chain block that triggered a revoke
+	Latency     float64   `json:"latencyMs,omitempty"` // revoke: head seen -> session killed
 	Argv        []string  `json:"argv,omitempty"`
 	GrantExpiry time.Time `json:"grantExpiry,omitempty"` // set on SessionStart; drives per-session Arkiv lifetime
 }

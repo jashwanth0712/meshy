@@ -17,15 +17,15 @@ import (
 
 // OrgMap is the JSON response for GET /v1/map.
 type OrgMap struct {
-	Org         string              `json:"org"`
-	OrgKey      string              `json:"orgKey,omitempty"`
-	Attestors   []string            `json:"attestors,omitempty"`
-	Provider    string              `json:"provider,omitempty"`
-	Networks    []NetworkInfo       `json:"networks"`
-	Agents      []AgentInfo         `json:"agents"`
-	Grants      []GrantInfo         `json:"grants"`
-	GeneratedAt time.Time           `json:"generatedAt"`
-	Block       uint64              `json:"block"`
+	Org         string        `json:"org"`
+	OrgKey      string        `json:"orgKey,omitempty"`
+	Attestors   []string      `json:"attestors,omitempty"`
+	Provider    string        `json:"provider,omitempty"`
+	Networks    []NetworkInfo `json:"networks"`
+	Agents      []AgentInfo   `json:"agents"`
+	Grants      []GrantInfo   `json:"grants"`
+	GeneratedAt time.Time     `json:"generatedAt"`
+	Block       uint64        `json:"block"`
 }
 
 type NetworkInfo struct {
@@ -55,11 +55,11 @@ type AgentInfo struct {
 }
 
 type GrantInfo struct {
-	Name      string `json:"name"`
-	FullName  string `json:"fullName"`
-	Owner     string `json:"owner,omitempty"`
-	Expiry    uint64 `json:"expiry"`
-	Status    string `json:"status"` // "live", "expired", "revoked"
+	Name     string `json:"name"`
+	FullName string `json:"fullName"`
+	Owner    string `json:"owner,omitempty"`
+	Expiry   uint64 `json:"expiry"`
+	Status   string `json:"status"` // "live", "expired", "revoked"
 }
 
 // mapCache holds a cached OrgMap and when it was built.
@@ -69,7 +69,7 @@ type mapCache struct {
 }
 
 type mapCacheEntry struct {
-	m      *OrgMap
+	m       *OrgMap
 	builtAt time.Time
 }
 

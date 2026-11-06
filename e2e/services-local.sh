@@ -69,33 +69,54 @@ $A grant --resource "$SVC" --agent claude-1 --for 1h | sed 's/^/  /'
 out=$("$BIN/meshy" curl "$SVC" /snapshot.json 2>&1); [[ $out == *front-door* ]] && ok "meshy curl $SVC/snapshot.json -> camera JSON" || fail "curl: $out"
 out=$("$BIN/meshy" ssh "$DEV" -- id 2>&1); [[ $out == *MESHY_NO_GRANT* ]] && ok "service grant does NOT give shell on the device" || fail "shell should be refused: $out"
 
-say "revoke cuts a live tunnel"
-"$BIN/meshy" connect "$SVC" --local 127.0.0.1:0 >"$WORK/connect.log" 2>&1 &
+say "revoke cuts a live tunnel (streaming feed service)"
+FEEDPORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1])')
+python3 - "$FEEDPORT" >/dev/null 2>&1 <<'PY' &
+import socket,sys,threading,time
+srv=socket.socket(); srv.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); srv.bind(("127.0.0.1",int(sys.argv[1]))); srv.listen()
+def serve(c):
+    n=0
+    try:
+        while True:
+            n+=1; c.sendall(b"frame %d\n" % n); time.sleep(0.2)
+    except OSError: pass
+while True:
+    c,_=srv.accept(); threading.Thread(target=serve,args=(c,),daemon=True).start()
+PY
+PIDS+=($!)
+FEED=feed.$DEV
+$A service add --device "$DEV" --name feed --target "127.0.0.1:$FEEDPORT" --proto tcp --desc "camera frame stream" >/dev/null && ok "service $FEED -> tcp 127.0.0.1:$FEEDPORT"
+$A grant --resource "$FEED" --agent claude-1 --for 1h >/dev/null && ok "granted claude-1 on $FEED"
+"$BIN/meshy" connect "$FEED" --local 127.0.0.1:0 >"$WORK/connect.log" 2>&1 &
 CP=$!
 for _ in $(seq 1 40); do grep -q MESHY_CONNECTED "$WORK/connect.log" && break; sleep 0.25; done
 LADDR=$(grep -o 'local=[^ ]*' "$WORK/connect.log" | cut -d= -f2)
-curl -s "http://$LADDR/snapshot.json" | grep -q front-door && ok "tunnel up at $LADDR" || fail "tunnel: $(cat "$WORK/connect.log")"
-python3 - "$LADDR" >"$WORK/stream.log" 2>&1 <<'EOF' &
+python3 - "$LADDR" >"$WORK/stream.log" 2>&1 <<'PY' &
 import socket,sys,time
-h,p=sys.argv[1].split(":"); s=socket.create_connection((h,int(p)))
-s.sendall(b"GET /snapshot.json HTTP/1.1\r\nHost: x\r\nConnection: keep-alive\r\n\r\n"); s.recv(4096)
-t=time.time()
+h,p=sys.argv[1].split(":"); s=socket.create_connection((h,int(p))); n=0; t=time.time()
 while True:
-    try:
-        s.sendall(b"GET /snapshot.json HTTP/1.1\r\nHost: x\r\nConnection: keep-alive\r\n\r\n")
-        if not s.recv(4096): break
-    except OSError: break
-    time.sleep(0.2)
-print("STREAM_CLOSED after %.1fs" % (time.time()-t))
-EOF
+    d=s.recv(4096)
+    if not d: break
+    n+=d.count(b"\n")
+print("STREAM_CLOSED frames=%d after %.1fs" % (n,time.time()-t))
+PY
 SP=$!
-sleep 2
-$A revoke --resource "$SVC" --agent claude-1 | sed 's/^/  /'
-for _ in $(seq 1 30); do grep -q STREAM_CLOSED "$WORK/stream.log" && break; sleep 0.5; done
-grep -q STREAM_CLOSED "$WORK/stream.log" && ok "live keep-alive stream cut: $(cat "$WORK/stream.log")" || fail "stream survived revoke"
-grep -q 'forward revoked' "$WORK/meshyd.log" && ok "meshyd: forward revoked on-chain block" || fail "no forward revoke in meshyd log"
+sleep 3
+F=$(grep -c . "$WORK/stream.log" 2>/dev/null)
+$A revoke --resource "$FEED" --agent claude-1 | sed 's/^/  /'
+for _ in $(seq 1 40); do grep -q STREAM_CLOSED "$WORK/stream.log" && break; sleep 0.5; done
+if grep -q STREAM_CLOSED "$WORK/stream.log"; then
+  FR=$(grep -o 'frames=[0-9]*' "$WORK/stream.log" | cut -d= -f2)
+  [[ ${FR:-0} -gt 5 ]] && ok "live stream ($(cat "$WORK/stream.log")) cut by the on-chain revoke" || fail "stream closed too early: $(cat "$WORK/stream.log")"
+else
+  fail "stream survived revoke"
+fi
+grep -q 'forward revoked' "$WORK/meshyd.log" && ok "meshyd: $(grep 'forward revoked' "$WORK/meshyd.log" | grep -o 'block=[0-9]*' | head -1) — forward revoked" || fail "no forward revoke in meshyd log"
 kill $CP 2>/dev/null
-out=$("$BIN/meshy" curl "$SVC" /snapshot.json 2>&1); [[ $out == *MESHY_NO_GRANT* ]] && ok "after revoke -> MESHY_NO_GRANT" || fail "after revoke: $out"
+"$BIN/meshy" connect "$FEED" --local 127.0.0.1:0 >"$WORK/connect2.log" 2>&1 &
+C2=$!; sleep 6; kill $C2 2>/dev/null
+grep -q MESHY_NO_GRANT "$WORK/connect2.log" && ok "reconnect to $FEED after revoke -> MESHY_NO_GRANT" || fail "after revoke: $(cat "$WORK/connect2.log")"
+out=$("$BIN/meshy" curl "$SVC" /snapshot.json 2>&1); [[ $out == *front-door* ]] && ok "camera grant (not revoked) still works — revocation is per service" || fail "camera: $out"
 
 say "EAC: delegated network admin"
 $A admin add --org "$ORG" --network home --addr "$DEL_ADDR" | sed 's/^/  /'

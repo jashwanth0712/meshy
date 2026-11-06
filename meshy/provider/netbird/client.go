@@ -65,11 +65,11 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 // --- Groups ---
 
 type Group struct {
-	ID          string        `json:"id,omitempty"`
-	Name        string        `json:"name"`
-	Peers       []PeerMinimum `json:"peers,omitempty"`
-	PeersCount  int           `json:"peers_count,omitempty"`
-	Issued      string        `json:"issued,omitempty"`
+	ID         string        `json:"id,omitempty"`
+	Name       string        `json:"name"`
+	Peers      []PeerMinimum `json:"peers,omitempty"`
+	PeersCount int           `json:"peers_count,omitempty"`
+	Issued     string        `json:"issued,omitempty"`
 }
 
 type PeerMinimum struct {
@@ -105,10 +105,10 @@ func (c *Client) DeleteGroup(ctx context.Context, id string) error {
 // --- Policies ---
 
 type Policy struct {
-	ID      string         `json:"id,omitempty"`
-	Name    string         `json:"name"`
-	Enabled bool           `json:"enabled"`
-	Rules   []PolicyRule   `json:"rules,omitempty"`
+	ID      string       `json:"id,omitempty"`
+	Name    string       `json:"name"`
+	Enabled bool         `json:"enabled"`
+	Rules   []PolicyRule `json:"rules,omitempty"`
 }
 
 type PolicyRule struct {
@@ -158,7 +158,7 @@ type SetupKeyClear struct {
 
 type CreateSetupKeyRequest struct {
 	Name       string   `json:"name"`
-	Type       string   `json:"type"` // "one-off" or "reusable"
+	Type       string   `json:"type"`       // "one-off" or "reusable"
 	ExpiresIn  int      `json:"expires_in"` // seconds
 	AutoGroups []string `json:"auto_groups"`
 	UsageLimit int      `json:"usage_limit"` // 1 for one-off

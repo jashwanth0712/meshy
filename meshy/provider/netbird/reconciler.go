@@ -17,8 +17,8 @@ type OrgSnapshot struct {
 	Org      string // e.g. "acme.eth"
 	Networks []NetworkSnap
 	Agents   []AgentSnap
-	Grants   []GrantSnap  // live grants only
-	Peers    []PeerSnap   // resource peers known to NetBird
+	Grants   []GrantSnap // live grants only
+	Peers    []PeerSnap  // resource peers known to NetBird
 }
 
 type NetworkSnap struct {

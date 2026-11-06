@@ -2,8 +2,8 @@ package provider
 
 import (
 	"context"
-	"crypto/ecdsa"
 	gocrypto "crypto"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
@@ -35,10 +35,10 @@ var defaultAllowedACRs = []string{
 
 // oidcDiscovery is the .well-known/openid-configuration document.
 type oidcDiscovery struct {
-	Issuer              string `json:"issuer"`
-	DeviceAuthEndpoint  string `json:"device_authorization_endpoint"`
-	TokenEndpoint       string `json:"token_endpoint"`
-	JWKSURI             string `json:"jwks_uri"`
+	Issuer             string `json:"issuer"`
+	DeviceAuthEndpoint string `json:"device_authorization_endpoint"`
+	TokenEndpoint      string `json:"token_endpoint"`
+	JWKSURI            string `json:"jwks_uri"`
 }
 
 // flowEntry tracks the state of one in-flight device authorization flow.
@@ -61,7 +61,7 @@ type FlowManager struct {
 	ClientID     string
 	ClientSecret string
 	AllowedACRs  []string
-	SignerKey     *ecdsa.PrivateKey
+	SignerKey    *ecdsa.PrivateKey
 
 	mu     sync.Mutex
 	flows  map[string]*flowEntry
@@ -79,7 +79,7 @@ func NewFlowManager(issuer, clientID, clientSecret string, signerKey *ecdsa.Priv
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		AllowedACRs:  acrs,
-		SignerKey:     signerKey,
+		SignerKey:    signerKey,
 		flows:        map[string]*flowEntry{},
 		hc:           &http.Client{Timeout: 15 * time.Second},
 	}
@@ -192,7 +192,7 @@ func (f *FlowManager) StartFlow(ctx context.Context, req StartFlowRequest) (*Sta
 
 	// Derive a pollId from the device_code (never return or log the device_code itself).
 	pollID := base64.RawURLEncoding.EncodeToString(
-		crypto.Keccak256([]byte(dar.DeviceCode+fmt.Sprintf("%d", time.Now().UnixNano())))[:16],
+		crypto.Keccak256([]byte(dar.DeviceCode + fmt.Sprintf("%d", time.Now().UnixNano())))[:16],
 	)
 
 	interval := dar.Interval

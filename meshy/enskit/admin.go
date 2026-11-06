@@ -30,14 +30,14 @@ var (
 
 // Role bits (RegistryRolesLib / PermissionedResolverLib). Admin = role << 128.
 var (
-	RoleRegistrar       = big.NewInt(1)
-	RoleUnregister      = new(big.Int).Lsh(big.NewInt(1), 12)
-	RoleRenew           = new(big.Int).Lsh(big.NewInt(1), 16)
-	RoleSetSubregistry  = new(big.Int).Lsh(big.NewInt(1), 20)
-	RoleSetResolver     = new(big.Int).Lsh(big.NewInt(1), 24)
-	ResolverSetAddr     = big.NewInt(1)
-	ResolverSetText     = new(big.Int).Lsh(big.NewInt(1), 4)
-	ResolverSetData     = new(big.Int).Lsh(big.NewInt(1), 24)
+	RoleRegistrar      = big.NewInt(1)
+	RoleUnregister     = new(big.Int).Lsh(big.NewInt(1), 12)
+	RoleRenew          = new(big.Int).Lsh(big.NewInt(1), 16)
+	RoleSetSubregistry = new(big.Int).Lsh(big.NewInt(1), 20)
+	RoleSetResolver    = new(big.Int).Lsh(big.NewInt(1), 24)
+	ResolverSetAddr    = big.NewInt(1)
+	ResolverSetText    = new(big.Int).Lsh(big.NewInt(1), 4)
+	ResolverSetData    = new(big.Int).Lsh(big.NewInt(1), 24)
 	// AllRoles = every role and its admin (0x1111...1111, 64 nybbles).
 	AllRoles, _ = new(big.Int).SetString(strings.Repeat("1", 64), 16)
 )

@@ -68,10 +68,10 @@ func newFakeOIDCServer(t *testing.T) *fakeOIDCServer {
 
 func (f *fakeOIDCServer) handleDiscovery(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{
-		"issuer":                                f.issuer,
-		"device_authorization_endpoint":         f.issuer + "/device/auth",
-		"token_endpoint":                        f.issuer + "/token",
-		"jwks_uri":                              f.issuer + "/jwks",
+		"issuer":                        f.issuer,
+		"device_authorization_endpoint": f.issuer + "/device/auth",
+		"token_endpoint":                f.issuer + "/token",
+		"jwks_uri":                      f.issuer + "/jwks",
 	})
 }
 

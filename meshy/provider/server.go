@@ -1,12 +1,13 @@
 // Package provider implements the meshy-sync HTTP API server.
 //
 // Endpoints:
-//   GET  /v1/health
-//   POST /v1/agent/device-flow/start
-//   POST /v1/agent/device-flow/poll
-//   POST /v1/agent/attest-dev        (only when --dev-attest)
-//   GET  /v1/map?org=<org.eth>
-//   POST /v1/admit
+//
+//	GET  /v1/health
+//	POST /v1/agent/device-flow/start
+//	POST /v1/agent/device-flow/poll
+//	POST /v1/agent/attest-dev        (only when --dev-attest)
+//	GET  /v1/map?org=<org.eth>
+//	POST /v1/admit
 package provider
 
 import (
@@ -32,29 +33,29 @@ const Version = "0.1.0"
 
 // Config holds all runtime configuration for the server.
 type Config struct {
-	Listen         string
-	SepoliaRPC     string
-	SignerKeyFile  string
-	WorldIssuer    string
-	WorldClientID  string
+	Listen            string
+	SepoliaRPC        string
+	SignerKeyFile     string
+	WorldIssuer       string
+	WorldClientID     string
 	WorldClientSecret string
-	DevAttest      bool
-	CORSOrigins    []string // allowed origins; default ["http://localhost:3000"]
-	NetBirdAPI     string
-	NetBirdToken   string
-	NetBirdMgmtURL string
-	FromBlock      uint64
-	Log            *slog.Logger
+	DevAttest         bool
+	CORSOrigins       []string // allowed origins; default ["http://localhost:3000"]
+	NetBirdAPI        string
+	NetBirdToken      string
+	NetBirdMgmtURL    string
+	FromBlock         uint64
+	Log               *slog.Logger
 }
 
 // Server is the meshy-sync HTTP server.
 type Server struct {
-	cfg       Config
-	signerKey *ecdsa.PrivateKey
-	flows     *FlowManager
+	cfg        Config
+	signerKey  *ecdsa.PrivateKey
+	flows      *FlowManager
 	mapBuilder *MapBuilder
-	nb        *netbird.Client
-	log       *slog.Logger
+	nb         *netbird.Client
+	log        *slog.Logger
 }
 
 // NewServer creates a Server and connects to Sepolia.
@@ -156,11 +157,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	jsonOK(w, map[string]any{
-		"ok":         true,
-		"attestor":   crypto.PubkeyToAddress(s.signerKey.PublicKey).Hex(),
-		"world":      worldMode,
-		"devAttest":  s.cfg.DevAttest,
-		"version":    Version,
+		"ok":        true,
+		"attestor":  crypto.PubkeyToAddress(s.signerKey.PublicKey).Hex(),
+		"world":     worldMode,
+		"devAttest": s.cfg.DevAttest,
+		"version":   Version,
 	})
 }
 

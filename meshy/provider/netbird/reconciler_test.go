@@ -256,7 +256,7 @@ func TestReconcilerCreateObjects(t *testing.T) {
 	rec := &netbird.Reconciler{Client: client}
 
 	snap := netbird.OrgSnapshot{
-		Org: "acme.eth",
+		Org:      "acme.eth",
 		Networks: []netbird.NetworkSnap{{Name: "prod"}},
 		Agents:   []netbird.AgentSnap{{Label: "claude-1"}},
 		Grants: []netbird.GrantSnap{{
