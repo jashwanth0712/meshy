@@ -10,6 +10,7 @@
 # Mac with no Gatekeeper warning, set both:
 #   MESHY_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)"   (security find-identity -v -p codesigning)
 #   MESHY_NOTARY_PROFILE=meshy-notary   (xcrun notarytool store-credentials meshy-notary ...)
+#   MESHY_NOTARY_TIMEOUT=12h   (optional; default 30m. A new team's first submissions can take hours.)
 # Then bin/* and the app get the hardened runtime + a secure timestamp; the app is notarized and
 # stapled; the zip and DMG are built from the stapled app; the DMG is signed, notarized, stapled.
 set -euo pipefail
@@ -80,7 +81,7 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 notarize() { # file — submit, wait, print Apple's log on failure
   echo "  notarytool submit $(basename "$1") (a few minutes)"
   local log="$OUT/obj/notary.log"
-  xcrun notarytool submit "$1" --keychain-profile "$NOTARY" --wait --timeout 30m | tee "$log"
+  xcrun notarytool submit "$1" --keychain-profile "$NOTARY" --wait --timeout "${MESHY_NOTARY_TIMEOUT:-30m}" | tee "$log"
   if ! grep -q "status: Accepted" "$log"; then
     local id; id=$(awk '/^ *id:/{print $2; exit}' "$log")
     [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$NOTARY" >&2
