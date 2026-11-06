@@ -7,7 +7,7 @@ Written 6 Nov 2026, from the live dashboard at `/org/meshydemo.eth` and from eth
 **Goal.** Move the dashboard from its current dark, terminal-style look to a calm, minimal style with Meshy's own character. Build it on shadcn/ui, design it around the new logo (`brand/`), and keep the access-first layout the user chose: the home page is the grants feed, not a network map.
 
 **Revision 2 (6 Nov).** The user asked for a Meshy vibe rather than a copy of ethglobal.com. What changed:
-- **Colour.** The logo's cobalt and white, plus the hero's gradient colours (`#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8`). Four directions were sampled in [`mockups/palette.html`](mockups/palette.html), and the user picked **B, Electric**: a white page, electric cobalt, and solid saturated chips (lime, sun, pink, lilac, cyan). See §2.
+- **Colour.** The logo's cobalt and white, plus the hero's gradient colours (`#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8`). Four directions were sampled (a palette page, since removed), and the user picked **B, Electric**: a white page, electric cobalt, and solid saturated chips (lime, sun, pink, lilac, cyan). See §2.
 - **Hero.** A night-sky `GradientASCII` horizon (`shape="horizon"`) replaces the pastel wash. It runs full size on the landing page, and as a short header band behind the nav and title on every app page. See §5.
 - **Landing.** No longer a showcase grid: it is a hero, then "three moves", then a numbered list of screens.
 
@@ -62,7 +62,7 @@ The ethglobal look in one sentence: generous white space, very dark text, big ti
 
 The logo (`brand/`, from commit `fe22bf8`) is an M drawn as a network. Rings are devices. The solid node is your own device. The agent is a four-point spark held apart by a gap: it reaches only what it is granted.
 
-### Four directions were sampled ([`mockups/palette.html`](mockups/palette.html))
+### Four directions were sampled
 | | Direction | Verdict |
 |---|---|---|
 | A | **Cobalt horizon.** Ice page, white cards, navy ink, cobalt action; sky and cyan for light; soft "candy" tags with a dot | The calmest of the fun options, but less memorable |
@@ -857,7 +857,6 @@ The `mockups/` folder:
 | File | Screen |
 |---|---|
 | `index.html` | Landing: the 600 px `GradientASCII` hero (the user's props), three moves, and a numbered list of screens |
-| `palette.html` | Palette study: directions A–D side by side, with B (Electric) picked, and its system (surfaces, blues, chips) |
 | `access.html` | Access home (`?theme=dark` for dark; `?palette=0x35e7` opens ⌘K) |
 | `give-access.html` | Give access sheet |
 | `revoke.html` | Revoke confirm, live timeline, stepper toasts |

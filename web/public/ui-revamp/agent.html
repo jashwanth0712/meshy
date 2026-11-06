@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Palette samples · Meshy UI mockup</title>
+<title>Agent: claude-1 · Meshy UI mockup</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctitle%3EMeshy%3C/title%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2222%22%20fill%3D%22%232B3FE0%22/%3E%3Cmask%20id%3D%22m6%22%20maskUnits%3D%22userSpaceOnUse%22%20x%3D%220%22%20y%3D%220%22%20width%3D%22100%22%20height%3D%22100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2231%22%20r%3D%223.5%22%20fill%3D%22%23000%22/%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2254%22%20r%3D%223.5%22%20fill%3D%22%23000%22/%3E%3Ccircle%20cx%3D%2273%22%20cy%3D%2271%22%20r%3D%223.5%22%20fill%3D%22%23000%22/%3E%3Ccircle%20cx%3D%2273%22%20cy%3D%2231%22%20r%3D%2212%22%20fill%3D%22%23000%22/%3E%3C/mask%3E%3Cg%20mask%3D%22url%28%23m6%29%22%3E%3Cpath%20d%3D%22M27%2071V31L50%2054L73%2031V71%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2231%22%20r%3D%227.5%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%228%22/%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2254%22%20r%3D%227.5%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%228%22/%3E%3Ccircle%20cx%3D%2273%22%20cy%3D%2271%22%20r%3D%227.5%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%228%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2271%22%20r%3D%2211.5%22%20fill%3D%22%23FFFFFF%22/%3E%3C/g%3E%3Cpath%20d%3D%22M73%2018.5Q75.4%2028.6%2085.5%2031Q75.4%2033.4%2073%2043.5Q70.6%2033.4%2060.5%2031Q70.6%2028.6%2073%2018.5Z%22%20fill%3D%22%23FFFFFF%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -338,139 +338,146 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
 </style>
 </head>
 <body class="min-h-screen bg-background text-foreground">
-<style>
-  .opt { border-radius: 18px; overflow: hidden; border: 1px solid var(--border); background: var(--background); color: var(--foreground); box-shadow: var(--shadow-soft); }
-  .sw { height: 46px; border-radius: 10px; border: 1px solid rgb(0 0 0 / .06); }
-  .chosen { outline: 3px solid #38bdf8; outline-offset: 4px; }
-  /* A and C keep the soft "candy" tags they were sampled with */
-  .candy .tag { --bg: var(--c-cobalt-bg, #e3e8ff); --fg: var(--c-cobalt-fg, #2b3fe0); --dt: var(--c-cobalt-dot, #2b3fe0); font-family: "Geist Mono", monospace; font-weight: 500; padding: 0 .6rem 0 .5rem; gap: .4rem; }
-  .candy .tag::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--dt); }
-  .candy .tag-sky { --bg: var(--c-sky-bg, #e0f2fe); --fg: var(--c-sky-fg, #0369a1); --dt: var(--c-sky-dot, #38bdf8); }
-  .candy .tag-mint { --bg: var(--c-mint-bg, #dcfce7); --fg: var(--c-mint-fg, #15803d); --dt: var(--c-mint-dot, #22c55e); }
-  .candy .tag-lemon { --bg: var(--c-lemon-bg, #fef9c3); --fg: var(--c-lemon-fg, #a16207); --dt: var(--c-lemon-dot, #eab308); }
-  .candy .tag-coral { --bg: var(--c-coral-bg, #ffe4e6); --fg: var(--c-coral-fg, #be123c); --dt: var(--c-coral-dot, #fb7185); }
-  .candy .tag-lilac { --bg: var(--c-lilac-bg, #ede9fe); --fg: var(--c-lilac-fg, #6d28d9); --dt: var(--c-lilac-dot, #a78bfa); }
-</style>
 
-<section class="band on-dark" style="margin-top:0;padding-top:0" data-ascii-host>
-  <div data-ascii='{"cellSize":16,"horizon":0.7,"arc":1.4,"cx":0.75}'></div>
-  <header class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-    <a href="index.html" class="text-foreground"><svg class="h-7 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk11" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk11)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
-    <div class="flex gap-2"><a href="index.html" class="btn btn-outline btn-sm">All mockups</a><button onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button></div>
-  </header>
-  <div class="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8">
-    <div class="eyebrow mb-3">ui revamp · palette study</div>
-    <h1 class="display max-w-3xl">Which colours feel like Meshy?</h1>
-    <p class="lede mt-4 max-w-2xl">Four directions, built from the logo's cobalt and white and the hero's gradient (<span class="mono text-foreground">#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8</span>). Each one shows the same pieces: page, card, a grant, buttons and tags.</p>
+<header class="on-dark topbar sticky top-0 z-40">
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-6 lg:px-8">
+    <a href="index.html" class="shrink-0 text-foreground" title="All mockups"><svg class="h-7 w-auto" role="img" aria-label="Meshy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 100"><rect width="100" height="100" rx="22" fill="#2B3FE0"/><mask id="mk3" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="27" cy="31" r="4.25" fill="#000"/><circle cx="50" cy="54" r="4.25" fill="#000"/><circle cx="73" cy="71" r="4.25" fill="#000"/><circle cx="73" cy="31" r="10" fill="#000"/></mask><g mask="url(#mk3)"><path d="M27 71V31L50 54L73 31V71" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="31" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="50" cy="54" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="73" cy="71" r="7" fill="none" stroke="#FFFFFF" stroke-width="5.5"/><circle cx="27" cy="71" r="9.75" fill="#FFFFFF"/></g><path d="M73 20.5Q75.0 29.0 83.5 31Q75.0 33.0 73 41.5Q71.0 33.0 62.5 31Q71.0 29.0 73 20.5Z" fill="#FFFFFF"/><path d="M133.6 71.36V28.64H142.88L143.2 39.12L142.24 38.64Q142.96 35.199999999999996 144.76 32.76Q146.56 30.32 149.16 29.0Q151.76 27.68 154.88 27.68Q160.32 27.68 163.68 30.759999999999998Q167.04 33.839999999999996 167.92000000000002 39.199999999999996H166.56Q167.28 35.44 169.04000000000002 32.92Q170.8 30.4 173.48000000000002 29.04Q176.16 27.68 179.52 27.68Q183.92000000000002 27.68 187.12 29.56Q190.32 31.439999999999998 192.04 35.04Q193.76 38.64 193.76 43.92V71.36H183.52V46.56Q183.52 41.28 181.72000000000003 38.64Q179.92000000000002 36.0 176.24 36.0Q173.76 36.0 172.0 37.28Q170.24 38.56 169.32 41.0Q168.4 43.44 168.4 46.879999999999995V71.36H158.88V46.879999999999995Q158.88 41.599999999999994 157.28 38.8Q155.68 36.0 151.76 36.0Q149.28 36.0 147.56 37.28Q145.84 38.56 144.84 41.0Q143.84 43.44 143.84 46.879999999999995V71.36ZM220.64000000000001 72.32Q214.24 72.32 209.52 69.56Q204.8 66.8 202.24 61.76Q199.68 56.72 199.68 50.0Q199.68 43.28 202.24 38.28Q204.8 33.28 209.48000000000002 30.48Q214.16 27.68 220.4 27.68Q226.48000000000002 27.68 231.08 30.4Q235.68 33.12 238.16 38.239999999999995Q240.64 43.36 240.64 50.56V52.879999999999995H210.32Q210.64000000000001 58.48 213.4 61.31999999999999Q216.16 64.16 220.72 64.16Q224.16 64.16 226.44 62.599999999999994Q228.72 61.04 229.6 58.239999999999995L240.08 58.879999999999995Q238.32 65.12 233.16 68.72Q228.0 72.32 220.64000000000001 72.32ZM210.32 46.0H230.08Q229.76 40.8 227.12 38.28Q224.48000000000002 35.76 220.4 35.76Q216.32 35.76 213.64 38.4Q210.96 41.04 210.32 46.0ZM264.0 72.32Q257.52000000000004 72.32 253.24 70.47999999999999Q248.96 68.64 246.72000000000003 65.36Q244.48000000000002 62.08 244.16000000000003 57.92L254.64000000000001 57.44Q255.20000000000002 60.8 257.36 62.64Q259.52000000000004 64.48 264.08000000000004 64.48Q267.68 64.48 269.56 63.32Q271.44 62.16 271.44 59.68Q271.44 58.239999999999995 270.76 57.28Q270.08000000000004 56.32 268.12 55.599999999999994Q266.16 54.879999999999995 262.40000000000003 54.16Q255.92000000000002 53.04 252.24 51.4Q248.56000000000003 49.76 247.08000000000004 47.28Q245.60000000000002 44.8 245.60000000000002 41.12Q245.60000000000002 35.12 250.20000000000002 31.4Q254.8 27.68 263.68 27.68Q269.84000000000003 27.68 273.8 29.64Q277.76 31.6 279.8 34.84Q281.84000000000003 38.08 282.16 42.08L271.76 42.56Q271.68 40.56 270.8 38.96Q269.92 37.36 268.16 36.44Q266.40000000000003 35.519999999999996 263.52000000000004 35.519999999999996Q259.92 35.519999999999996 258.04 36.959999999999994Q256.16 38.4 256.16 40.8Q256.16 42.480000000000004 256.92 43.6Q257.68 44.72 259.52 45.4Q261.36 46.08 264.56 46.64Q271.12 47.599999999999994 274.96000000000004 49.279999999999994Q278.8 50.959999999999994 280.44000000000005 53.48Q282.08000000000004 56.0 282.08000000000004 59.519999999999996Q282.08000000000004 65.68 277.16 69.0Q272.24 72.32 264.0 72.32ZM288.08000000000004 71.36V14.559999999999995H298.32V38.4H297.04Q297.68 34.72 299.6 32.36Q301.52000000000004 30.0 304.32000000000005 28.84Q307.12 27.68 310.48 27.68Q315.20000000000005 27.68 318.44000000000005 29.72Q321.68 31.759999999999998 323.32000000000005 35.44Q324.96000000000004 39.12 324.96000000000004 43.92V71.36H314.72V46.4Q314.72 41.2 312.96000000000004 38.6Q311.20000000000005 36.0 307.44 36.0Q303.28000000000003 36.0 300.8 38.72Q298.32 41.44 298.32 46.64V71.36ZM336.4 83.36V75.44H341.84Q343.92 75.44 344.92 74.8Q345.92 74.16 346.48 72.64L347.68 69.67999999999999H344.71999999999997L329.44 28.64H340.08L350.8 60.08L361.03999999999996 28.64H371.68L354.96 75.84Q353.52 79.84 350.91999999999996 81.6Q348.32 83.36 343.68 83.36Z" fill="currentColor"/></svg></a>
+    <button class="ml-1 hidden items-center gap-2 rounded-full border border-border bg-card py-1 pl-1.5 pr-3 text-sm font-medium hover:border-border-strong lg:inline-flex" title="Switch org">
+      <span class="grid h-6 w-6 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground">M</span>
+      <span class="mono text-[13px]">meshydemo.eth</span>
+      <i data-lucide="chevrons-up-down" class="h-3.5 w-3.5 text-muted-foreground"></i>
+    </button>
+    <nav class="ml-2 hidden items-center gap-0.5 md:flex" aria-label="Main"><a class="navlink" href="access.html">Access</a>
+<a class="navlink" href="directory.html" aria-current="page">Directory</a>
+<a class="navlink" href="activity.html">Activity</a>
+<a class="navlink" href="billing.html">Billing</a>
+<a class="navlink" href="provider.html">Provider</a>
+<a class="navlink" href="settings.html">Settings</a></nav>
+    <div class="ml-auto flex items-center gap-2">
+      <button onclick="openPalette()" class="hidden h-9 w-64 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card pl-3 pr-1.5 text-sm text-muted-foreground hover:border-border-strong 2xl:inline-flex">
+        <i data-lucide="search" class="h-4 w-4"></i><span>Search names, actions…</span><span class="ml-auto flex gap-0.5"><kbd>⌘</kbd><kbd>K</kbd></span>
+      </button>
+      <button onclick="openPalette()" class="btn btn-outline btn-sm gap-1.5 2xl:hidden" aria-label="Search"><i data-lucide="search"></i><kbd>⌘K</kbd></button>
+      <button onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button>
+      <button class="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card pl-1.5 pr-3 text-sm font-semibold hover:border-border-strong">
+        <span class="h-6 w-6 rounded-full" style="background:conic-gradient(from 200deg,#1e3fd8,#a5d8ff,#f6f8ff,#38bdf8,#1e3fd8)"></span>
+        <span class="mono text-[13px]">0x45e8…E0EA</span>
+        <span class="badge b-info h-5 px-2 text-[11px]">Owner</span>
+      </button>
+    </div>
   </div>
-</section>
-<div class="band-edge"></div>
-
-<main class="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-  <div class="grid gap-8 lg:grid-cols-2">
-
-    <!-- A -->
-    <section class="opt candy" style="--background:#f6f8ff;--primary:#2b3fe0">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">A</span><b>Cobalt horizon</b></div><span class="badge b-muted">Soft</span></div>
-      <div class="p-5">
-        <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#f6f8ff"></div><div class="sw" style="background:#ffffff"></div><div class="sw" style="background:#0b1533"></div><div class="sw" style="background:#2b3fe0"></div><div class="sw" style="background:#a5d8ff"></div><div class="sw" style="background:#38bdf8"></div></div>
-        <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>ice</span><span>white</span><span>navy ink</span><span>cobalt</span><span>sky</span><span>cyan</span></div>
-        <div class="card mt-5 p-4">
-          <div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span><div class="flex-1"><div class="ens font-semibold">claude-1 → db1.prod</div><div class="text-xs text-muted-foreground">Folders · sealed policy</div></div><span class="mono text-sm font-semibold">58m 38s</span></div>
-          <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-mint">live</span><span class="tag tag-sky">home</span><span class="tag">prod</span><span class="tag tag-lemon">expiring</span><span class="tag tag-coral">refused</span><span class="tag tag-lilac">world id</span></div>
-          <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
-        </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">Closest to the logo and the calmest of the fun options: candy dots on soft fills, in mono lowercase. Quieter than B, but also less memorable.</p>
-      </div>
-    </section>
-
-    <!-- B -->
-    <section class="opt chosen">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">B</span><b>Electric</b></div><span class="badge b-live"><i data-lucide="check"></i>Picked</span></div>
-      <div class="p-5">
-        <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#ffffff"></div><div class="sw" style="background:#1e3fd8"></div><div class="sw" style="background:#38bdf8"></div><div class="sw" style="background:#bef264"></div><div class="sw" style="background:#fde047"></div><div class="sw" style="background:#f9a8d4"></div></div>
-        <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>white</span><span>cobalt</span><span>cyan</span><span>lime</span><span>sun</span><span>pink</span></div>
-        <div class="card mt-5 p-4">
-          <div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-full" style="background:#1e3fd8;color:#fff"><i data-lucide="sparkle" class="h-4 w-4"></i></span><div class="flex-1"><div class="ens font-semibold">claude-1 → db1.prod</div><div class="text-xs text-muted-foreground">Folders · sealed policy</div></div><span class="mono text-sm font-semibold">58m 38s</span></div>
-          <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-lime">live</span><span class="tag tag-cyan">home</span><span class="tag">prod</span><span class="tag tag-sun">expiring</span><span class="tag tag-pink">refused</span><span class="tag tag-lilac">world id</span></div>
-          <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
-        </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground"><b class="text-foreground">Picked.</b> Loud, fun and unmistakably Meshy: electric cobalt and cyan from the hero, with solid lime, sun, pink and lilac chips. To keep tables readable, a row carries at most one chip: its state. Everything else stays as plain text.</p>
-      </div>
-    </section>
-
-    <!-- C -->
-    <section class="opt candy" style="--background:#f6f8ff;--primary:#2b3fe0;--c-mint-bg:#dbeafe;--c-mint-fg:#1d4ed8;--c-mint-dot:#3b82f6;--c-coral-bg:#eef2ff;--c-coral-fg:#4338ca;--c-coral-dot:#6366f1;--c-lilac-bg:#e0e7ff;--c-lilac-fg:#3730a3;--c-lilac-dot:#818cf8;--c-lemon-bg:#cffafe;--c-lemon-fg:#0e7490;--c-lemon-dot:#22d3ee">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">C</span><b>All blue</b></div><span class="badge b-muted">Calmest</span></div>
-      <div class="p-5">
-        <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#f6f8ff"></div><div class="sw" style="background:#dbeafe"></div><div class="sw" style="background:#a5d8ff"></div><div class="sw" style="background:#38bdf8"></div><div class="sw" style="background:#2b3fe0"></div><div class="sw" style="background:#141c5e"></div></div>
-        <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>ice</span><span>blue 100</span><span>sky</span><span>cyan</span><span>cobalt</span><span>night</span></div>
-        <div class="card mt-5 p-4">
-          <div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span><div class="flex-1"><div class="ens font-semibold">claude-1 → db1.prod</div><div class="text-xs text-muted-foreground">Folders · sealed policy</div></div><span class="mono text-sm font-semibold">58m 38s</span></div>
-          <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-mint">live</span><span class="tag tag-sky">home</span><span class="tag">prod</span><span class="tag tag-lemon">expiring</span><span class="tag tag-coral">refused</span><span class="tag tag-lilac">world id</span></div>
-          <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
-        </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">Very on-brand and serene, but "live", "expiring" and "prod" all look alike. State then rests on the words alone, and the fun is gone.</p>
-      </div>
-    </section>
-
-    <!-- D -->
-    <section class="opt dark">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">D</span><b>Night mesh</b></div><span class="badge b-info">Dark theme of B</span></div>
-      <div class="p-5">
-        <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#050b24"></div><div class="sw" style="background:#0b1435"></div><div class="sw" style="background:#e8edff"></div><div class="sw" style="background:#8c9bff"></div><div class="sw" style="background:#bef264"></div><div class="sw" style="background:#f9a8d4"></div></div>
-        <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>night</span><span>card</span><span>ink</span><span>cobalt 300</span><span>lime</span><span>pink</span></div>
-        <div class="card mt-5 p-4">
-          <div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span><div class="flex-1"><div class="ens font-semibold">claude-1 → db1.prod</div><div class="text-xs text-muted-foreground">Folders · sealed policy</div></div><span class="mono text-sm font-semibold">58m 38s</span></div>
-          <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-mint">live</span><span class="tag tag-sky">home</span><span class="tag">prod</span><span class="tag tag-lemon">expiring</span><span class="tag tag-coral">refused</span><span class="tag tag-lilac">world id</span></div>
-          <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
-        </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">The hero's night sky as a full theme, with B's electric chips (they glow on night). It ships as the dark mode, behind the moon button on every page, rather than as the default, so the dashboard keeps the logo's white.</p>
-      </div>
-    </section>
-  </div>
-
-  <!-- the chosen system -->
-  <section class="mt-16">
-    <div class="eyebrow mb-2">picked · b, electric</div>
-    <h2 class="text-3xl font-semibold tracking-tight">The system</h2>
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
-      <div class="card card-b">
-        <h3 class="h3">Surfaces</h3>
-        <ul class="mt-3 space-y-2 text-[13.5px]">
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#050b24"></span>Night <span class="mono ml-auto text-xs text-muted-foreground">#050B24 · nav and hero band</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#ffffff"></span>White <span class="mono ml-auto text-xs text-muted-foreground">#FFFFFF · page and cards</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#f3f5fc"></span>Mist <span class="mono ml-auto text-xs text-muted-foreground">#F3F5FC · fills, table header</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#0a0f2c"></span>Navy ink <span class="mono ml-auto text-xs text-muted-foreground">#0A0F2C · text</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#e6e9f5"></span>Hairline <span class="mono ml-auto text-xs text-muted-foreground">#E6E9F5 · borders</span></li>
-        </ul>
-      </div>
-      <div class="card card-b">
-        <h3 class="h3">Blues</h3>
-        <ul class="mt-3 space-y-2 text-[13.5px]">
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#1e3fd8"></span>Electric cobalt <span class="mono ml-auto text-xs text-muted-foreground">#1E3FD8 · primary</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#8c9bff"></span>Cobalt 300 <span class="mono ml-auto text-xs text-muted-foreground">#8C9BFF · primary on dark</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#a5d8ff"></span>Sky <span class="mono ml-auto text-xs text-muted-foreground">#A5D8FF · glow, focus on dark</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#38bdf8"></span>Cyan <span class="mono ml-auto text-xs text-muted-foreground">#38BDF8 · horizon edge, network chip</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#eaf0ff"></span>Accent <span class="mono ml-auto text-xs text-muted-foreground">#EAF0FF · hover, selected</span></li>
-        </ul>
-      </div>
-      <div class="card card-b">
-        <h3 class="h3">Chips</h3>
-        <p class="mt-1 text-[13px] text-muted-foreground">Solid and saturated, with dark text (white on cobalt). Lime, sun and pink mean state; cyan and cobalt mean networks; lilac means identity. At most one chip per table row.</p>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-[13px]">
-          <div class="flex items-center gap-2"><span class="tag tag-lime">live</span><span class="text-muted-foreground">open, healthy</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-sun">expiring</span><span class="text-muted-foreground">soon, demo-only</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-pink">refused</span><span class="text-muted-foreground">revoked, blocked</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-lilac">world id</span><span class="text-muted-foreground">identity, agents</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-cyan">home</span><span class="text-muted-foreground">network label</span></div>
-          <div class="flex items-center gap-2"><span class="tag">prod</span><span class="text-muted-foreground">network, default</span></div>
-        </div>
+</header><div class="band on-dark" data-ascii-host><div data-ascii='{"cellSize":16,"horizon":0.62,"arc":1.2,"cx":0.8,"glyphOpacity":0.85,"density":0.85}'></div>
+<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
+  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><a href="directory.html">directory</a><span class="dot-sep"> / </span><span class="text-foreground">agents</span></nav>
+  <div class="flex flex-wrap items-end justify-between gap-6">
+    <div class="flex items-center gap-5">
+      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-foreground text-background"><i data-lucide="sparkle" class="h-8 w-8"></i></span>
+      <div>
+        <h1 class="ens text-[2.25rem] font-semibold leading-none tracking-tight"><a href="#">claude-1</a><span class="text-muted-foreground">.agents.meshydemo.eth</span></h1>
+        <div class="mt-3 flex flex-wrap items-center gap-1.5"><span class="tag tag-lilac"><i data-lucide="fingerprint" class="h-3 w-3"></i>human-backed · world id</span><span class="tag tag-cyan">claude code</span><span class="tag tag-lime"><span class="dot dot-live"></span>1 live grant</span></div>
       </div>
     </div>
-  </section>
+    <div class="flex gap-2"><button class="btn btn-outline"><i data-lucide="copy"></i>Copy name</button><a href="give-access.html" class="btn btn-primary btn-lg"><i data-lucide="key-round"></i>Give access</a></div>
+  </div>
+</section>
+</div><div class="band-edge"></div>
+<div class="relative pb-20 pt-8">
+
+
+<main class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+  <div class="space-y-6">
+    <!-- reach explainer -->
+    <section class="card overflow-hidden">
+      <div class="card-h"><div><h2 class="h3">What claude-1 can touch right now</h2><p class="text-[13px] text-muted-foreground">Computed from live ENS names, not from a config file. Changes the moment a grant lands or expires.</p></div><div class="seg"><button aria-pressed="true">Map</button><button>List</button></div></div>
+      <div class="grid md:grid-cols-[minmax(0,1fr)_280px]">
+        <!-- map -->
+        <div class="relative min-h-[320px] bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:18px_18px] p-6">
+          <svg viewBox="0 0 520 300" class="h-full w-full" aria-label="Reach map">
+            <path d="M150 150 C 240 150, 250 60, 340 60" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M150 150 C 240 150, 260 150, 340 150" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="4 6"/>
+            <path d="M150 150 C 240 150, 250 240, 340 240" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="4 6"/>
+            <path d="M351 240 L 429 240" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="4 6"/>
+            <!-- agent: the logo's spark, held apart by a gap -->
+            <circle cx="120" cy="150" r="34" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="2 4"/>
+            <path d="M120 122Q125 145 148 150Q125 155 120 178Q115 155 92 150Q115 145 120 122Z" fill="var(--foreground)"/>
+            <text x="120" y="205" text-anchor="middle" font-family="Geist Mono" font-size="13" font-weight="600" fill="var(--foreground)">claude-1</text>
+            <!-- db1: live -->
+            <circle cx="340" cy="60" r="12" fill="var(--card)" stroke="var(--primary)" stroke-width="6"/>
+            <text x="362" y="56" font-family="Geist Mono" font-size="13" font-weight="600" fill="var(--foreground)">db1.prod</text>
+            <text x="362" y="74" font-family="Geist" font-size="11.5" fill="var(--success)">read · 57m left</text>
+            <!-- rig1: revoked -->
+            <circle cx="340" cy="150" r="10" fill="var(--card)" stroke="var(--border-strong)" stroke-width="4"/>
+            <text x="362" y="146" font-family="Geist Mono" font-size="12" fill="var(--muted-foreground)">rig1.home</text>
+            <text x="362" y="162" font-family="Geist" font-size="11" fill="var(--destructive)">revoked 3h ago</text>
+            <!-- pi: never granted -->
+            <circle cx="340" cy="240" r="10" fill="var(--card)" stroke="var(--border-strong)" stroke-width="4"/>
+            <text x="340" y="270" text-anchor="middle" font-family="Geist Mono" font-size="12" fill="var(--muted-foreground)">pi.home</text>
+            <text x="340" y="285" text-anchor="middle" font-family="Geist" font-size="11" fill="var(--muted-foreground)">refused 2h ago</text>
+            <!-- camera service on pi: expired -->
+            <circle cx="438" cy="240" r="8" fill="var(--card)" stroke="var(--border-strong)" stroke-width="3"/>
+            <text x="438" y="268" text-anchor="middle" font-family="Geist Mono" font-size="11.5" fill="var(--muted-foreground)">camera</text>
+            <text x="438" y="283" text-anchor="middle" font-family="Geist" font-size="10.5" fill="var(--muted-foreground)">expired 2h ago</text>
+          </svg>
+          <div class="absolute bottom-4 left-6 flex gap-4 text-[11.5px] text-muted-foreground"><span class="flex items-center gap-1.5"><span class="h-0.5 w-5 rounded bg-primary"></span>Live grant</span><span class="flex items-center gap-1.5"><span class="h-0 w-5 border-t-2 border-dashed border-border-strong"></span>No access</span></div>
+        </div>
+        <!-- sentence -->
+        <div class="border-t border-border p-5 md:border-l md:border-t-0">
+          <div class="eyebrow mb-2">In plain words</div>
+          <p class="text-[15px] leading-relaxed">claude-1 can <b>read</b> <span class="mono text-[13.5px]">~/meshy-demo/srv/reports</span> on <b class="mono">db1.prod</b> for <b class="tnum" data-left="3420">57m 00s</b>.</p>
+          <p class="mt-3 text-[14px] leading-relaxed text-muted-foreground">It <b class="text-foreground">cannot</b> write anywhere, open a shell on <span class="mono">pi</span> or <span class="mono">rig1</span>, reach <span class="mono">camera</span>, or use the network from inside its sandbox.</p>
+          <div class="mt-4 rounded-xl border border-warning/30 bg-warning-soft p-3 text-[12.5px] text-warning"><i data-lucide="lock-open" class="mr-1 inline h-3.5 w-3.5"></i>Folder paths are shown because the org key is loaded in this browser. Without it you see "sealed policy".</div>
+          <div class="mt-4 flex gap-2"><a href="revoke.html" class="btn btn-danger btn-sm"><i data-lucide="zap"></i>Revoke all</a><button class="btn btn-outline btn-sm"><i data-lucide="timer-reset"></i>Extend</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- blocked attempts -->
+    <section class="card">
+      <div class="card-h"><div><h2 class="h3">What it tried and was refused</h2><p class="text-[13px] text-muted-foreground">Each refusal carries what the agent asked for, so turning it into a grant takes one click.</p></div><span class="badge b-bad">7 in 24 h</span></div>
+      <div class="overflow-x-auto">
+        <table class="tbl">
+          <thead><tr><th>When</th><th>Where</th><th>Reason</th><th>Asked for</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="text-muted-foreground">2h ago</td><td><span class="ens">pi.home</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-muted-foreground">shell</td><td class="text-right"><a href="give-access.html" class="btn btn-outline btn-sm">Grant this</a></td></tr>
+            <tr><td class="text-muted-foreground">2h ago</td><td><span class="ens">camera.pi.home</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-muted-foreground">http port 8001</td><td class="text-right"><a href="give-access.html" class="btn btn-outline btn-sm">Grant this</a></td></tr>
+            <tr><td class="text-muted-foreground">4h ago</td><td><span class="ens">db1.prod</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-muted-foreground">shell</td><td class="text-right"><span class="text-xs text-muted-foreground">Granted since</span></td></tr>
+            <tr><td class="text-muted-foreground">5h ago</td><td><span class="ens">rig1.home</span></td><td><code class="text-xs">MESHY_BLOCKED</code></td><td><span class="mono text-[13px]">datasets/</span> <span class="badge b-muted h-5">write</span></td><td class="text-right"><a href="give-access.html" class="btn btn-outline btn-sm">Grant this</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card">
+      <div class="card-h"><h2 class="h3">Identity</h2><a href="#" class="text-xs font-semibold text-primary hover:underline">ENS ↗</a></div>
+      <dl class="divide text-[13px]">
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Address</dt><dd class="mono">0x35e7…A62f</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">SSH key</dt><dd class="mono">ed25519 …v08v2g6Ahf</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Approved by</dt><dd class="mono">0x45e8…E0EA <span class="badge b-info h-5 font-sans">Owner</span></dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Human check</dt><dd class="text-right">World ID attestation<br><span class="mono text-xs text-muted-foreground">by 0x6Aaf…0EC4</span></dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Resolver</dt><dd class="text-right">Its own<br><span class="text-xs text-muted-foreground">may change only <span class="mono">meshy.ssh</span></span></dd></div>
+      </dl>
+      <div class="border-t border-border px-5 py-3 text-[12.5px] leading-relaxed text-muted-foreground"><span class="eyebrow mb-1 block">agent-context</span>Meshy agent claude-1 (Claude Code). Access is granted per resource via ENS subnames.</div>
+    </section>
+    <section class="card card-b">
+      <h2 class="h3">Grant history</h2>
+      <ol class="relative mt-4 space-y-4 border-l border-border pl-4 text-[13px]">
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primary"></span><b class="font-semibold">db1.prod</b> · folders · 1h<div class="text-xs text-muted-foreground">granted 2m ago · live</div></li>
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-border-strong"></span><b class="font-semibold">camera.pi.home</b> · port 8001<div class="text-xs text-muted-foreground">expired 2h ago</div></li>
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-destructive"></span><b class="font-semibold">rig1.home</b> · models (read)<div class="text-xs text-muted-foreground">revoked 3h ago by 0xf846…Fc98</div></li>
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-destructive"></span><b class="font-semibold">db1.prod</b> · folders<div class="text-xs text-muted-foreground">revoked 4h ago · session killed 132 ms after block</div></li>
+      </ol>
+    </section>
+    <section class="card card-b">
+      <h2 class="h3 text-destructive">Remove agent</h2>
+      <p class="mt-1 text-[13px] text-muted-foreground">Unregisters <span class="ens">claude-1.agents.meshydemo.eth</span>. Its grants stop working at once.</p>
+      <button class="btn btn-danger btn-sm mt-3"><i data-lucide="user-minus"></i>Remove claude-1</button>
+    </section>
+  </aside>
 </main>
 
+</div>
 <div id="palette" hidden class="fixed inset-0 z-[60]">
   <div class="scrim"></div>
   <div role="dialog" aria-label="Command palette" class="pop fade-in relative z-[51] mx-auto mt-[12vh] w-[min(640px,92vw)] overflow-hidden">
@@ -515,6 +522,14 @@ kbd, .kbd { display: inline-grid; place-items: center; min-width: 1.25rem; heigh
     </div>
   </div>
 </div>
+<footer class="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/85 backdrop-blur-md">
+  <div class="mx-auto flex h-9 max-w-7xl items-center gap-5 px-6 text-xs text-muted-foreground lg:px-8">
+    <span class="flex items-center gap-1.5"><span class="dot dot-live"></span>Sepolia <span class="mono tnum text-foreground">#12,074,308</span></span>
+    <span class="hidden items-center gap-1.5 sm:flex"><i data-lucide="radio" class="h-3.5 w-3.5"></i>Arkiv</span>
+    <a href="activity.html" class="hidden min-w-0 items-center gap-1.5 truncate hover:text-foreground md:flex"><span class="mono text-foreground">claude-1</span> started a session on <span class="mono text-foreground">db1.prod</span><span>· 1m ago</span></a>
+    <span class="ml-auto flex items-center gap-1.5"><i data-lucide="lock-open" class="h-3.5 w-3.5 text-success"></i>Org key loaded in this browser</span>
+  </div>
+</footer>
 <script>
 // Mockup behaviour: theme toggle, ⌘K palette, live countdowns. Not production code.
 (function () {
