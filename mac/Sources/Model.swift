@@ -1,5 +1,6 @@
 // Data for the menu-bar menu: the org map from meshy-sync, refusals and revocations from Arkiv
-// (via the dashboard's read-only proxy), agent identities on this Mac, sign-in, favorites, cache.
+// (via the dashboard's read-only proxy), agent identities on this Mac, your orgs and roles,
+// favorites, access requests, cache. Nothing loads until you sign in and add an org.
 // See docs/mac/PLAN.md §2–§3.
 import AppKit
 import Foundation
@@ -113,6 +114,26 @@ struct LocalAgent: Codable {
     let addr: String
 }
 
+// MARK: - Role in an org (dashboard /api/role, read from ENSv2)
+
+struct RoleInfo: Codable {
+    let role: String // owner | admin | member
+    let adminOf: [String]
+    let checkedAt: Double
+    var canSign: Bool { role == "owner" || role == "admin" }
+}
+
+/// An access request this Mac sent to an admin, shown as pending until the grant appears on ENS.
+struct AccessRequest: Codable {
+    let agent: String
+    let target: String
+    let path: String?
+    let mode: String?
+    let dur: Int
+    let at: Double
+    let link: String
+}
+
 // MARK: - Store
 
 final class MeshyStore {
@@ -122,12 +143,11 @@ final class MeshyStore {
 
     // settings
     var syncURL: String {
-        get { defaults.string(forKey: "syncURL") ?? "https://sync.16-4-10-3.sslip.io" }
-        set { defaults.set(newValue, forKey: "syncURL") }
-    }
-    var openInBrowser: Bool {
-        get { defaults.bool(forKey: "openInBrowser") }
-        set { defaults.set(newValue, forKey: "openInBrowser") }
+        get {
+            let v = defaults.string(forKey: "syncURL") ?? Settings.providerURL
+            return v.contains("sslip.io") ? Settings.providerURL : v // the old IP-based host moved to api.meshy.live
+        }
+        set { defaults.set(newValue == Settings.providerURL ? nil : newValue, forKey: "syncURL") }
     }
     var refreshSeconds: Double {
         get { let v = defaults.double(forKey: "refreshSeconds"); return v > 0 ? v : 30 }
@@ -142,34 +162,22 @@ final class MeshyStore {
         set { defaults.set(newValue, forKey: "notifications"); if newValue { requestNotificationAuth() } }
     }
 
-    // orgs
-    var orgs: [String] {
-        get {
-            var a = defaults.stringArray(forKey: "orgs") ?? []
-            if !a.contains(Settings.org) { a.insert(Settings.org, at: 0) }
-            return a
-        }
-        set { defaults.set(newValue, forKey: "orgs") }
-    }
-    var org: String { Settings.org }
+    // session (Session.swift): nothing is shown until you sign in
+    private(set) var session: Session?
+    var address: String? { session?.address }
+    private var who: String { address?.lowercased() ?? "-" }
 
-    // identity (sign-in)
-    var address: String? {
-        get { defaults.string(forKey: "identity.address") }
-        set { defaults.set(newValue, forKey: "identity.address") }
+    // orgs belong to the signed-in address
+    var orgs: [String] {
+        get { address == nil ? [] : defaults.stringArray(forKey: "orgs.\(who)") ?? [] }
+        set { defaults.set(newValue, forKey: "orgs.\(who)") }
     }
-    private(set) var signature: String? {
-        get { defaults.string(forKey: "identity.sig") }
-        set { defaults.set(newValue, forKey: "identity.sig") }
+    var org: String? {
+        guard address != nil else { return nil }
+        let o = defaults.string(forKey: "org.\(who)")
+        return o.flatMap { orgs.contains($0) ? $0 : nil } ?? orgs.first
     }
-    private var pendingState: String? {
-        get { defaults.string(forKey: "signin.state") }
-        set { defaults.set(newValue, forKey: "signin.state") }
-    }
-    private var pendingAt: Double {
-        get { defaults.double(forKey: "signin.at") }
-        set { defaults.set(newValue, forKey: "signin.at") }
-    }
+    private func setOrg(_ o: String?) { defaults.set(o, forKey: "org.\(who)") }
 
     // data
     private(set) var map: OrgMap?
@@ -184,6 +192,7 @@ final class MeshyStore {
     private var failures = 0
 
     private init() {
+        session = Keychain.read()
         loadCache()
         loadLocalAgents()
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.refresh(force: true) }
@@ -191,7 +200,9 @@ final class MeshyStore {
 
     func start() {
         refresh(force: true)
+        if let o = org, role(o) == nil || Date().timeIntervalSince1970 - (role(o)?.checkedAt ?? 0) > 3600 { checkRole(o) { _ in } }
         schedule()
+        if notificationsOn && address != nil { requestNotificationAuth() }
     }
 
     private func schedule() {
@@ -204,92 +215,116 @@ final class MeshyStore {
         }
     }
 
-    // MARK: identity
+    // MARK: session
 
-    enum Role: String { case admin, agent, member }
-    var role: Role? {
-        guard let a = address?.lowercased(), let m = map else { return nil }
-        if (m.agents ?? []).contains(where: { $0.addr?.lowercased() == a }) { return .agent }
-        if (m.agents ?? []).contains(where: { $0.owner?.lowercased() == a }) { return .admin }
-        return .member
-    }
-
-    func beginSignIn(dashboard: String) -> URL? {
-        var bytes = [UInt8](repeating: 0, count: 16)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        let state = bytes.map { String(format: "%02x", $0) }.joined()
-        pendingState = state
-        pendingAt = Date().timeIntervalSince1970
-        var c = URLComponents(string: dashboard.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/connect")
-        c?.queryItems = [URLQueryItem(name: "state", value: state), URLQueryItem(name: "org", value: org)]
-        return c?.url
-    }
-
-    /// meshy://signin?state=…&address=…&sig=…: accepted only for the state we issued, within 10 min.
-    @discardableResult
-    func completeSignIn(_ url: URL) -> Bool {
-        let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        func v(_ k: String) -> String? { q.first { $0.name == k }?.value }
-        guard let st = v("state"), let want = pendingState, st == want,
-              Date().timeIntervalSince1970 - pendingAt < 600,
-              let addr = v("address"), addr.range(of: "^0x[0-9a-fA-F]{40}$", options: .regularExpression) != nil
-        else { return false }
-        address = addr
-        signature = v("sig")
-        pendingState = nil
+    func setSession(_ s: Session) {
+        session = s
+        resetData()
+        loadCache()
         onChange?()
-        return true
+        refresh(force: true)
+        if let o = org { checkRole(o) { _ in } }
+        if notificationsOn { requestNotificationAuth() }
     }
 
-    func useAddress(_ a: String) -> Bool {
-        guard a.range(of: "^0x[0-9a-fA-F]{40}$", options: .regularExpression) != nil else { return false }
-        address = a
-        signature = nil
-        onChange?()
-        return true
-    }
-
-    func logOut() {
-        address = nil
-        signature = nil
+    func signOut() {
+        Keychain.delete()
+        session = nil
+        resetData()
         onChange?()
     }
 
-    // MARK: orgs
-
-    func switchOrg(_ o: String) {
-        guard o != org else { return }
-        Settings.org = o
-        Settings.lastPath = nil
+    private func resetData() {
         map = nil
         mapAt = nil
         mapError = nil
         events = []
         seenEvents = []
         primedEvents = false
+    }
+
+    // MARK: roles
+
+    func role(_ o: String) -> RoleInfo? {
+        guard let d = defaults.data(forKey: "role.\(who).\(o)") else { return nil }
+        return try? JSONDecoder().decode(RoleInfo.self, from: d)
+    }
+
+    /// Reads the address's role in an org from ENSv2 through the dashboard. nil role = not a Meshy org.
+    func checkRole(_ o: String, done: @escaping (Result<RoleInfo?, SignInError>) -> Void) {
+        guard let a = address else { return done(.failure(SignInError(message: "Sign in first."))) }
+        var c = URLComponents(string: Settings.base + "/api/role")
+        c?.queryItems = [URLQueryItem(name: "org", value: o), URLQueryItem(name: "address", value: a)]
+        guard let url = c?.url else { return done(.failure(SignInError(message: "Bad org name."))) }
+        var req = URLRequest(url: url, timeoutInterval: 45)
+        req.setValue("MeshyMac/\(appVersion)", forHTTPHeaderField: "User-Agent")
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, err in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard let data, let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    return done(.failure(SignInError(message: err?.localizedDescription ?? "The dashboard didn't answer.")))
+                }
+                if let e = j["error"] as? String { return done(.failure(SignInError(message: e))) }
+                guard j["exists"] as? Bool == true, let r = j["role"] as? String else { return done(.success(nil)) }
+                let info = RoleInfo(role: r, adminOf: j["adminOf"] as? [String] ?? [], checkedAt: Date().timeIntervalSince1970)
+                if let d = try? JSONEncoder().encode(info) { self.defaults.set(d, forKey: "role.\(self.who).\(o)") }
+                self.onChange?()
+                done(.success(info))
+            }
+        }.resume()
+    }
+
+    /// One line for the header: "owner", "admin of prod", "member", plus "agent claude-1" for identities here.
+    var roleLine: String? {
+        guard let o = org else { return nil }
+        var parts: [String] = []
+        if let r = role(o) {
+            parts.append(r.role == "admin" ? "admin of " + r.adminOf.map { $0.replacingOccurrences(of: ".\(o)", with: "") }.joined(separator: ", ") : r.role)
+        }
+        let mine = agentsHere.map(\.agent)
+        if !mine.isEmpty { parts.append("agent " + mine.joined(separator: ", ")) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    // MARK: orgs
+
+    func switchOrg(_ o: String) {
+        guard o != org, orgs.contains(o) else { return }
+        setOrg(o)
+        resetData()
         loadCache()
         onChange?()
-        NotificationCenter.default.post(name: .meshyOrgChanged, object: nil)
+        refresh(force: true)
+        if role(o) == nil { checkRole(o) { _ in } }
+    }
+
+    /// Adds an org after checking ENS: nil = it isn't a Meshy org.
+    func addOrg(_ o: String, done: @escaping (Result<RoleInfo?, SignInError>) -> Void) {
+        checkRole(o) { [weak self] r in
+            if case .success(.some) = r { self?.addOrgUnchecked(o) }
+            done(r)
+        }
+    }
+
+    func addOrgUnchecked(_ o: String) {
+        guard address != nil else { return }
+        if !orgs.contains(o) { orgs = orgs + [o] }
+        setOrg(o)
+        resetData()
+        loadCache()
+        onChange?()
         refresh(force: true)
     }
 
-    func addOrg(_ o: String) {
-        var a = orgs
-        if !a.contains(o) { a.append(o) }
-        orgs = a
-        switchOrg(o)
-    }
-
     func removeOrg(_ o: String) {
-        var a = orgs.filter { $0 != o }
-        if a.isEmpty { a = ["meshydemo.eth"] }
-        orgs = a
-        if o == org { switchOrg(a[0]) } else { onChange?() }
+        orgs = orgs.filter { $0 != o }
+        if o == org || org == nil { setOrg(orgs.first); resetData(); loadCache(); refresh(force: true) }
+        onChange?()
     }
 
     // MARK: favorites
 
-    private var favKey: String { "favorites.\(org)" }
+    private var favKey: String { "favorites.\(who).\(org ?? "-")" }
     var favorites: [String] { defaults.stringArray(forKey: favKey) ?? [] }
     func isFavorite(_ name: String) -> Bool { favorites.contains(name) }
     func toggleFavorite(_ name: String) {
@@ -299,14 +334,29 @@ final class MeshyStore {
         onChange?()
     }
 
+    // MARK: access requests (pending until the grant shows up)
+
+    private var reqKey: String { "requests.\(who).\(org ?? "-")" }
+    var requests: [AccessRequest] {
+        get {
+            guard let d = defaults.data(forKey: reqKey), let a = try? JSONDecoder().decode([AccessRequest].self, from: d) else { return [] }
+            let now = Date().timeIntervalSince1970
+            let live = map?.liveGrants ?? []
+            return a.filter { r in now - r.at < 86400 && !live.contains { $0.agentLabel == r.agent && $0.target == r.target && $0.expiry > r.at } }
+        }
+        set { defaults.set(try? JSONEncoder().encode(newValue), forKey: reqKey) }
+    }
+    func addRequest(_ r: AccessRequest) { requests = requests + [r]; onChange?() }
+    func dropRequest(at i: Int) { var a = requests; if a.indices.contains(i) { a.remove(at: i) }; requests = a; onChange?() }
+
     // MARK: refresh
 
     func refresh(force: Bool) {
+        guard let org else { return }
         if fetching { return }
         if !force, let at = mapAt, Date().timeIntervalSince(at) < 15 { return }
         fetching = true
         onChange?()
-        let org = self.org
         var c = URLComponents(string: syncURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/v1/map")
         c?.queryItems = [URLQueryItem(name: "org", value: org)]
         guard let url = c?.url else { fetching = false; return }
@@ -314,8 +364,9 @@ final class MeshyStore {
         req.setValue("MeshyMac/\(appVersion)", forHTTPHeaderField: "User-Agent")
         URLSession.shared.dataTask(with: req) { [weak self] data, resp, err in
             DispatchQueue.main.async {
-                guard let self, org == self.org else { return }
+                guard let self else { return }
                 self.fetching = false
+                guard org == self.org else { return }
                 let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
                 if let data, code == 200, let m = try? JSONDecoder().decode(OrgMap.self, from: data) {
                     self.map = m
@@ -339,7 +390,7 @@ final class MeshyStore {
     }
 
     private func fetchEvents() {
-        guard let m = map else { return }
+        guard let m = map, let org else { return }
         let writers = m.devices.compactMap(\.addr).filter { $0.range(of: "^0x[0-9a-fA-F]{40}$", options: .regularExpression) != nil }
         guard !writers.isEmpty else { return }
         let owner = " AND (" + writers.map { "$owner = addr(\($0))" }.joined(separator: " OR ") + ")"
@@ -359,7 +410,7 @@ final class MeshyStore {
             }
         }
         group.notify(queue: .main) { [weak self] in
-            guard let self else { return }
+            guard let self, org == self.org else { return }
             // newest first; one row per (text, minute) so batch writes don't show twice
             var seenText = Set<String>()
             let fresh = found.sorted { $0.ts > $1.ts }.filter { seenText.insert("\($0.title)|\(Int($0.ts / 60))").inserted }
@@ -374,7 +425,7 @@ final class MeshyStore {
     }
 
     private func arkivQuery(_ q: String, limit: Int, done: @escaping ([ArkivEvent]) -> Void) {
-        guard let url = URL(string: Settings.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/api/arkiv") else { return done([]) }
+        guard let url = URL(string: Settings.base + "/api/arkiv") else { return done([]) }
         var req = URLRequest(url: url, timeoutInterval: 20)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -406,20 +457,26 @@ final class MeshyStore {
     // MARK: notifications
 
     func requestNotificationAuth() {
+        guard !isTest, Bundle.main.bundleIdentifier != nil else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    private func notify(_ e: ArkivEvent) {
+    func notify(title: String, body: String, id: String = UUID().uuidString) {
+        guard !isTest, notificationsOn else { return }
         let c = UNMutableNotificationContent()
-        c.title = e.kind == "session.revoke" ? "Access revoked" : "Access refused"
-        c.body = e.title
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: e.key, content: c, trigger: nil))
+        c.title = title
+        c.body = body
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil))
+    }
+
+    private func notify(_ e: ArkivEvent) {
+        notify(title: e.kind == "session.revoke" ? "Access revoked" : "Access refused", body: e.title, id: e.key)
     }
 
     // MARK: cache and local identities
 
     private var cacheURL: URL? {
-        guard let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("Meshy", isDirectory: true) else { return nil }
+        guard let org, let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent(isTest ? "Meshy-tests" : "Meshy", isDirectory: true) else { return nil }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("map-\(org).json")
     }
@@ -429,7 +486,7 @@ final class MeshyStore {
     }
 
     private func loadCache() {
-        guard let u = cacheURL, let d = try? Data(contentsOf: u), let m = try? JSONDecoder().decode(OrgMap.self, from: d) else { return }
+        guard let u = cacheURL, let d = try? Data(contentsOf: u), let m = try? JSONDecoder().decode(OrgMap.self, from: d), m.org == org else { return }
         map = m
         mapAt = (try? u.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
     }
@@ -442,8 +499,9 @@ final class MeshyStore {
         return true
     }
 
+    /// Agent identities created on this Mac by `meshy join` (~/.meshy, or $MESHY_HOME).
     func loadLocalAgents() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".meshy")
+        let home = URL(fileURLWithPath: Bins.meshyHome)
         let dirs = (try? FileManager.default.contentsOfDirectory(at: home, includingPropertiesForKeys: nil)) ?? []
         var out: [LocalAgent] = []
         for d in dirs where d.lastPathComponent.hasPrefix("agent") {
@@ -452,6 +510,9 @@ final class MeshyStore {
         if let data = try? Data(contentsOf: home.appendingPathComponent("agent.json")), let a = try? JSONDecoder().decode(LocalAgent.self, from: data) { out.append(a) }
         localAgents = out
     }
+
+    /// This Mac's agent identities in the selected org.
+    var agentsHere: [LocalAgent] { localAgents.filter { $0.org == org } }
 
     var statusLine: String {
         if fetching && map == nil { return "Connecting to the provider…" }
@@ -462,8 +523,6 @@ final class MeshyStore {
         return "Sepolia \(block) · updated \(age)\(fetching ? " · updating…" : "")"
     }
 }
-
-extension Notification.Name { static let meshyOrgChanged = Notification.Name("meshyOrgChanged") }
 
 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
 

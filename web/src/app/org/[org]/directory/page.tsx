@@ -16,7 +16,9 @@ export default function DirectoryPage() {
   const now = useNow(10000) / 1000;
   // ?n=<full ENS name> (from the Mac menu bar) selects that item
   const [sel, setSel] = useState<string | undefined>(() => (typeof window === "undefined" ? undefined : new URLSearchParams(window.location.search).get("n") ?? undefined));
-  const [adding, setAdding] = useState(false);
+  // ?add=<meshy-join code> (from "Share this Mac…" in the Mac app) opens Add device, prefilled
+  const [addCode] = useState(() => (typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("add") ?? "").trim()));
+  const [adding, setAdding] = useState(!!addCode);
   const [inviting, setInviting] = useState(false);
   const [giving, setGiving] = useState<{ resource?: string; agent?: string } | null>(null);
   if (!tree) return <p className="pt-14 text-[14px] text-muted">Reading the org from ENS…</p>;
@@ -145,7 +147,7 @@ export default function DirectoryPage() {
         </section>
       </div>
 
-      {adding && <AddSheet onClose={() => setAdding(false)} />}
+      {adding && <AddSheet initialCode={addCode} onClose={() => setAdding(false)} />}
       {inviting && <InviteSheet onClose={() => setInviting(false)} />}
       {giving && <GrantDrawer preset={giving} onClose={() => setGiving(null)} />}
     </>

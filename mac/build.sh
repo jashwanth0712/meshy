@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Build Meshy.app (universal arm64 + x86_64), ad-hoc signed, plus a zip and a dmg.
-# The app loads the live dashboard; nothing is bundled.
+# Bundles the meshy, meshyd and meshy-mesh binaries (universal) in Contents/Resources/bin,
+# so Share this Mac, Join and Sign-In with Ethereum work without installing anything else.
 #   mac/build.sh            -> mac/build/Meshy.app, Meshy-mac.zip, Meshy.dmg
 #   MESHY_URL=http://localhost:3000 open mac/build/Meshy.app   (point at a dev server)
+#   VERSION=v0.3.0 mac/build.sh   (stamps the Go tools; default: dev)
 set -euo pipefail
 cd "$(dirname "$0")"
 OUT=build
@@ -12,11 +14,24 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$OUT/obj"
 
 echo "› compiling"
 for arch in arm64 x86_64; do
-  swiftc -O -target "$arch-apple-macos13.0" -framework AppKit -framework WebKit \
+  swiftc -O -target "$arch-apple-macos13.0" -framework AppKit \
     Sources/*.swift -o "$OUT/obj/Meshy-$arch"
 done
 lipo -create "$OUT/obj/Meshy-arm64" "$OUT/obj/Meshy-x86_64" -output "$APP/Contents/MacOS/Meshy"
 cp Info.plist "$APP/Contents/Info.plist"
+
+echo "› go tools (meshy, meshyd, meshy-mesh)"
+BIN="$APP/Contents/Resources/bin"; mkdir -p "$BIN"; HERE=$(pwd)
+LDFLAGS="-s -w -X main.version=${VERSION:-dev}"
+gobuild() { # tool moddir pkg
+  for arch in arm64 amd64; do
+    (cd "../$2" && GOOS=darwin GOARCH=$arch CGO_ENABLED=0 go build -trimpath -ldflags "$LDFLAGS" -o "$HERE/$OUT/obj/$1-$arch" "$3")
+  done
+  lipo -create "$OUT/obj/$1-arm64" "$OUT/obj/$1-amd64" -output "$BIN/$1"
+}
+gobuild meshy meshy ./cmd/meshy
+gobuild meshyd meshy ./cmd/meshyd
+gobuild meshy-mesh meshnet .
 
 echo "› icon"
 # macOS icons sit on an 824 px tile inside a 1024 canvas; the brand tile is full-bleed, so pad it.
@@ -35,6 +50,7 @@ sips -z 18 18 ../brand/png/meshy-mark-1024.png --out "$APP/Contents/Resources/St
 sips -z 36 36 ../brand/png/meshy-mark-1024.png --out "$APP/Contents/Resources/StatusIconTemplate@2x.png" >/dev/null
 
 echo "› signing (ad-hoc)"
+for b in "$APP/Contents/Resources/bin/"*; do codesign --force --sign - "$b"; done
 codesign --force --deep --sign - "$APP"
 codesign --verify --strict "$APP"
 

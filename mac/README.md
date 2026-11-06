@@ -1,43 +1,42 @@
 # Meshy for macOS
 
-**Menu bar first.** Meshy lives in the menu bar, like Twingate. Click the Meshy mark (the number next to it is your live grants) to see:
-- your org and identity, with a Live switch
-- **Organizations ›**, to switch or add ENS orgs
-- **Networks ›**, searchable: devices and services. Each has copy-`meshy ssh` / `meshy connect`, its address, Open in Admin Console, Give Access… and Favorites
-- **Access ›**: live grants with countdowns, plus Copy command, Renew… and Revoke…
-- **This Mac ›**: agent identities in `~/.meshy`
-- **Recent ›**: refusals and revocations from Arkiv, also sent as notifications
-- **More ›**: account, Settings, Start at Login, Notifications, Help, Troubleshoot
+A menu-bar app (no Dock icon). Install `Meshy.dmg`, drag Meshy to Applications, open it, and click the Meshy mark in the menu bar. Nothing else to install: `meshy`, `meshyd` and `meshy-mesh` ship inside the app (`Contents/Resources/bin`, universal).
 
-Sign in from the menu: **Sign In…** opens the dashboard's `/connect` page. Your browser wallet signs a nonce, and the page hands back `meshy://signin`. No keys reach the app. Design, edge cases and tests are in [docs/mac/PLAN.md](../docs/mac/PLAN.md).
+**A fresh install shows nothing but Sign In.** There is no default org and no demo data.
 
-Run `mac/test.sh --live` for the headless checks (18 assertions; uses an isolated defaults suite).
+1. **Sign In with Ethereum…** opens <https://meshy.live/connect> in your default browser. MetaMask signs a one-time SIWE (EIP-4361) message: nonce, `meshy.live`, chain 11155111, 10-minute expiry. The page sends you back once through `meshy://auth`. The app checks the nonce it issued and recovers the signer with the bundled `meshy verify-siwe`. The session is kept in your login Keychain until **More › Sign Out**.
+2. **Add Organization…**: type your org's ENS name. The app reads your role from ENSv2 through `/api/role`: owner, delegated admin of some networks, or member. Your org list belongs to your address.
+3. Use the menu:
+   - **Networks ›**: devices and services, searchable. Each has **Request Access…** plus the `meshy ssh` / `meshy connect` command. Owners and admins also get **Give Access…**.
+   - **Access ›**: **Yours** (live grants with countdowns, and your pending requests) and **Everyone** in the org. Owners and admins get Renew… and Revoke….
+   - **This Mac ›**:
+     - **Share this Mac…**: pick folders and a network, then name the device.
+     - **Join with an Invite Link…**: become an agent or person.
+     - **Install Command-Line Tools**: symlinks into `~/.local/bin`.
+     - Daemon and mesh status.
+   - **Recent ›**: refusals and revocations from Arkiv, also sent as notifications.
+   - **Admin Console** (⌘0): opens the dashboard for the org you picked, in your browser, where your wallet is.
 
-The window described below is the **Admin Console** (menu › Admin Console, ⌘0). It shows a Dock icon only while it's open.
+Every write is signed in the browser by an owner or admin and enforced on-chain. The app never holds a wallet key.
 
-A native window around the live Meshy dashboard (AppKit + WKWebView, no dependencies). It opens <https://meshy-bay.vercel.app>, production of `main` (Vercel redeploys it on every push), for one org (default `meshydemo.eth`). Every screen reads ENSv2 on Sepolia and Arkiv live; nothing is bundled or hardcoded. The app follows macOS light and dark mode.
+## Share this Mac
+1. Pick folders (Finder panel), a network and a device name.
+2. The app runs `meshyd init` (keys in `~/.meshy/meshyd`). It then opens the dashboard's **Add device** sheet with the join code filled in: `/org/<org>/directory?add=meshy-join:…`.
+3. An owner or admin signs 3 transactions.
+4. When the device shows up on ENS, the app installs two LaunchAgents:
+   - `live.meshy.meshyd`: `meshyd run` with `wss://ethereum-sepolia-rpc.publicnode.com`, `--arkiv=`, and the control socket at `~/.meshy/meshyd/control.sock`
+   - `live.meshy.mesh`: `meshyd mesh-join --provider https://api.meshy.live`
 
-Develop also offers the redesign's branch build at <https://meshy-next.vercel.app>, `localhost:3000`, or a custom URL.
+   Logs are in `~/Library/Logs/Meshy`. **Stop Sharing** removes both LaunchAgents and keeps the keys.
 
-## Build
+## Request access
+Pick an agent, a folder (from the device's `meshy.roots`), read or read-and-write, and a duration. You get a link to `/org/<org>?give=<agent>&target=<device>&path=…&mode=ro|rw&dur=…`, which opens the Give access sheet prefilled. Copy it or email it to an admin, or open it yourself if you are one. It shows under Access › Yours until the grant lands.
+
+## Build and test
 ```bash
-mac/build.sh   # → mac/build/Meshy.app, Meshy-mac.zip, Meshy.dmg (universal, ad-hoc signed)
-open mac/build/Meshy.app
+mac/build.sh        # → mac/build/Meshy.app, Meshy-mac.zip, Meshy.dmg (universal, ad-hoc signed; builds the Go tools too)
+mac/test.sh --live  # headless checks: fresh install, SIWE accept/reject/replay, Keychain persistence, menu, live provider
 ```
-Needs Xcode command-line tools (Swift 5.9+). The binary targets macOS 13 or later. The ad-hoc signature is fine on the machine that built it. Anyone you send the zip or dmg to must right-click → Open the first time; signing it with a Developer ID and notarizing it removes that step.
-
-## What it does
-- **Same-site links stay in the app.** Etherscan, the ENS app, the Arkiv explorer and World ID open in your default browser.
-- **Wallets.** Signing grants and revokes needs a wallet extension (MetaMask), which a WebKit app can't host. "Connect wallet" therefore offers to open the current page in your browser, and the app itself stays read-only.
-- **Remembers state.** It keeps the last page, window size and org between launches. The org key you import in Settings stays in the app's local storage, just as in a browser.
-- **Keyboard:**
-  - ⌘1–⌘6: Access, Directory, Activity, Billing, Provider, Settings
-  - ⇧⌘O: open another org
-  - ⇧⌘B: open the page in your browser
-  - ⇧⌘C: copy the link
-  - ⌘R: reload
-  - ⌘[ / ⌘]: back / forward
-  - ⌘+ / ⌘−: zoom
-- **Deep links:** `open "meshy://org/meshydemo.eth/activity"`.
-- **Develop menu:** switch between production, `localhost:3000` and a custom URL. Right-click → Inspect Element opens the Web Inspector. `MESHY_URL=… open mac/build/Meshy.app` also overrides the URL.
-- **QA snapshot:** `mac/build/Meshy.app/Contents/MacOS/Meshy --snapshot out.png --wait 15` renders the page to a PNG and quits.
+- **Requirements:** Xcode command-line tools and Go 1.24+. `test.sh` signs SIWE messages with viem from `web/node_modules`, so run `npm ci` in `web/` first.
+- **Signing:** the ad-hoc signature works on the machine that built it. Elsewhere, right-click → Open the first time. A Developer ID plus notarization removes that step.
+- **Settings:** More › Settings changes the provider API and dashboard URLs (defaults `https://api.meshy.live` and `https://meshy.live`). `MESHY_URL=http://localhost:3000` overrides the dashboard for development.

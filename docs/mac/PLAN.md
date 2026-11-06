@@ -10,6 +10,34 @@ Everything that needs a wallet signature (grant, renew, revoke, admin) hands off
 
 Scope: `mac/` (Swift, AppKit, no dependencies), plus three small additions to `web/` for deep links and sign-in. Nothing in `meshy/`, `meshnet/` or `deploy/` changes.
 
+> **0.5.0 (2026-11-06) supersedes §3–§5 where they differ.** See "0.5.0: universal app" below. The tree in §1 is the signed-in shape; the Admin Console is now the browser.
+
+---
+
+## 0.5.0: universal app (fixes from a fresh install on a second Mac)
+
+| Problem on a fresh install | Fix |
+|---|---|
+| Connect wallet redirected again and again and didn't keep the login | **SIWE (EIP-4361).** The app opens `/connect?nonce=…&callback=meshy://auth`. The page signs `meshy.live wants you to sign in…` (nonce, chain 11155111, 10-minute expiry) and redirects **once**; a reload shows "Signed in" instead. The app verifies it with the bundled `meshy verify-siwe` (secp256k1 recovery plus nonce, domain, chain and expiry checks). Nonces are single-use and expire after 15 min. The session goes in the login Keychain, through `/usr/bin/security` so app updates don't prompt. |
+| Demo org, `claude-1` sessions on `db1.prod` and an Arkiv feed shown to a new user | **No defaults.** Signed out = only Sign In / Join / More. Signed in with no org = Add Organization…. Orgs, favorites and requests are keyed by the signed-in address. Recent loads only for an org you added. `DEFAULT_ORG` is gone from `web/`; the home page asks for an org and lists the ones this browser opened, with the demo as an explicit link. |
+| Requesting access meant curl and CLI installs | **Bundled tools.** `meshy`, `meshyd` and `meshy-mesh` are in `Contents/Resources/bin`. **Share this Mac…** runs `meshyd init`, opens Add device prefilled (`?add=`), then starts LaunchAgents once ENS shows the device. **Join with an Invite Link…** runs `meshy join` then `meshy mesh-join`. **Install Command-Line Tools** adds symlinks in `~/.local/bin`. |
+| Access requests were hard | **Request Access…** on every device and service: agent, folder (from `meshy.roots`), read / read-write, duration. It produces `/org/<org>?give=&target=&path=&mode=&dur=`, the Give access sheet fully prefilled, to copy or email to an admin. Pending requests show under Access › Yours until the grant lands. |
+| Connect wallet landed on someone else's admin panel | The WKWebView console is gone. **Admin Console** opens `/org/<your picked org>` in the default browser, and only once you've picked an org. |
+| Paths assumed this machine | Folder choices come from an NSOpenPanel on the device itself, or from the target device's `meshy.roots`. Nothing in `mac/` or `web/src` names a user folder. |
+
+**Role.** `GET /api/role?org=&address=` (web) reads `exactOwner(org)` and, for each network, `hasRootRoles(ADMIN_ROLES, address)`. It returns `owner`, `admin` (with `adminOf`) or `member`. The menu adds "agent <label>" for identities in `~/.meshy`. Only owners and admins see Give Access…, Renew… and Revoke….
+
+**Hosts.** Dashboard `https://meshy.live`, provider `https://api.meshy.live`, Sepolia `wss://ethereum-sepolia-rpc.publicnode.com`. Stored `meshy-bay` / `meshy-next` / `sslip.io` settings from older builds are migrated.
+
+**Tests.** `mac/test.sh --live`, 33 checks:
+- a fresh install shows no demo data
+- SIWE: unknown nonce, other domain, bad signature and replay are rejected, and a valid signature is accepted
+- the session survives a relaunch
+- the org menu works on the fixture, and the live provider loads
+- signing out hides everything
+
+`go test ./cmd/meshy -run TestVerifySIWE` covers the verifier.
+
 ---
 
 ## 1. Menu tree

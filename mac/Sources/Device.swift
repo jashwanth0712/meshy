@@ -1,0 +1,282 @@
+// This Mac as a Meshy device or agent, using the binaries bundled in Meshy.app/Contents/Resources/bin.
+//
+// Share this Mac…   meshyd init (keys + join code) → dashboard Add device, prefilled → once ENS
+//                   shows the device, two LaunchAgents: `meshyd run` and `meshyd mesh-join`.
+// Join with invite  meshy join <link> (approval in the browser) → meshy mesh-join.
+// CLI tools         symlinks in ~/.local/bin.
+import AppKit
+import Foundation
+
+enum Bins {
+    /// Meshy.app/Contents/Resources/bin, or $MESHY_BIN_DIR for development.
+    static var dir: String? {
+        if let d = ProcessInfo.processInfo.environment["MESHY_BIN_DIR"] { return d }
+        return Bundle.main.resourceURL?.appendingPathComponent("bin").path
+    }
+    static func path(_ tool: String) -> String? {
+        guard let d = dir else { return nil }
+        let p = (d as NSString).appendingPathComponent(tool)
+        return FileManager.default.isExecutableFile(atPath: p) ? p : nil
+    }
+    static var home: String { FileManager.default.homeDirectoryForCurrentUser.path }
+    static var meshyHome: String { ProcessInfo.processInfo.environment["MESHY_HOME"] ?? home + "/.meshy" }
+    /// meshyd's keys and mesh state for this Mac.
+    static var stateDir: String { ProcessInfo.processInfo.environment["MESHY_STATE"] ?? meshyHome + "/meshyd" }
+    static var controlSocket: String { stateDir + "/control.sock" }
+    static let tools = ["meshy", "meshyd", "meshy-mesh"]
+}
+
+/// The device this Mac shares (one per Mac).
+struct SharedDevice: Codable {
+    let name: String // db2.prod.acme.eth
+    let org: String
+    let roots: [String]
+    let addr: String
+    let joinCode: String
+    var running: Bool
+    let createdAt: Double
+}
+
+/// Live status from meshyd's control socket.
+struct DaemonStatus {
+    var reachable = false
+    var healthy = false
+    var head: Int?
+    var sessions = 0
+    var meshRunning = false
+    var meshJoined = false
+}
+
+final class DeviceManager {
+    static let shared = DeviceManager()
+    let defaults = appDefaults
+    var onChange: (() -> Void)?
+
+    private(set) var status = DaemonStatus()
+    private(set) var joinState: String? // "Waiting for approval of claude-1.agents.acme.eth…"
+    private var joinProc: Process?
+    private var timer: Timer?
+
+    var device: SharedDevice? {
+        get { defaults.data(forKey: "device").flatMap { try? JSONDecoder().decode(SharedDevice.self, from: $0) } }
+        set { defaults.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: "device") }
+    }
+
+    func start() {
+        poll()
+        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.poll() }
+    }
+
+    // MARK: Share this Mac
+
+    /// Step 1: keys + join code, then the dashboard's Add device sheet, prefilled.
+    func share(name: String, org: String, roots: [String]) -> Result<SharedDevice, SignInError> {
+        guard let meshyd = Bins.path("meshyd") else { return .failure(SignInError(message: "meshyd is missing from Meshy.app. Reinstall Meshy.")) }
+        guard let r = run(meshyd, ["init", "--name", name, "--roots", roots.joined(separator: ","), "--state", Bins.stateDir], timeout: 30) else {
+            return .failure(SignInError(message: "Couldn't run meshyd."))
+        }
+        guard r.status == 0, let line = r.stdout.components(separatedBy: "\n").first(where: { $0.contains("meshy-join:") }) else {
+            return .failure(SignInError(message: (r.stderr + r.stdout).trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        let code = line.trimmingCharacters(in: .whitespaces)
+        var b64 = String(code.dropFirst("meshy-join:".count)).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        let j = Data(base64Encoded: b64).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let d = SharedDevice(name: name, org: org, roots: roots, addr: j?["addr"] as? String ?? "", joinCode: code, running: false, createdAt: Date().timeIntervalSince1970)
+        device = d
+        onChange?()
+        return .success(d)
+    }
+
+    var addDeviceLink: String? {
+        guard let d = device else { return nil }
+        return "/org/\(d.org)/directory?add=\(q(d.joinCode))"
+    }
+
+    /// Is the shared device on ENS (in the selected org's map) with our key?
+    var registered: Bool {
+        guard let d = device, let m = MeshyStore.shared.map, m.org == d.org else { return false }
+        return m.devices.contains { $0.fullName == d.name && ($0.addr ?? "").lowercased() == d.addr.lowercased() }
+    }
+
+    /// Step 2 (automatic once registered): run the daemon and join the mesh as LaunchAgents.
+    func startDaemons() -> String? {
+        guard var d = device else { return "Share this Mac first." }
+        guard let meshyd = Bins.path("meshyd") else { return "meshyd is missing from Meshy.app." }
+        let logs = Bins.home + "/Library/Logs/Meshy"
+        try? FileManager.default.createDirectory(atPath: logs, withIntermediateDirectories: true)
+        let common = ["--name", d.name, "--state", Bins.stateDir]
+        let jobs: [(String, [String], String)] = [
+            ("live.meshy.meshyd", [meshyd, "run"] + common + ["--roots", d.roots.joined(separator: ","), "--sepolia", Settings.sepoliaWS, "--arkiv=", "--listen", "127.0.0.1:2222", "--control", Bins.controlSocket], "meshyd"),
+            ("live.meshy.mesh", [meshyd, "mesh-join"] + common + ["--provider", MeshyStore.shared.syncURL], "mesh"),
+        ]
+        for (label, args, log) in jobs {
+            if let e = installAgent(label: label, args: args, log: "\(logs)/\(log).log") { return e }
+        }
+        d.running = true
+        device = d
+        MeshyStore.shared.notify(title: "This Mac is shared", body: "\(d.name) is running and joining the mesh.")
+        poll()
+        return nil
+    }
+
+    func stopDaemons() {
+        for label in ["live.meshy.meshyd", "live.meshy.mesh"] { removeAgent(label) }
+        if var d = device { d.running = false; device = d }
+        poll()
+    }
+
+    func forgetDevice() {
+        stopDaemons()
+        device = nil
+        onChange?()
+    }
+
+    private var agentsDir: String { Bins.home + "/Library/LaunchAgents" }
+    private var uid: String { String(getuid()) }
+
+    private func installAgent(label: String, args: [String], log: String) -> String? {
+        let plist: [String: Any] = [
+            "Label": label, "ProgramArguments": args, "RunAtLoad": true, "KeepAlive": true,
+            "StandardOutPath": log, "StandardErrorPath": log, "ProcessType": "Background", "ThrottleInterval": 20,
+        ]
+        if isTest { return nil }
+        let path = "\(agentsDir)/\(label).plist"
+        try? FileManager.default.createDirectory(atPath: agentsDir, withIntermediateDirectories: true)
+        guard let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0), (try? data.write(to: URL(fileURLWithPath: path))) != nil else {
+            return "Couldn't write \(path)."
+        }
+        _ = run("/bin/launchctl", ["bootout", "gui/\(uid)/\(label)"], timeout: 15)
+        guard let r = run("/bin/launchctl", ["bootstrap", "gui/\(uid)", path], timeout: 15), r.status == 0 else {
+            return "launchctl couldn't start \(label)."
+        }
+        return nil
+    }
+
+    private func removeAgent(_ label: String) {
+        if isTest { return }
+        _ = run("/bin/launchctl", ["bootout", "gui/\(uid)/\(label)"], timeout: 15)
+        try? FileManager.default.removeItem(atPath: "\(agentsDir)/\(label).plist")
+    }
+
+    // MARK: status
+
+    func poll() {
+        let dev = device
+        DispatchQueue.global().async { [weak self] in
+            guard let self else { return }
+            var s = DaemonStatus()
+            if dev != nil, FileManager.default.fileExists(atPath: Bins.controlSocket),
+               let r = run("/usr/bin/curl", ["-s", "--max-time", "3", "--unix-socket", Bins.controlSocket, "http://meshyd/status"], timeout: 5), r.status == 0,
+               let d = r.stdout.data(using: .utf8), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+                s.reachable = true
+                s.healthy = j["healthy"] as? Bool ?? false
+                s.head = (j["headNumber"] as? NSNumber)?.intValue
+                s.sessions = (j["sessions"] as? [Any])?.count ?? 0
+            }
+            if dev != nil, !isTest, let r = run("/bin/launchctl", ["print", "gui/\(getuid())/live.meshy.mesh"], timeout: 5) {
+                s.meshRunning = r.status == 0 && r.stdout.contains("state = running")
+            }
+            s.meshJoined = FileManager.default.fileExists(atPath: Bins.stateDir + "/mesh/management")
+            DispatchQueue.main.async {
+                self.status = s
+                // finish setup by itself once the dashboard transaction landed
+                if let d = self.device, !d.running, self.registered { _ = self.startDaemons() }
+                self.onChange?()
+            }
+        }
+    }
+
+    var statusLine: String? {
+        guard let d = device else { return nil }
+        let short = d.name.replacingOccurrences(of: ".\(d.org)", with: "")
+        if !d.running { return registered ? "\(short) · starting…" : "\(short) · waiting for it to be added on ENS" }
+        if !status.reachable { return "\(short) · daemon starting…" }
+        let mesh = status.meshRunning ? "on the mesh" : status.meshJoined ? "mesh reconnecting" : "joining the mesh"
+        let health = status.healthy ? "healthy" : "chain not live yet"
+        return "\(short) · \(health) · \(mesh)" + (status.sessions > 0 ? " · \(plural(status.sessions, "session"))" : "")
+    }
+
+    // MARK: Join with an invite link (agent or person)
+
+    var joining: Bool { joinProc != nil }
+
+    func join(link: String, provider: String, done: @escaping (Result<String, SignInError>) -> Void) {
+        guard let meshy = Bins.path("meshy") else { return done(.failure(SignInError(message: "meshy is missing from Meshy.app."))) }
+        let comps = URLComponents(string: link)
+        let org = comps?.queryItems?.first { $0.name == "org" }?.value ?? ""
+        let agent = comps?.queryItems?.first { $0.name == "agent" }?.value ?? ""
+        let name = "\(agent).agents.\(org)"
+        joinState = "Approve \(name) in your browser…"
+        onChange?()
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: meshy)
+        p.arguments = ["join", link] // opens the approval page in the default browser, then waits for ENS
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = out
+        var log = ""
+        out.fileHandleForReading.readabilityHandler = { h in
+            if let s = String(data: h.availableData, encoding: .utf8) { DispatchQueue.main.async { log += s } }
+        }
+        p.terminationHandler = { [weak self] proc in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                out.fileHandleForReading.readabilityHandler = nil
+                self.joinProc = nil
+                guard proc.terminationStatus == 0 else {
+                    self.joinState = nil
+                    self.onChange?()
+                    let why = log.components(separatedBy: "\n").filter { !$0.isEmpty && !$0.allSatisfy { $0 == "." } }.last ?? "meshy join failed"
+                    return done(.failure(SignInError(message: why)))
+                }
+                self.joinState = "Joining the mesh as \(name)…"
+                self.onChange?()
+                DispatchQueue.global().async {
+                    let r = run(meshy, ["mesh-join", "--provider", provider], timeout: 120)
+                    DispatchQueue.main.async {
+                        self.joinState = nil
+                        MeshyStore.shared.loadLocalAgents()
+                        self.onChange?()
+                        if r?.status == 0 { done(.success(name)) } else { done(.failure(SignInError(message: "Approved, but joining the mesh failed: \((r?.stderr ?? "").trimmingCharacters(in: .whitespacesAndNewlines))"))) }
+                    }
+                }
+            }
+        }
+        do { try p.run(); joinProc = p } catch {
+            joinState = nil
+            done(.failure(SignInError(message: error.localizedDescription)))
+        }
+    }
+
+    func cancelJoin() {
+        joinProc?.terminate()
+        joinProc = nil
+        joinState = nil
+        onChange?()
+    }
+
+    // MARK: Command-line tools
+
+    /// Symlinks the bundled tools into ~/.local/bin. Returns what to tell the user.
+    func installTools() -> String {
+        guard let dir = Bins.dir, Bins.path("meshy") != nil else { return "The tools are missing from Meshy.app. Reinstall Meshy." }
+        let bin = Bins.home + "/.local/bin"
+        try? FileManager.default.createDirectory(atPath: bin, withIntermediateDirectories: true)
+        var done: [String] = []
+        for t in Bins.tools {
+            let link = "\(bin)/\(t)"
+            try? FileManager.default.removeItem(atPath: link)
+            if (try? FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "\(dir)/\(t)")) != nil { done.append(t) }
+        }
+        let path = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        let shellPath = run("/bin/zsh", ["-lc", "echo $PATH"], timeout: 10)?.stdout ?? path
+        let onPath = shellPath.components(separatedBy: ":").contains { $0.trimmingCharacters(in: .whitespacesAndNewlines) == bin }
+        return "Installed \(done.joined(separator: ", ")) in ~/.local/bin." + (onPath ? "" : "\n\nAdd it to your PATH, then open a new Terminal window:\n  echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.zshrc")
+    }
+
+    var toolsInstalled: Bool {
+        guard let dir = Bins.dir else { return false }
+        return (try? FileManager.default.destinationOfSymbolicLink(atPath: Bins.home + "/.local/bin/meshy")) == "\(dir)/meshy"
+    }
+}

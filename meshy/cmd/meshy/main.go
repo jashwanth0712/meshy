@@ -151,6 +151,8 @@ func main() {
 		err = cmdConnect(os.Args[2:])
 	case "mesh-join":
 		err = cmdMeshJoin(os.Args[2:])
+	case "verify-siwe":
+		err = cmdVerifySIWE(os.Args[2:])
 	case "curl":
 		var code int
 		code, err = cmdCurl(os.Args[2:])
@@ -182,6 +184,7 @@ func usage() {
   meshy connect <service> [--local :8001]  tunnel to a service, e.g. camera.pi.home.acme.eth
   meshy mesh-join --provider <url>      join the provider's WireGuard mesh as this agent's own peer
   meshy curl <service> [/path]          one HTTP request to a service
+  meshy verify-siwe --sig 0x… < msg     check a Sign-In with Ethereum message, print the signer
 
 Errors are machine-readable: MESHY_BLOCKED, MESHY_REVOKED, MESHY_EXPIRED,
 MESHY_NO_GRANT, MESHY_NOT_HUMAN_BACKED.

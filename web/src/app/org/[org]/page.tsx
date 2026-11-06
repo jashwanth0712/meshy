@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GrantDrawer, RevokeTimeline } from "@/components/Access";
+import { type GrantPreset, GrantDrawer, RevokeTimeline } from "@/components/Access";
 import { Button, Card, Empty, Modal, PageHeader, Ring, Row, Tabs, ago, fmtLeft, useNow } from "@/components/ui";
 import { type Row as Ev, orgFeed } from "@/lib/arkiv";
 import type { GrantNode, ResourceNode, ServiceNode } from "@/lib/ens";
@@ -65,7 +65,7 @@ export default function AccessPage() {
   const { tree, org, orgKey, account, error, loading } = useMeshy();
   const now = useNow(5000);
   const [tab, setTab] = useState<"live" | "ended">("live");
-  const [drawer, setDrawer] = useState<{ resource?: string; agent?: string } | null>(null);
+  const [drawer, setDrawer] = useState<GrantPreset | null>(null);
   const [confirming, setConfirming] = useState<Line>();
   const [revoking, setRevoking] = useState<Line>();
   const [feed, setFeed] = useState<Ev[]>();
@@ -94,7 +94,7 @@ export default function AccessPage() {
     return () => clearInterval(t);
   }, [load, writers.length]);
 
-  // Deep links (Approve, the Mac menu bar): ?give=<agent>[&target=<name>] opens the sheet,
+  // Deep links (Approve, the Mac menu bar): ?give=<agent>[&target=<name>][&path=/x&mode=ro|rw&dur=secs] opens the sheet,
   // ?revoke=<grant full name> opens the confirm dialog for that live grant.
   const deepLinked = useRef(false);
   useEffect(() => {
@@ -104,7 +104,14 @@ export default function AccessPage() {
     const revoke = q.get("revoke");
     if (give !== null) {
       deepLinked.current = true;
-      setDrawer({ agent: give.replace(/\.agents\..*$/, "") || undefined, resource: q.get("target") ?? undefined });
+      const mode = q.get("mode");
+      setDrawer({
+        agent: give.replace(/\.agents\..*$/, "") || undefined,
+        resource: q.get("target") ?? undefined,
+        path: q.get("path") ?? undefined,
+        mode: mode === "rw" || mode === "ro" ? mode : undefined,
+        dur: Number(q.get("dur")) || undefined,
+      });
     } else if (revoke) {
       const l = lines.find((x) => x.g.name === revoke);
       if (l) {

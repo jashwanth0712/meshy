@@ -13,9 +13,13 @@ const DURATIONS = [
   { v: 900, label: "15 min" },
   { v: 3600, label: "1 hour" },
   { v: 14400, label: "4 hours" },
+  { v: 86400, label: "1 day" },
 ];
 
-export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { resource?: string; agent?: string } }) {
+/** What a deep link (Mac menu bar "Request access…", Approve, activity) can prefill. */
+export type GrantPreset = { resource?: string; agent?: string; path?: string; mode?: "ro" | "rw"; dur?: number };
+
+export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: GrantPreset }) {
   const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
   const resources = useMemo(() => tree?.networks.flatMap((n) => n.resources) ?? [], [tree]);
   const services = useMemo(() => resources.flatMap((r) => r.services), [resources]);
@@ -23,8 +27,10 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
   const [agent, setAgent] = useState(preset?.agent ?? tree?.agents[0]?.label ?? "");
   const res = resources.find((r) => r.name === resName);
   const svc = services.find((x) => x.name === resName);
-  const [paths, setPaths] = useState<PathRule[]>(() => (res?.roots[0] ? [{ p: res.roots[0], m: "ro" }] : []));
-  const [dur, setDur] = useState(3600);
+  const [paths, setPaths] = useState<PathRule[]>(() =>
+    preset?.path?.startsWith("/") ? [{ p: preset.path, m: preset.mode ?? "ro" }] : res?.roots[0] ? [{ p: res.roots[0], m: preset?.mode ?? "ro" }] : [],
+  );
+  const [dur, setDur] = useState(DURATIONS.some((d) => d.v === preset?.dur) ? preset!.dur! : 3600);
   const [steps, setSteps] = useState<Step[]>();
   const busy = steps?.some((s) => s.state === "doing");
   const finished = steps && !busy;

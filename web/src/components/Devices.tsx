@@ -13,15 +13,23 @@ function parseJoin(code: string): Join {
   return JSON.parse(atob(b + "=".repeat((4 - (b.length % 4)) % 4))) as Join;
 }
 
+function joinName(code: string): string | undefined {
+  try {
+    return parseJoin(code).name;
+  } catch {
+    return undefined;
+  }
+}
+
 export type AddMode = "resource" | "service" | "network";
 
 /** Add a device (join code), a service on a device, or a network. Same transactions as before. */
-export function AddSheet({ onClose, initial = "resource" }: { onClose: () => void; initial?: AddMode }) {
+export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { onClose: () => void; initial?: AddMode; initialCode?: string }) {
   const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
   const [mode, setMode] = useState<AddMode>(initial);
   const [svcForm, setSvcForm] = useState({ device: tree?.networks[0]?.resources[0]?.name ?? "", name: "camera", target: "127.0.0.1:8001", proto: "http", desc: "" });
   const [netLabel, setNetLabel] = useState("");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [devKind, setDevKind] = useState("server");
   const [devMeta, setDevMeta] = useState({ model: "", location: "" });
   const [steps, setSteps] = useState<Step[]>();
@@ -154,10 +162,16 @@ export function AddSheet({ onClose, initial = "resource" }: { onClose: () => voi
           <Seg value={mode} onChange={setMode} options={[{ v: "resource", label: "Device" }, { v: "service", label: "Service" }, { v: "network", label: "Network" }]} />
           {mode === "resource" && (
             <>
-              <div>
-                <p className="text-[14px] text-muted">On the device, run this and paste the code it prints:</p>
-                <pre className="mono mt-2 overflow-x-auto rounded-xl bg-panel-2 px-4 py-3 text-[13px]">meshyd init --name db2.{tree.networks[0]?.label ?? "prod"}.{org} --roots /srv</pre>
-              </div>
+              {initialCode ? (
+                <p className="text-[14px] text-muted">
+                  Meshy for Mac filled in the join code for <b className="mono text-fg">{joinName(code) ?? "this device"}</b>. Check it, then add it.
+                </p>
+              ) : (
+                <div>
+                  <p className="text-[14px] text-muted">In Meshy for Mac choose This Mac › Share this Mac…, or on the device run this and paste the code it prints:</p>
+                  <pre className="mono mt-2 overflow-x-auto rounded-xl bg-panel-2 px-4 py-3 text-[13px]">meshyd init --name db2.{tree.networks[0]?.label ?? "prod"}.{org} --roots /srv</pre>
+                </div>
+              )}
               <Field label="Join code">
                 <textarea className={cx(inputCls, "h-24")} value={code} onChange={(e) => setCode(e.target.value)} placeholder="meshy-join:…" />
               </Field>

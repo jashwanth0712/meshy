@@ -37,7 +37,7 @@ for arch in amd64 arm64; do build meshy-sync meshy ./cmd/meshy-sync linux $arch;
 
 if [[ "$(uname)" == Darwin ]] && command -v swiftc >/dev/null; then
   echo "› Mac app"
-  "$ROOT/mac/build.sh" >/dev/null
+  VERSION="$VERSION" "$ROOT/mac/build.sh" >/dev/null
   cp "$ROOT/mac/build/Meshy-mac.zip" "$ROOT/mac/build/Meshy.dmg" "$OUT/"
   echo "  ✓ Meshy-mac.zip, Meshy.dmg"
 fi
