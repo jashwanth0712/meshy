@@ -129,7 +129,7 @@ type SeatStatus struct {
 }
 
 // TrialSeats is what a new MeshyOrgFactory org gets before it subscribes.
-const TrialSeats = 3
+const TrialSeats = 5
 
 // isFactoryOrg reports whether org was created by MeshyOrgFactory (it writes
 // meshy.created-by on the org's own resolver, which the org owner controls).
