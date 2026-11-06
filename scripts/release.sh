@@ -41,7 +41,7 @@ for p in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64; do
 done
 for arch in amd64 arm64; do build meshy-sync meshy ./cmd/meshy-sync linux $arch; done
 
-if [[ "$(uname)" == Darwin ]] && command -v swiftc >/dev/null; then
+if [[ -z "${SKIP_MAC:-}" && "$(uname)" == Darwin ]] && command -v swiftc >/dev/null; then
   echo "› Mac app"
   VERSION="$VERSION" "$ROOT/mac/build.sh" | grep -E "^(›|✓|  notarytool)|status:"   # pipefail: a build failure stops the release
   cp "$ROOT/mac/build/Meshy-mac.zip" "$ROOT/mac/build/Meshy.dmg" "$OUT/"

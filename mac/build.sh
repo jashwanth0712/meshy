@@ -81,10 +81,10 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 notarize() { # file — submit, wait, print Apple's log on failure
   echo "  notarytool submit $(basename "$1") (a few minutes)"
   local log="$OUT/obj/notary.log"
-  xcrun notarytool submit "$1" --keychain-profile "$NOTARY" --wait --timeout "${MESHY_NOTARY_TIMEOUT:-30m}" | tee "$log"
+  xcrun notarytool submit "$1" --keychain-profile "$NOTARY" ${MESHY_NOTARY_KEYCHAIN:+--keychain "$MESHY_NOTARY_KEYCHAIN"} --wait --timeout "${MESHY_NOTARY_TIMEOUT:-30m}" | tee "$log"
   if ! grep -q "status: Accepted" "$log"; then
     local id; id=$(awk '/^ *id:/{print $2; exit}' "$log")
-    [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$NOTARY" >&2
+    [[ -n "$id" ]] && xcrun notarytool log "$id" --keychain-profile "$NOTARY" ${MESHY_NOTARY_KEYCHAIN:+--keychain "$MESHY_NOTARY_KEYCHAIN"} >&2
     echo "✗ notarization failed" >&2; exit 1
   fi
 }

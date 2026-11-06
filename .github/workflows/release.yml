@@ -1,0 +1,125 @@
+# Release Meshy from GitHub's own runners (no uploads from a laptop).
+#
+#   git tag v0.3.4 && git push origin v0.3.4      -> builds and publishes everything
+#   Actions → release → Run workflow (version)     -> same, from the UI
+#
+# 1. cli      (ubuntu)  meshy, meshyd, meshy-mesh, meshy-admin for macOS + Linux, meshy-sync for Linux
+# 2. publish  (ubuntu)  creates the GitHub release with the CLI + checksums.txt, marks it Latest
+#                       -> `curl -fsSL https://get.meshy.live | sh` serves it from this point
+# 3. mac      (macOS)   builds Meshy.app (+ bundled CLIs), signs + notarizes when the secrets
+#                       exist (else ad-hoc), attaches Meshy.dmg / Meshy-mac.zip, updates checksums
+#
+# Optional secrets for a notarized app (no Gatekeeper warning):
+#   MACOS_CERT_P12_BASE64   Developer ID Application cert + key, exported as .p12, base64
+#   MACOS_CERT_PASSWORD     the .p12 export password
+#   APPLE_ID, APPLE_APP_PASSWORD, APPLE_TEAM_ID   for notarytool (app-specific password)
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to publish, e.g. v0.3.4 (created if missing)"
+        required: true
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref_name }}
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: meshy/go.mod
+          cache-dependency-path: |
+            meshy/go.sum
+            meshnet/go.sum
+      - name: Build CLI for macOS + Linux
+        run: SKIP_MAC=1 scripts/release.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli
+          path: dist/${{ env.VERSION }}/
+          if-no-files-found: error
+
+  publish:
+    needs: cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli
+          path: out
+      - name: Create or update the release (CLI first, Latest)
+        run: |
+          set -euo pipefail
+          R=${{ github.repository }}
+          if ! gh release view "$VERSION" --repo "$R" >/dev/null 2>&1; then
+            gh release create "$VERSION" --repo "$R" --target "${{ github.sha }}" --title "Meshy $VERSION" \
+              --notes "Install or update: \`curl -fsSL https://get.meshy.live | sh\` · Mac app: \`Meshy.dmg\` (attached when the macOS build finishes). Built by GitHub Actions; every archive is listed in checksums.txt."
+          fi
+          gh release upload "$VERSION" out/* --repo "$R" --clobber
+          gh release edit "$VERSION" --repo "$R" --draft=false --latest
+
+  mac:
+    needs: publish
+    runs-on: macos-15
+    timeout-minutes: 300 # a new Apple team's first notarizations can take hours
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: meshy/go.mod
+          cache-dependency-path: |
+            meshy/go.sum
+            meshnet/go.sum
+      - name: Import Developer ID + notary credentials (if configured)
+        env:
+          P12: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$P12" ] || [ -z "$APPLE_ID" ]; then echo "No signing secrets: building ad-hoc."; exit 0; fi
+          KC="$RUNNER_TEMP/meshy.keychain-db"; KCP=$(openssl rand -hex 16)
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KCP" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCP" "$KC"
+          security import "$RUNNER_TEMP/cert.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KCP" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/cert.p12"
+          ID=$(security find-identity -v -p codesigning "$KC" | grep 'Developer ID Application' | head -1 | sed -E 's/.*"(.*)"/\1/')
+          xcrun notarytool store-credentials meshy-notary --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --keychain "$KC"
+          echo "MESHY_SIGN_IDENTITY=$ID" >> "$GITHUB_ENV"
+          echo "MESHY_NOTARY_PROFILE=meshy-notary" >> "$GITHUB_ENV"
+          echo "MESHY_NOTARY_KEYCHAIN=$KC" >> "$GITHUB_ENV"
+          echo "MESHY_NOTARY_TIMEOUT=4h" >> "$GITHUB_ENV"
+          echo "Signing as: $ID"
+      - name: Build Meshy.app, DMG and zip
+        run: VERSION="$VERSION" mac/build.sh
+      - name: Attach to the release and update checksums
+        run: |
+          set -euo pipefail
+          R=${{ github.repository }}
+          cd mac/build
+          gh release download "$VERSION" --repo "$R" --pattern checksums.txt --clobber
+          grep -v -E ' (Meshy\.dmg|Meshy-mac\.zip)$' checksums.txt > c.txt || true
+          shasum -a 256 Meshy.dmg Meshy-mac.zip >> c.txt
+          mv c.txt checksums.txt
+          gh release upload "$VERSION" Meshy.dmg Meshy-mac.zip checksums.txt --repo "$R" --clobber
