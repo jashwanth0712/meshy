@@ -157,7 +157,7 @@ Last updated Fri 6 Nov 2026, about 11:00 IST, after the provider mesh went live 
    The current attestation for `claude-1` is a **dev signature**.
 2. **Public repo + live demo URL + video.**
    - ~~Make the repo public~~ **done** (6 Nov).
-   - Deploy `web/` (for example to Vercel) with `SEPOLIA_RPC`, `ARKIV_RPC` and `NEXT_PUBLIC_MESHY_SYNC=https://sync.16-4-10-3.sslip.io`, and add the dashboard origin to meshy-sync `--cors`.
+   - ~~Deploy `web/`~~ **done:** https://meshy-bay.vercel.app (Vercel project `meshy`, deployed from the CLI, so a push doesn't redeploy). It uses a public Sepolia RPC; the Alchemy and Arkiv keys aren't uploaded. meshy-sync `--cors` allows that origin.
    - A UI revamp in the ETHGlobal style (shadcn) is being planned in `docs/ui-revamp/`.
    - The video should be 2:30–3:00. `e2e/live-demo.sh` is the script.
 
