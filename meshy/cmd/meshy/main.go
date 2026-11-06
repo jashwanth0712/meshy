@@ -16,7 +16,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -142,6 +144,14 @@ func main() {
 		err = cmdWhoami()
 	case "grants":
 		err = cmdGrants(os.Args[2:])
+	case "connect":
+		err = cmdConnect(os.Args[2:])
+	case "curl":
+		var code int
+		code, err = cmdCurl(os.Args[2:])
+		if err == nil {
+			os.Exit(code)
+		}
 	case "ssh":
 		var code int
 		code, err = cmdSSH(os.Args[2:])
@@ -163,7 +173,9 @@ func usage() {
   meshy join <invite-link>              set up this agent and wait for approval
   meshy whoami                          identity and ENS records
   meshy grants <resource>...            what you can access and for how long
-  meshy ssh <resource> [--] <command>   run a command on a resource
+  meshy ssh <resource> [--] <command>   run a command on a resource (folder sandbox)
+  meshy connect <service> [--local :8001]  tunnel to a service, e.g. camera.pi.home.acme.eth
+  meshy curl <service> [/path]          one HTTP request to a service
 
 Errors are machine-readable: MESHY_BLOCKED, MESHY_REVOKED, MESHY_EXPIRED,
 MESHY_NO_GRANT, MESHY_NOT_HUMAN_BACKED.
@@ -350,44 +362,9 @@ func cmdSSH(args []string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	ens, err := ensClient(ctx)
+	conn, err := dialResource(id, resource, *endpoint)
 	if err != nil {
 		return 0, err
-	}
-	r, err := ens.Lookup(ctx, resource)
-	if err != nil {
-		return 0, fmt.Errorf("MESHY_UNKNOWN_RESOURCE %s: %v", resource, err)
-	}
-	hostRec, _ := r.Text(ctx, ens, "meshy.ssh-host")
-	if hostRec == "" {
-		return 0, fmt.Errorf("MESHY_UNKNOWN_RESOURCE %s has no meshy.ssh-host record", resource)
-	}
-	hostKey, _, _, _, err := gossh.ParseAuthorizedKey([]byte(hostRec))
-	if err != nil {
-		return 0, fmt.Errorf("bad meshy.ssh-host on %s: %v", resource, err)
-	}
-	addr := *endpoint
-	if addr == "" {
-		addr, _ = r.Text(ctx, ens, "meshy.endpoint")
-	}
-	if addr == "" {
-		addr = net.JoinHostPort(string(resource), "22") // resolved by Meshy mesh DNS
-	}
-	cfg := &gossh.ClientConfig{
-		User: id.Agent,
-		Auth: []gossh.AuthMethod{gossh.PublicKeys(id.key)},
-		// The host key is pinned in ENS: no trust-on-first-use.
-		HostKeyCallback: gossh.FixedHostKey(hostKey),
-		Timeout:         15 * time.Second,
-	}
-	conn, err := gossh.Dial("tcp", addr, cfg)
-	if err != nil {
-		if strings.Contains(err.Error(), "unable to authenticate") {
-			return 0, fmt.Errorf("MESHY_NO_GRANT resource=%s agent=%s (no live grant, key mismatch, or not human-backed; run `meshy grants %s`)", resource, id.Name(), resource)
-		}
-		return 0, fmt.Errorf("MESHY_UNREACHABLE resource=%s addr=%s: %v", resource, addr, err)
 	}
 	defer conn.Close()
 	sess, err := conn.NewSession()
@@ -430,4 +407,155 @@ func shellJoin(args []string) string {
 		}
 	}
 	return strings.Join(q, " ")
+}
+
+// dialResource opens an SSH connection to a resource's meshyd as this agent,
+// verifying the host key pinned in ENS (meshy.ssh-host).
+func dialResource(id *Identity, resource enskit.Name, endpoint string) (*gossh.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ens, err := ensClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r, err := ens.Lookup(ctx, resource)
+	if err != nil {
+		return nil, fmt.Errorf("MESHY_UNKNOWN_RESOURCE %s: %v", resource, err)
+	}
+	hostRec, _ := r.Text(ctx, ens, "meshy.ssh-host")
+	if hostRec == "" {
+		return nil, fmt.Errorf("MESHY_UNKNOWN_RESOURCE %s has no meshy.ssh-host record", resource)
+	}
+	hostKey, _, _, _, err := gossh.ParseAuthorizedKey([]byte(hostRec))
+	if err != nil {
+		return nil, fmt.Errorf("bad meshy.ssh-host on %s: %v", resource, err)
+	}
+	addr := endpoint
+	if addr == "" {
+		addr, _ = r.Text(ctx, ens, "meshy.endpoint")
+	}
+	if addr == "" {
+		addr = net.JoinHostPort(string(resource), "22") // resolved by Meshy mesh DNS
+	}
+	cfg := &gossh.ClientConfig{
+		User: id.Agent,
+		Auth: []gossh.AuthMethod{gossh.PublicKeys(id.key)},
+		// The host key is pinned in ENS: no trust-on-first-use.
+		HostKeyCallback: gossh.FixedHostKey(hostKey),
+		Timeout:         15 * time.Second,
+	}
+	conn, err := gossh.Dial("tcp", addr, cfg)
+	if err != nil {
+		if strings.Contains(err.Error(), "unable to authenticate") {
+			return nil, fmt.Errorf("MESHY_NOT_ADMITTED resource=%s agent=%s (identity not approved, key mismatch, or not human-backed; run `meshy whoami`)", resource, id.Name())
+		}
+		return nil, fmt.Errorf("MESHY_UNREACHABLE resource=%s addr=%s: %v", resource, addr, err)
+	}
+	return conn, nil
+}
+
+// ---- services: connect / curl ----
+
+// A service is a child of a device: camera.pi.home.acme.eth lives on
+// pi.home.acme.eth. We SSH to the device and open a direct-tcpip channel whose
+// destination is the service's ENS name; meshyd maps it to the target that ENS
+// declares and only while our grant <agent>.<service> is live.
+func cmdConnect(args []string) error {
+	fs := flag.NewFlagSet("connect", flag.ExitOnError)
+	local := fs.String("local", "127.0.0.1:0", "local listen address")
+	endpoint := fs.String("endpoint", "", "override the device's endpoint")
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		args = append(append([]string{}, args[1:]...), args[0]) // allow: connect <svc> --local ...
+	}
+	fs.Parse(args)
+	if fs.NArg() != 1 {
+		return errors.New("usage: meshy connect <service ens name> [--local 127.0.0.1:8001]")
+	}
+	service := enskit.Name(fs.Arg(0))
+	id, err := loadIdentity()
+	if err != nil {
+		return err
+	}
+	conn, err := dialResource(id, service.Parent(), *endpoint)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	// Probe once so authorization errors surface immediately.
+	probe, err := conn.Dial("tcp", string(service)+":0")
+	if err != nil {
+		return fmt.Errorf("%s", strings.TrimPrefix(err.Error(), "ssh: rejected: administratively prohibited ("))
+	}
+	probe.Close()
+	ln, err := net.Listen("tcp", *local)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("MESHY_CONNECTED service=%s local=%s (Ctrl-C to stop)\n", service, ln.Addr())
+	for {
+		c, err := ln.Accept()
+		if err != nil {
+			return err
+		}
+		go func() {
+			defer c.Close()
+			up, err := conn.Dial("tcp", string(service)+":0")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
+			defer up.Close()
+			done := make(chan struct{}, 2)
+			go func() { io.Copy(up, c); done <- struct{}{} }()
+			go func() { io.Copy(c, up); done <- struct{}{} }()
+			<-done
+		}()
+	}
+}
+
+// cmdCurl does one HTTP GET through a service tunnel: the easy path for agents.
+func cmdCurl(args []string) (int, error) {
+	fs := flag.NewFlagSet("curl", flag.ExitOnError)
+	method := fs.String("X", "GET", "HTTP method")
+	data := fs.String("d", "", "request body")
+	fs.Parse(args)
+	if fs.NArg() < 1 {
+		return 0, errors.New("usage: meshy curl <service ens name> [/path] [-X POST -d body]")
+	}
+	service := enskit.Name(fs.Arg(0))
+	path := "/"
+	if fs.NArg() > 1 {
+		path = fs.Arg(1)
+	}
+	id, err := loadIdentity()
+	if err != nil {
+		return 0, err
+	}
+	conn, err := dialResource(id, service.Parent(), "")
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+	tr := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		c, err := conn.Dial("tcp", string(service)+":0")
+		if err != nil {
+			return nil, errors.New(strings.TrimSuffix(strings.TrimPrefix(err.Error(), "ssh: rejected: administratively prohibited ("), ")"))
+		}
+		return c, nil
+	}}
+	req, err := http.NewRequest(*method, "http://"+string(service)+path, strings.NewReader(*data))
+	if err != nil {
+		return 0, err
+	}
+	resp, err := (&http.Client{Transport: tr, Timeout: 60 * time.Second}).Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	fmt.Fprintf(os.Stderr, "MESHY_HTTP %s %d via %s\n", resp.Proto, resp.StatusCode, service)
+	io.Copy(os.Stdout, resp.Body)
+	if resp.StatusCode >= 400 {
+		return 22, nil
+	}
+	return 0, nil
 }

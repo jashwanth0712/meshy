@@ -125,6 +125,10 @@ func main() {
 		err = resourceAdd(ctx, os.Args[3:])
 	case "agent add":
 		err = agentAdd(ctx, os.Args[3:])
+	case "service add":
+		err = serviceAdd(ctx, os.Args[3:])
+	case "admin add":
+		err = adminAdd(ctx, os.Args[3:])
 	default:
 		switch os.Args[1] {
 		case "grant":
@@ -157,7 +161,10 @@ func usage() {
   network add   --org acme.eth --name prod
   resource add  --org acme.eth --network prod --join meshy-join:...
   agent add     --org acme.eth --approve '<MESHY_APPROVE_URL>' [--dev-attest-key hex]
+  service add   --device pi.home.acme.eth --name camera --target 127.0.0.1:8001 [--proto http] [--desc ..]
+  admin add     --org acme.eth --network prod --addr 0x..   (EAC: delegated network admin)
   grant         --resource db1.prod.acme.eth --agent claude-1 --path /srv/reports:ro [--path /srv/tmp:rw] [--for 1h]
+  grant         --resource camera.pi.home.acme.eth --agent claude-1 [--for 1h]     (service: no --path)
   revoke        --resource db1.prod.acme.eth --agent claude-1
   show          --org acme.eth
 
@@ -269,6 +276,8 @@ func resourceAdd(ctx context.Context, args []string) error {
 	org := fs.String("org", "", "org")
 	network := fs.String("network", "", "network label")
 	code := fs.String("join", "", "join code printed by `meshyd init`")
+	kind := fs.String("kind", "", "device kind, e.g. server, gpu-server, raspberry-pi")
+	meta := fs.String("meta", "", `device metadata JSON, e.g. '{"gpus":"2x RTX 4090","location":"lab"}'`)
 	fs.Parse(args)
 	s, err := loadState(*org)
 	if err != nil {
@@ -307,6 +316,15 @@ func resourceAdd(ctx context.Context, args []string) error {
 	if j.Endpoint != "" {
 		texts["meshy.endpoint"] = j.Endpoint
 	}
+	if *kind != "" {
+		texts["meshy.kind"] = *kind
+	}
+	if *meta != "" {
+		if !json.Valid([]byte(*meta)) {
+			return errors.New("--meta must be JSON")
+		}
+		texts["meshy.meta"] = *meta
+	}
 	if _, err := a.SetRecords(ctx, common.HexToAddress(s.Resolver), enskit.RecordSet{Name: name, Addr: &addr, Texts: texts}); err != nil {
 		return err
 	}
@@ -341,10 +359,18 @@ func agentAdd(ctx context.Context, args []string) error {
 		return err
 	}
 	name := enskit.Name(agent + ".agents." + *org)
-	if _, err := a.Register(ctx, common.HexToAddress(s.AgentsReg), agent, a.From(), common.Address{}, common.HexToAddress(s.Resolver), nil, yearExpiry()); err != nil {
+	addr := common.HexToAddress(addrS)
+	// The agent gets its OWN PermissionedResolver: the approving human holds
+	// every role, the agent may edit only its meshy.ssh key (key rotation).
+	// The org still controls membership via the agents registry (unregister).
+	agentRes, err := a.DeployResolver(ctx, a.From())
+	if err != nil {
+		return fmt.Errorf("deploy agent resolver: %w", err)
+	}
+	step("agent resolver %s (owned by the approver, not the org resolver)", agentRes.Hex())
+	if _, err := a.Register(ctx, common.HexToAddress(s.AgentsReg), agent, a.From(), common.Address{}, agentRes, nil, yearExpiry()); err != nil {
 		return err
 	}
-	addr := common.HexToAddress(addrS)
 	texts := map[string]string{
 		"meshy.ssh":     ssh,
 		"meshy.owner":   a.From().Hex(),
@@ -362,10 +388,13 @@ func agentAdd(ctx context.Context, args []string) error {
 		texts["meshy.worldid"] = att
 		step("DEV attestation signed by %s (production: provider after World ID Agent Pass)", crypto.PubkeyToAddress(k.PublicKey).Hex())
 	}
-	if _, err := a.SetRecords(ctx, common.HexToAddress(s.Resolver), enskit.RecordSet{Name: name, Addr: &addr, Texts: texts}); err != nil {
+	if _, err := a.SetRecords(ctx, agentRes, enskit.RecordSet{Name: name, Addr: &addr, Texts: texts}); err != nil {
 		return err
 	}
-	step("agent %s → %s", name, addr.Hex())
+	if _, err := a.GrantTextKey(ctx, agentRes, "meshy.ssh", addr); err != nil {
+		return fmt.Errorf("grant meshy.ssh setter role: %w", err)
+	}
+	step("agent %s → %s (agent may rotate only meshy.ssh)", name, addr.Hex())
 	return nil
 }
 
@@ -425,6 +454,16 @@ func grant(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	gname := enskit.Name(*agent + "." + string(res))
+	expiry := time.Now().Add(*dur)
+	if len(paths) == 0 {
+		// Service grant: port-level access to <service>; no folder policy.
+		if _, err := a.Register(ctx, common.HexToAddress(grantsReg), *agent, agentAddr, common.Address{}, common.HexToAddress(s.Resolver), nil, expiry); err != nil {
+			return fmt.Errorf("register grant: %w", err)
+		}
+		fmt.Printf("MESHY_GRANTED grant=%s service=%s expires=%s\n", gname, res, expiry.Format(time.RFC3339))
+		return nil
+	}
 	rr, err := ens.Lookup(ctx, res)
 	if err != nil {
 		return err
@@ -438,8 +477,6 @@ func grant(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	gname, _ := enskit.GrantName(*agent, res)
-	expiry := time.Now().Add(*dur)
 	if _, err := a.Register(ctx, common.HexToAddress(grantsReg), *agent, agentAddr, common.Address{}, common.HexToAddress(s.Resolver), nil, expiry); err != nil {
 		return fmt.Errorf("register grant: %w", err)
 	}
@@ -494,5 +531,96 @@ func show(ctx context.Context, args []string) error {
 	}
 	b, _ := json.MarshalIndent(s, "", "  ")
 	fmt.Println(string(b))
+	return nil
+}
+
+func serviceAdd(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("service add", flag.ExitOnError)
+	var c cli
+	c.register(fs)
+	device := fs.String("device", "", "device (resource) ENS name, e.g. pi.home.acme.eth")
+	name := fs.String("name", "", "service label, e.g. camera")
+	target := fs.String("target", "", "host:port on the device, e.g. 127.0.0.1:8001")
+	proto := fs.String("proto", "http", "protocol: http, tcp, rtsp, ...")
+	desc := fs.String("desc", "", "description")
+	fs.Parse(args)
+	dev := enskit.Name(*device)
+	s, err := loadState(string(dev.Org()))
+	if err != nil {
+		return err
+	}
+	devReg, ok := s.Resources[*device]
+	if !ok {
+		return fmt.Errorf("unknown device %s (meshy-admin resource add first)", *device)
+	}
+	if *name == "" || *target == "" {
+		return errors.New("--name and --target are required")
+	}
+	a, err := c.admin(ctx)
+	if err != nil {
+		return err
+	}
+	svcName := *name + "." + *device
+	grantsReg, err := a.DeployRegistry(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := a.Register(ctx, common.HexToAddress(devReg), *name, a.From(), grantsReg, common.HexToAddress(s.Resolver), nil, yearExpiry()); err != nil {
+		return fmt.Errorf("register %s: %w", svcName, err)
+	}
+	spec, _ := json.Marshal(map[string]string{"proto": *proto, "target": *target, "desc": *desc})
+	texts := map[string]string{"meshy.service": string(spec), "meshy.kind": "service", "url": *proto + "://" + svcName}
+	if *desc != "" {
+		texts["description"] = *desc
+	}
+	if _, err := a.SetRecords(ctx, common.HexToAddress(s.Resolver), enskit.RecordSet{Name: enskit.Name(svcName), Texts: texts}); err != nil {
+		return err
+	}
+	s.Resources[svcName] = grantsReg.Hex()
+	step("service %s → %s://%s (grants registry %s)", svcName, *proto, *target, grantsReg.Hex())
+	return s.save()
+}
+
+// adminAdd delegates a network to another address with Enhanced Access
+// Control: create/revoke/renew names in the network and its resources, and
+// write ONLY meshy.policy records on the org resolver.
+func adminAdd(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("admin add", flag.ExitOnError)
+	var c cli
+	c.register(fs)
+	org := fs.String("org", "", "org")
+	network := fs.String("network", "", "network label")
+	addrS := fs.String("addr", "", "admin address")
+	fs.Parse(args)
+	s, err := loadState(*org)
+	if err != nil {
+		return err
+	}
+	netReg, ok := s.Networks[*network]
+	if !ok || !common.IsHexAddress(*addrS) {
+		return errors.New("--network must exist and --addr must be an address")
+	}
+	a, err := c.admin(ctx)
+	if err != nil {
+		return err
+	}
+	who := common.HexToAddress(*addrS)
+	if _, err := a.GrantRootRoles(ctx, common.HexToAddress(netReg), enskit.AdminRoles, who); err != nil {
+		return fmt.Errorf("network roles: %w", err)
+	}
+	step("%s: REGISTRAR|UNREGISTER|RENEW on %s.%s", who.Hex(), *network, *org)
+	suffix := "." + *network + "." + *org
+	for name, reg := range s.Resources {
+		if strings.HasSuffix(name, suffix) {
+			if _, err := a.GrantRootRoles(ctx, common.HexToAddress(reg), enskit.AdminRoles, who); err != nil {
+				return fmt.Errorf("roles on %s: %w", name, err)
+			}
+			step("%s: can grant/revoke on %s", who.Hex(), name)
+		}
+	}
+	if _, err := a.GrantTextKey(ctx, common.HexToAddress(s.Resolver), "meshy.policy", who); err != nil {
+		return fmt.Errorf("resolver setter role: %w", err)
+	}
+	step("%s: may set ONLY the meshy.policy text record on the org resolver", who.Hex())
 	return nil
 }

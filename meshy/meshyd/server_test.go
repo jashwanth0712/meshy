@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"errors"
+	"io"
 	"math/big"
 	"net"
 	"strings"
@@ -143,7 +144,7 @@ func TestDeniesUnknownAgent(t *testing.T) {
 		t.Fatal("unknown agent was admitted")
 	}
 	evs := h.ring.Snapshot()
-	if len(evs) == 0 || evs[len(evs)-1].Kind != audit.Denied || !strings.Contains(evs[len(evs)-1].Reason, "MESHY_NO_GRANT") {
+	if len(evs) == 0 || evs[len(evs)-1].Kind != audit.Denied || !strings.Contains(evs[len(evs)-1].Reason, "MESHY_UNKNOWN_AGENT") {
 		t.Fatalf("events %+v", evs)
 	}
 }
@@ -219,5 +220,100 @@ func TestCommandAllowList(t *testing.T) {
 	_, stderr, err := h.run(t, "claude-1", "rm -rf x")
 	if exitCode(err) != 126 || !strings.Contains(stderr, "MESHY_BLOCKED cmd=rm") {
 		t.Fatalf("err=%v stderr=%q", err, stderr)
+	}
+}
+
+// --- ENS-gated service forwarding ---
+
+func echoServer(t *testing.T) string {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() { defer c.Close(); io.Copy(c, c) }()
+		}
+	}()
+	return ln.Addr().String()
+}
+
+func dialClient(t *testing.T, h *harness, user string) *gossh.Client {
+	t.Helper()
+	c, err := gossh.Dial("tcp", h.addr, &gossh.ClientConfig{User: user, Auth: []gossh.AuthMethod{gossh.PublicKeys(signer(t))}, HostKeyCallback: gossh.InsecureIgnoreHostKey(), Timeout: 5 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	return c
+}
+
+func TestForwardToGrantedService(t *testing.T) {
+	h := newHarness(t, time.Now().Add(time.Hour))
+	target := echoServer(t)
+	az := h.srv.Auth.(StaticAuthorizer)["claude-1"]
+	az.Services = map[enskit.Name]string{"camera.db1.prod.acme.eth": target}
+	c := dialClient(t, h, "claude-1")
+	conn, err := c.Dial("tcp", "camera.db1.prod.acme.eth:9999") // port ignored: ENS decides the target
+	if err != nil {
+		t.Fatalf("forward refused: %v", err)
+	}
+	defer conn.Close()
+	conn.Write([]byte("ping"))
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(conn, buf); err != nil || string(buf) != "ping" {
+		t.Fatalf("echo = %q %v", buf, err)
+	}
+}
+
+func TestForwardRefusedWithoutServiceGrant(t *testing.T) {
+	h := newHarness(t, time.Now().Add(time.Hour))
+	c := dialClient(t, h, "claude-1")
+	if _, err := c.Dial("tcp", "camera.db1.prod.acme.eth:0"); err == nil || !strings.Contains(err.Error(), "MESHY_NO_GRANT") {
+		t.Fatalf("err = %v", err)
+	}
+	var blocked bool
+	for _, e := range h.ring.Snapshot() {
+		blocked = blocked || (e.Kind == audit.Blocked && e.Op == "connect")
+	}
+	if !blocked {
+		t.Fatal("refused forward not audited")
+	}
+}
+
+func TestRevokeCutsLiveForward(t *testing.T) {
+	h := newHarness(t, time.Now().Add(time.Hour))
+	target := echoServer(t)
+	h.srv.Auth.(StaticAuthorizer)["claude-1"].Services = map[enskit.Name]string{"camera.db1.prod.acme.eth": target}
+	c := dialClient(t, h, "claude-1")
+	conn, err := c.Dial("tcp", "camera.db1.prod.acme.eth:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id string
+	for deadline := time.Now().Add(2 * time.Second); id == "" && time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+		if ids := h.w.ids(); len(ids) == 1 {
+			id = ids[0]
+		}
+	}
+	if id == "" {
+		t.Fatal("forward not watched")
+	}
+	h.srv.Revoke(enskit.Revocation{SessionID: id, Grant: "claude-1.camera.db1.prod.acme.eth", Reason: "revoked", Block: big.NewInt(7), HeadSeen: time.Now()})
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if _, err := conn.Read(make([]byte, 1)); err == nil {
+		t.Fatal("forward survived revocation")
+	}
+	var revoked bool
+	for _, e := range h.ring.Snapshot() {
+		revoked = revoked || (e.Kind == audit.SessionRevoke && e.Op == "connect")
+	}
+	if !revoked {
+		t.Fatal("forward revoke not audited")
 	}
 }

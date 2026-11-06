@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdh"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -16,18 +18,50 @@ import (
 	"github.com/jashwanth0712/meshy/meshy/policy"
 )
 
-// Authz is the result of a successful authorization.
+// Identity is an authenticated agent (key + ENS identity + World ID checked).
+type Identity struct {
+	Agent     string      // agent label (SSH username), e.g. "claude-1"
+	AgentName enskit.Name // claude-1.agents.acme.eth
+	Addr      common.Address
+}
+
+// Authz authorizes a shell/exec session on this resource (device grant).
 type Authz struct {
 	Agent     string       // agent label (the SSH username), e.g. "claude-1"
 	AgentName enskit.Name  // claude-1.agents.acme.eth
 	Grant     enskit.Grant // what the watcher re-checks every block
 	Expiry    time.Time
 	Policy    *policy.Policy
+	// Services is used only by StaticAuthorizer (tests/demos): service -> target.
+	Services map[enskit.Name]string
 }
 
-// Authorizer decides whether an SSH login is allowed.
+// Service is a network service published under a device in ENS, e.g.
+// camera.pi.home.acme.eth -> {"proto":"http","target":"127.0.0.1:8001"}.
+type Service struct {
+	Proto  string `json:"proto"`
+	Target string `json:"target"`
+	Desc   string `json:"desc,omitempty"`
+}
+
+// ServiceAuthz authorizes one port-forward to a service (service grant).
+type ServiceAuthz struct {
+	Service enskit.Name
+	Grant   enskit.Grant
+	Expiry  time.Time
+	Spec    Service
+}
+
+// Authorizer decides who may log in and what they may do.
 type Authorizer interface {
-	Authorize(ctx context.Context, user string, key gossh.PublicKey) (*Authz, error)
+	// Authenticate checks the SSH key against the agent's ENS identity (and
+	// World ID attestation). It does not require any grant.
+	Authenticate(ctx context.Context, user string, key gossh.PublicKey) (*Identity, error)
+	// AuthorizeSession requires a live device grant <agent>.<resource> with a policy.
+	AuthorizeSession(ctx context.Context, id *Identity) (*Authz, error)
+	// AuthorizeService requires a live service grant <agent>.<service>, where
+	// service is a child of this resource; returns the ENS-declared target.
+	AuthorizeService(ctx context.Context, id *Identity, service enskit.Name) (*ServiceAuthz, error)
 }
 
 // DenyError is an authorization failure with an agent-facing code.
@@ -48,15 +82,15 @@ type HumanVerifier interface {
 	VerifyAgent(ctx context.Context, agent enskit.Name, agentAddr common.Address, attestation string) error
 }
 
-// ENSAuthorizer authorizes logins from ENSv2 state.
+// ENSAuthorizer authorizes from ENSv2 state.
 //
-// For user U connecting to resource R it requires:
-//  1. grant U.R is REGISTERED, unexpired, and (with every ancestor) owned;
-//  2. agent identity U.agents.<org> has `meshy.ssh` equal to the presented key
-//     and an addr record equal to the grant owner;
-//  3. (if Human != nil) a valid `meshy.worldid` attestation on the agent;
-//  4. the grant's `meshy.policy` decrypts with the daemon key, names this
-//     grant, and carries the grant's current token id.
+//   - Authenticate: agent identity U.agents.<org> has `meshy.ssh` == key, an
+//     addr record, and (if Human != nil) a valid `meshy.worldid` attestation.
+//   - AuthorizeSession: grant U.<resource> is REGISTERED, unexpired, owned (with
+//     every ancestor) by the agent address, and its `meshy.policy` decrypts
+//     with the daemon key, names this grant and carries its current token id.
+//   - AuthorizeService: S is a child of <resource> with a `meshy.service`
+//     record, and grant U.S is live and owned by the agent.
 type ENSAuthorizer struct {
 	ENS      *enskit.Client
 	Resource enskit.Name
@@ -72,34 +106,11 @@ func (a *ENSAuthorizer) now() time.Time {
 	return time.Now()
 }
 
-func (a *ENSAuthorizer) Authorize(ctx context.Context, user string, key gossh.PublicKey) (*Authz, error) {
-	grantName, err := enskit.GrantName(user, a.Resource)
+func (a *ENSAuthorizer) Authenticate(ctx context.Context, user string, key gossh.PublicKey) (*Identity, error) {
+	agentName, err := enskit.AgentName(user, a.Resource)
 	if err != nil {
 		return nil, deny("MESHY_BAD_USER", "user=%q: %v", user, err)
 	}
-	agentName, _ := enskit.AgentName(user, a.Resource)
-
-	// 1. Grant must be live with all ancestors.
-	owner, err := a.ENS.ExactOwner(ctx, grantName, nil)
-	if err != nil {
-		return nil, fmt.Errorf("meshyd: ens: %w", err)
-	}
-	if owner == (common.Address{}) {
-		return nil, deny("MESHY_NO_GRANT", "resource=%s grant=%s", a.Resource, grantName)
-	}
-	g, err := a.ENS.Lookup(ctx, grantName)
-	if err != nil {
-		return nil, fmt.Errorf("meshyd: ens: %w", err)
-	}
-	if g.State.Status != enskit.Registered {
-		return nil, deny("MESHY_NO_GRANT", "grant=%s status=%s", grantName, g.State.Status)
-	}
-	expiry := time.Unix(int64(g.State.Expiry), 0)
-	if !expiry.After(a.now()) {
-		return nil, deny("MESHY_EXPIRED", "grant=%s", grantName)
-	}
-
-	// 2. Agent identity binds the SSH key and the grant owner.
 	ag, err := a.ENS.Lookup(ctx, agentName)
 	if err != nil || ag.State.Status != enskit.Registered {
 		return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s", agentName)
@@ -118,11 +129,9 @@ func (a *ENSAuthorizer) Authorize(ctx context.Context, user string, key gossh.Pu
 	if err != nil {
 		return nil, fmt.Errorf("meshyd: ens: %w", err)
 	}
-	if agentAddr != owner {
-		return nil, deny("MESHY_NO_GRANT", "grant=%s is owned by %s, not agent %s", grantName, owner.Hex(), agentAddr.Hex())
+	if agentAddr == (common.Address{}) {
+		return nil, deny("MESHY_UNKNOWN_AGENT", "agent=%s has no addr record", agentName)
 	}
-
-	// 3. Human-backed (World ID Agent Pass).
 	if a.Human != nil {
 		att, err := a.ENS.Text(ctx, ag.Resolver, agentName, "meshy.worldid")
 		if err != nil {
@@ -135,8 +144,45 @@ func (a *ENSAuthorizer) Authorize(ctx context.Context, user string, key gossh.Pu
 			return nil, deny("MESHY_NOT_HUMAN_BACKED:", "%v (agent=%s)", err, agentName)
 		}
 	}
+	return &Identity{Agent: user, AgentName: agentName, Addr: agentAddr}, nil
+}
 
-	// 4. Policy.
+// liveGrant checks that grant is registered, unexpired (with ancestors) and
+// owned by owner. It returns the grant's records.
+func (a *ENSAuthorizer) liveGrant(ctx context.Context, grantName enskit.Name, owner common.Address) (*enskit.Records, time.Time, error) {
+	exact, err := a.ENS.ExactOwner(ctx, grantName, nil)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("meshyd: ens: %w", err)
+	}
+	if exact == (common.Address{}) {
+		return nil, time.Time{}, deny("MESHY_NO_GRANT", "grant=%s", grantName)
+	}
+	if exact != owner {
+		return nil, time.Time{}, deny("MESHY_NO_GRANT", "grant=%s is owned by %s, not the agent %s", grantName, exact.Hex(), owner.Hex())
+	}
+	g, err := a.ENS.Lookup(ctx, grantName)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("meshyd: ens: %w", err)
+	}
+	if g.State.Status != enskit.Registered {
+		return nil, time.Time{}, deny("MESHY_NO_GRANT", "grant=%s status=%s", grantName, g.State.Status)
+	}
+	expiry := time.Unix(int64(g.State.Expiry), 0)
+	if !expiry.After(a.now()) {
+		return nil, time.Time{}, deny("MESHY_EXPIRED", "grant=%s", grantName)
+	}
+	return g, expiry, nil
+}
+
+func (a *ENSAuthorizer) AuthorizeSession(ctx context.Context, id *Identity) (*Authz, error) {
+	grantName, err := enskit.GrantName(id.Agent, a.Resource)
+	if err != nil {
+		return nil, deny("MESHY_BAD_USER", "%v", err)
+	}
+	g, expiry, err := a.liveGrant(ctx, grantName, id.Addr)
+	if err != nil {
+		return nil, err
+	}
 	if g.Resolver == (common.Address{}) {
 		return nil, deny("MESHY_NO_POLICY", "grant=%s has no resolver", grantName)
 	}
@@ -145,7 +191,7 @@ func (a *ENSAuthorizer) Authorize(ctx context.Context, user string, key gossh.Pu
 		return nil, fmt.Errorf("meshyd: ens: %w", err)
 	}
 	if rec == "" {
-		return nil, deny("MESHY_NO_POLICY", "grant=%s", grantName)
+		return nil, deny("MESHY_NO_POLICY", "grant=%s (a folder policy is required for shell access)", grantName)
 	}
 	pol, err := policy.Open(rec, string(grantName), a.Key)
 	if err != nil {
@@ -154,13 +200,42 @@ func (a *ENSAuthorizer) Authorize(ctx context.Context, user string, key gossh.Pu
 	if pol.GrantTokenID != "" && pol.GrantTokenID != g.State.TokenID.String() {
 		return nil, deny("MESHY_STALE_POLICY", "grant=%s was re-issued; ask an admin to re-grant", grantName)
 	}
-
 	return &Authz{
-		Agent:     user,
-		AgentName: agentName,
-		Grant:     enskit.Grant{Name: grantName, Owner: owner, TokenID: g.State.TokenID},
-		Expiry:    expiry,
-		Policy:    pol,
+		Agent: id.Agent, AgentName: id.AgentName,
+		Grant:  enskit.Grant{Name: grantName, Owner: id.Addr, TokenID: g.State.TokenID},
+		Expiry: expiry, Policy: pol,
+	}, nil
+}
+
+func (a *ENSAuthorizer) AuthorizeService(ctx context.Context, id *Identity, service enskit.Name) (*ServiceAuthz, error) {
+	service = enskit.Name(strings.ToLower(strings.TrimSuffix(string(service), ".")))
+	if service.Parent() != a.Resource {
+		return nil, deny("MESHY_NOT_HERE", "service=%s is not published under %s", service, a.Resource)
+	}
+	svc, err := a.ENS.Lookup(ctx, service)
+	if err != nil || svc.State.Status != enskit.Registered {
+		return nil, deny("MESHY_UNKNOWN_SERVICE", "service=%s", service)
+	}
+	raw, err := svc.Text(ctx, a.ENS, "meshy.service")
+	if err != nil {
+		return nil, fmt.Errorf("meshyd: ens: %w", err)
+	}
+	var spec Service
+	if json.Unmarshal([]byte(raw), &spec) != nil || spec.Target == "" {
+		return nil, deny("MESHY_UNKNOWN_SERVICE", "service=%s has no valid meshy.service record", service)
+	}
+	if _, _, err := net.SplitHostPort(spec.Target); err != nil {
+		return nil, deny("MESHY_UNKNOWN_SERVICE", "service=%s target %q is not host:port", service, spec.Target)
+	}
+	grantName := enskit.Name(id.Agent + "." + string(service))
+	g, expiry, err := a.liveGrant(ctx, grantName, id.Addr)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceAuthz{
+		Service: service,
+		Grant:   enskit.Grant{Name: grantName, Owner: id.Addr, TokenID: g.State.TokenID},
+		Expiry:  expiry, Spec: spec,
 	}, nil
 }
 
@@ -178,9 +253,30 @@ type StaticAuthorizer map[string]*Authz
 
 var ErrDenied = errors.New("denied")
 
-func (s StaticAuthorizer) Authorize(_ context.Context, user string, _ gossh.PublicKey) (*Authz, error) {
-	if az, ok := s[user]; ok {
-		return az, nil
+func (s StaticAuthorizer) Authenticate(_ context.Context, user string, _ gossh.PublicKey) (*Identity, error) {
+	az, ok := s[user]
+	if !ok {
+		return nil, deny("MESHY_UNKNOWN_AGENT", "user=%s", user)
 	}
-	return nil, deny("MESHY_NO_GRANT", "user=%s", user)
+	return &Identity{Agent: user, AgentName: az.AgentName, Addr: az.Grant.Owner}, nil
+}
+
+func (s StaticAuthorizer) AuthorizeSession(_ context.Context, id *Identity) (*Authz, error) {
+	az, ok := s[id.Agent]
+	if !ok || az.Policy == nil {
+		return nil, deny("MESHY_NO_GRANT", "user=%s", id.Agent)
+	}
+	return az, nil
+}
+
+func (s StaticAuthorizer) AuthorizeService(_ context.Context, id *Identity, service enskit.Name) (*ServiceAuthz, error) {
+	az, ok := s[id.Agent]
+	if !ok {
+		return nil, deny("MESHY_NO_GRANT", "user=%s", id.Agent)
+	}
+	t, ok := az.Services[service]
+	if !ok {
+		return nil, deny("MESHY_NO_GRANT", "grant=%s.%s", id.Agent, service)
+	}
+	return &ServiceAuthz{Service: service, Grant: enskit.Grant{Name: enskit.Name(id.Agent + "." + string(service))}, Expiry: az.Expiry, Spec: Service{Proto: "tcp", Target: t}}, nil
 }

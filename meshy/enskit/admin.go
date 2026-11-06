@@ -53,6 +53,7 @@ const adminABI = `[
  {"type":"function","name":"setSubregistry","inputs":[{"name":"anyId","type":"uint256"},{"name":"registry","type":"address"}],"outputs":[]},
  {"type":"function","name":"setResolver","inputs":[{"name":"anyId","type":"uint256"},{"name":"resolver","type":"address"}],"outputs":[]},
  {"type":"function","name":"grantRootRoles","inputs":[{"name":"roleBitmap","type":"uint256"},{"name":"account","type":"address"}],"outputs":[{"type":"bool"}]},
+ {"type":"function","name":"grantSetterRoles","inputs":[{"name":"setter","type":"bytes"},{"name":"account","type":"address"}],"outputs":[{"type":"bool"}]},
  {"type":"function","name":"setText","inputs":[{"name":"name","type":"bytes"},{"name":"key","type":"string"},{"name":"value","type":"string"}],"outputs":[]},
  {"type":"function","name":"setAddress","inputs":[{"name":"name","type":"bytes"},{"name":"coinType","type":"uint256"},{"name":"addressBytes","type":"bytes"}],"outputs":[]},
  {"type":"function","name":"multicall","inputs":[{"name":"data","type":"bytes[]"}],"outputs":[{"type":"bytes[]"}]},
@@ -362,3 +363,23 @@ func (a *Admin) SetRecords(ctx context.Context, resolver common.Address, sets ..
 	}
 	return a.tx(ctx, resolver, "multicall", calls)
 }
+
+// GrantRootRoles grants registry-wide roles to account (EAC). Used to make a
+// delegated network admin: REGISTRAR|UNREGISTER|RENEW on a network's registry.
+func (a *Admin) GrantRootRoles(ctx context.Context, registry common.Address, roles *big.Int, account common.Address) (*types.Receipt, error) {
+	return a.tx(ctx, registry, "grantRootRoles", roles, account)
+}
+
+// GrantTextKey lets account set ONE text key (for any name) on resolver, via
+// EAC setter-scoped roles: "an account that can edit only certain records".
+func (a *Admin) GrantTextKey(ctx context.Context, resolver common.Address, key string, account common.Address) (*types.Receipt, error) {
+	setter, err := pack("setText", []byte{0}, key, "")
+	if err != nil {
+		return nil, err
+	}
+	return a.tx(ctx, resolver, "grantSetterRoles", setter, account)
+}
+
+// AdminRoles are the registry roles a delegated admin gets on a network or a
+// resource's grants registry: create, revoke and renew names.
+var AdminRoles = new(big.Int).Or(new(big.Int).Or(RoleRegistrar, RoleUnregister), RoleRenew)

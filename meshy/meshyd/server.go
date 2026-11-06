@@ -46,7 +46,19 @@ type Server struct {
 
 	mu       sync.Mutex
 	sessions map[string]*session
+	forwards map[string]*forward
 	srv      *ssh.Server
+}
+
+// forward is one ENS-authorized port-forward to a service.
+type forward struct {
+	id      string
+	id_     *Identity
+	sa      *ServiceAuthz
+	started time.Time
+	ch      gossh.Channel
+	up      net.Conn
+	once    sync.Once
 }
 
 type session struct {
@@ -72,7 +84,7 @@ type SessionInfo struct {
 	Paths   string
 }
 
-const ctxAuthz = "meshy.authz"
+const ctxIdentity = "meshy.identity"
 
 func (s *Server) log() *slog.Logger {
 	if s.Log == nil {
@@ -98,12 +110,19 @@ func (s *Server) Serve(ln net.Listener) error {
 	if s.sessions == nil {
 		s.sessions = map[string]*session{}
 	}
+	if s.forwards == nil {
+		s.forwards = map[string]*forward{}
+	}
 	s.srv = &ssh.Server{
 		Handler:          s.handle,
 		PublicKeyHandler: s.authPublicKey,
-		// No port forwarding, no agent forwarding, no X11, no SFTP subsystem
-		// outside the sandbox: only exec/shell in the sandbox.
-		LocalPortForwardingCallback:   func(ssh.Context, string, uint32) bool { return false },
+		// Channels: sandboxed sessions, and direct-tcpip forwards that are
+		// authorized per service by ENS (never to arbitrary host:port). No
+		// reverse forwarding, agent forwarding or X11.
+		ChannelHandlers: map[string]ssh.ChannelHandler{
+			"session":      ssh.DefaultSessionHandler,
+			"direct-tcpip": s.directTCPIP,
+		},
 		ReversePortForwardingCallback: func(ssh.Context, string, uint32) bool { return false },
 		IdleTimeout:                   30 * time.Minute,
 	}
@@ -127,6 +146,15 @@ func (s *Server) Close() error {
 	for _, ss := range sessions {
 		s.terminate(ss, "MESHY_SHUTDOWN resource is shutting down")
 	}
+	s.mu.Lock()
+	fws := make([]*forward, 0, len(s.forwards))
+	for _, f := range s.forwards {
+		fws = append(fws, f)
+	}
+	s.mu.Unlock()
+	for _, f := range fws {
+		f.close()
+	}
 	if srv != nil {
 		return srv.Close()
 	}
@@ -140,14 +168,14 @@ func (s *Server) authPublicKey(ctx ssh.Context, key ssh.PublicKey) bool {
 		s.emit(audit.Event{Kind: audit.Denied, Agent: ctx.User(), Reason: "MESHY_UNAVAILABLE chain view is stale"})
 		return false
 	}
-	az, err := s.Auth.Authorize(actx, ctx.User(), key)
+	id, err := s.Auth.Authenticate(actx, ctx.User(), key)
 	if err != nil {
 		reason := err.Error()
 		s.emit(audit.Event{Kind: audit.Denied, Agent: ctx.User(), Reason: reason})
 		s.log().Info("login denied", "user", ctx.User(), "remote", ctx.RemoteAddr(), "reason", reason)
 		return false
 	}
-	ctx.SetValue(ctxAuthz, az)
+	ctx.SetValue(ctxIdentity, id)
 	return true
 }
 
@@ -158,9 +186,18 @@ func newID() string {
 }
 
 func (s *Server) handle(sess ssh.Session) {
-	az, _ := sess.Context().Value(ctxAuthz).(*Authz)
-	if az == nil {
+	id, _ := sess.Context().Value(ctxIdentity).(*Identity)
+	if id == nil {
 		fmt.Fprintln(sess.Stderr(), "MESHY_DENIED no authorization")
+		sess.Exit(1)
+		return
+	}
+	actx, cancel := context.WithTimeout(sess.Context(), 15*time.Second)
+	az, err := s.Auth.AuthorizeSession(actx, id)
+	cancel()
+	if err != nil {
+		s.emit(audit.Event{Kind: audit.Denied, Agent: id.Agent, Reason: err.Error()})
+		fmt.Fprintf(sess.Stderr(), "%s resource=%s agent=%s\n", err.Error(), s.Resource, id.AgentName)
 		sess.Exit(1)
 		return
 	}
@@ -296,7 +333,12 @@ func (s *Server) commandFor(sess ssh.Session, az *Authz) (argv []string, blockMs
 func (s *Server) Revoke(r enskit.Revocation) {
 	s.mu.Lock()
 	ss := s.sessions[r.SessionID]
+	fw := s.forwards[r.SessionID]
 	s.mu.Unlock()
+	if fw != nil {
+		s.revokeForward(fw, r)
+		return
+	}
 	if ss == nil {
 		return
 	}
@@ -342,11 +384,13 @@ func (s *Server) terminate(ss *session, msg string) bool {
 	return killed
 }
 
-// Sessions lists active sessions.
+// Sessions lists active sessions and service forwards.
 func (s *Server) Sessions() []SessionInfo {
+	fws := s.Forwards()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := make([]SessionInfo, 0, len(s.sessions))
+	out := make([]SessionInfo, 0, len(s.sessions)+len(fws))
+	out = append(out, fws...)
 	for _, ss := range s.sessions {
 		out = append(out, SessionInfo{
 			ID: ss.id, Agent: ss.authz.Agent, Grant: string(ss.authz.Grant.Name), Argv: ss.argv,
