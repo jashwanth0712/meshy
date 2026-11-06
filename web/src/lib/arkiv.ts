@@ -1,0 +1,155 @@
+// Arkiv (Rabdi) reads for Meshy's audit log. Schema: arkiv/schema.md.
+import { gunzipSync } from "fflate";
+import { openBytes, openJSON } from "./envelope";
+
+export const ARKIV_RPC = "/api/arkiv";
+export const ARKIV_PUBLIC_RPC = "https://rpc.rabdi.db-chain.testnet.arkiv.network";
+
+export type Attr = { name: string; type: string; value: string };
+export type Entity = { key: string; attrs: Record<string, string | number>; raw: Attr[] };
+
+export type AuditEvent = {
+  kind: string;
+  ts: string;
+  resource: string;
+  agent?: string;
+  grant?: string;
+  session?: string;
+  op?: string;
+  path?: string;
+  bytes?: number;
+  reason?: string;
+  block?: number;
+  latencyMs?: number;
+  argv?: string[];
+};
+
+export type Row = {
+  key: string;
+  schema: string;
+  kind: string;
+  ts: number;
+  agent: string;
+  grant: string;
+  resource: string;
+  session: string;
+  op: string;
+  reason: string;
+  block?: number;
+  latencyMs?: number;
+  nOps?: number;
+  payload?: string; // sealed envelope (hex-decoded string) or plaintext JSON
+  event?: AuditEvent; // decrypted
+  ops?: AuditEvent[]; // decrypted audit chunk
+  path?: string;
+};
+
+function decodeValue(a: Attr): string | number {
+  if (a.type === "u64" || a.type === "u256" || a.type === "i32") {
+    const v = typeof a.value === "string" && a.value.startsWith("0x") ? parseInt(a.value, 16) : Number(a.value);
+    return Number.isFinite(v) ? v : a.value;
+  }
+  return a.value;
+}
+
+export async function query(q: string, limit = 50): Promise<Entity[]> {
+  const res = await fetch(ARKIV_RPC, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "arkiv_query",
+      params: [q, { select: { key: true, attributes: true }, limit: "0x" + limit.toString(16) }],
+    }),
+  });
+  const j = await res.json();
+  if (j.error) throw new Error(j.error.message ?? JSON.stringify(j.error));
+  const data = Array.isArray(j.result) ? j.result : j.result?.data ?? [];
+  return data.map((it: { key: string; attributes: Attr[] }) => {
+    const attrs: Record<string, string | number> = {};
+    for (const a of it.attributes ?? []) attrs[a.name] = decodeValue(a);
+    return { key: it.key, attrs, raw: it.attributes ?? [] };
+  });
+}
+
+function hexToBytes(h: string): Uint8Array {
+  const s = h.startsWith("0x") ? h.slice(2) : h;
+  const out = new Uint8Array(s.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function toRow(e: Entity): Row {
+  const a = e.attrs;
+  return {
+    key: e.key,
+    schema: String(a["arkiv.schema"] ?? ""),
+    kind: String(a.kind ?? (a["arkiv.schema"] === "meshy.audit-chunk" ? "ops" : "")),
+    ts: Number(a.ts ?? 0),
+    agent: String(a.agent ?? ""),
+    grant: String(a.grant ?? ""),
+    resource: String(a.resource ?? ""),
+    session: String(a.session ?? ""),
+    op: String(a.op ?? ""),
+    reason: String(a.reason ?? ""),
+    block: a.block !== undefined ? Number(a.block) : undefined,
+    latencyMs: a.latencyMs !== undefined ? Number(a.latencyMs) : undefined,
+    nOps: a.nOps !== undefined ? Number(a.nOps) : undefined,
+    payload: typeof a.payload === "string" ? a.payload : undefined,
+    path: typeof a.path === "string" ? a.path : undefined,
+  };
+}
+
+/** Decrypt a row's payload with the org's X25519 private key (base64). */
+export function decryptRow(r: Row, orgPriv?: string): Row {
+  if (!r.payload) return r;
+  try {
+    const bytes = hexToBytes(r.payload);
+    const text = new TextDecoder().decode(bytes);
+    if (r.schema === "meshy.audit-chunk") {
+      const gz = text.trim().startsWith("{\"v\"") && orgPriv ? openBytes(text, r.schema, orgPriv) : bytes;
+      const lines = new TextDecoder().decode(gunzipSync(gz)).trim().split("\n");
+      return { ...r, ops: lines.filter(Boolean).map((l) => JSON.parse(l) as AuditEvent) };
+    }
+    if (text.trim().startsWith("{\"v\"")) {
+      if (!orgPriv) return r;
+      return { ...r, event: openJSON<AuditEvent>(text, r.schema, orgPriv) };
+    }
+    return { ...r, event: JSON.parse(text) as AuditEvent };
+  } catch {
+    return r;
+  }
+}
+
+const esc = (s: string) => s.replace(/'/g, "");
+
+export async function orgFeed(org: string, orgPriv?: string, limit = 60): Promise<Row[]> {
+  const [sessions, blocked, chunks] = await Promise.all([
+    query(`arkiv.schema = str('meshy.session') AND org = str('${esc(org)}') ORDER BY ts:u64 DESC`, limit),
+    query(`arkiv.schema = str('meshy.blocked') AND org = str('${esc(org)}') ORDER BY ts:u64 DESC`, limit),
+    query(`arkiv.schema = str('meshy.audit-chunk') AND org = str('${esc(org)}') ORDER BY ts:u64 DESC`, limit),
+  ]);
+  return [...sessions, ...blocked, ...chunks]
+    .map(toRow)
+    .map((r) => decryptRow(r, orgPriv))
+    .sort((a, b) => b.ts - a.ts);
+}
+
+export async function revokesFor(org: string, grant: string): Promise<Row[]> {
+  const rows = await query(
+    `arkiv.schema = str('meshy.session') AND kind = str('session.revoke') AND org = str('${esc(org)}') AND grant = str('${esc(grant)}') ORDER BY ts:u64 DESC`,
+    10,
+  );
+  return rows.map(toRow);
+}
+
+/** Sessions with a start and no end/revoke, i.e. live right now (Arkiv lags ~5 s). */
+export function liveSessions(rows: Row[]): Row[] {
+  const ended = new Set(rows.filter((r) => r.kind === "session.end" || r.kind === "session.revoke").map((r) => r.session));
+  return rows.filter((r) => r.kind === "session.start" && !ended.has(r.session));
+}
+
+export function runnableQuery(org: string): string {
+  return `curl -s ${ARKIV_PUBLIC_RPC} -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"arkiv_query","params":["arkiv.schema = str(\\u0027meshy.blocked\\u0027) AND org = str(\\u0027${org}\\u0027) ORDER BY ts:u64 DESC",{"select":{"key":true,"attributes":true},"limit":"0x14"}]}'`;
+}
