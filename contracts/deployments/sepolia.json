@@ -1,0 +1,20 @@
+{
+  "chainId": 11155111,
+  "ProviderRegistry": "0x8B93557b315E825C657D48A4CB962A3fF7E4eEec",
+  "MeshySubscription": "0x83989608D93858c1D835216B44B44469Dc8204Df",
+  "usdc": "0x240b0316Df57887DBBE58b586508b19e633a14aa",
+  "universalHelper": "0xd453e5Bdb62CC3beA84341B1e306319C8Ffd7DFe",
+  "deployBlock": 12073169,
+  "demoProviderId": 1,
+  "txs": {
+    "deployProviderRegistry": "0x7e49a0cfedbfddeba6c2500953c021db72a867ed0adb2c53df85f8f33d2d5dc6",
+    "deployMeshySubscription": "0xa330f7e79ff6c744de6cb36ff09c65e04561079275dda7f7bc43fcf48a5a3dd9",
+    "registerDemoProvider": "0x1c54c49c01a9ac3307f7e47b2020929392b9a3ffce131492c92bec6ea057096b",
+    "mintUSDC": "0x47cfaa7a240e84f7cee41269dbfe6239b3a23291abd798c7b09c84a118eac897",
+    "approveUSDC": "0x12879f99cbe12c877c91cfa3e8645667118a56f4989c417832f1199217bcffbf",
+    "subscribeMeshydemo": "0xeb5ad5a9009300806a1e094ba42d51aeb6cbdda1728c5c8d5cb1922bb2f1a6a2"
+  },
+  "orgNode": "0x9f45134e2d59d4949fa900db9a7d128fe9976c45607551b681ef0c6b97ecf0e5",
+  "demoSeats": 5,
+  "demoMonths": 1
+}
