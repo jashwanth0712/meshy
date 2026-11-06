@@ -78,8 +78,34 @@ func home() string {
 	return filepath.Join(h, ".meshy")
 }
 
-func loadIdentity() (*Identity, error) {
-	dir := home()
+func loadIdentity() (*Identity, error) { return loadIdentityFrom(home()) }
+
+// loadIdentityFor picks the identity for the org that name belongs to: the one
+// in MESHY_HOME if set; else ~/.meshy if its org matches; else any
+// ~/.meshy/person-*.<org> created by `meshy login` or `meshy join-org`.
+func loadIdentityFor(name enskit.Name) (*Identity, error) {
+	if os.Getenv("MESHY_HOME") != "" {
+		return loadIdentity()
+	}
+	org := string(name.Org())
+	def, defErr := loadIdentity()
+	if defErr == nil && def.Org == org {
+		return def, nil
+	}
+	h, _ := os.UserHomeDir()
+	dirs, _ := filepath.Glob(filepath.Join(h, ".meshy", "person-*"))
+	for _, d := range dirs {
+		if id, err := loadIdentityFrom(d); err == nil && id.Org == org {
+			return id, nil
+		}
+	}
+	if defErr == nil {
+		return def, nil // let the daemon say MESHY_UNKNOWN_AGENT / MESHY_NO_GRANT
+	}
+	return nil, fmt.Errorf("no Meshy identity for %s on this machine: run `meshy login` (or `meshy join <invite-link>`)", org)
+}
+
+func loadIdentityFrom(dir string) (*Identity, error) {
 	b, err := os.ReadFile(filepath.Join(dir, "agent.json"))
 	if err != nil {
 		return nil, errors.New("no Meshy identity yet: run `meshy join <invite-link>`")
@@ -165,6 +191,8 @@ func main() {
 		err = cmdJoin(os.Args[2:])
 	case "join-org":
 		err = cmdJoinOrg(os.Args[2:])
+	case "login":
+		err = cmdLogin(os.Args[2:])
 	case "whoami":
 		err = cmdWhoami()
 	case "top":
@@ -201,6 +229,7 @@ func main() {
 func usage() {
 	fmt.Fprint(os.Stderr, `meshy — agent access to Meshy resources (ENSv2-controlled)
 
+  meshy login                           sign in with your wallet; joins this machine to your orgs
   meshy join <invite-link>              set up this agent and wait for approval
   meshy join-org <invite-link> [--name alice]
                                         join an org as a person (People → Invite link)
@@ -370,12 +399,12 @@ func cmdWhoami() error {
 }
 
 func cmdGrants(args []string) error {
-	id, err := loadIdentity()
-	if err != nil {
-		return err
-	}
 	if len(args) == 0 {
 		return errors.New("usage: meshy grants <resource ens name>...")
+	}
+	id, err := loadIdentityFor(enskit.Name(args[0]))
+	if err != nil {
+		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -425,7 +454,7 @@ func cmdSSH(args []string) (int, error) {
 	if len(cmdArgs) > 0 && cmdArgs[0] == "--" {
 		cmdArgs = cmdArgs[1:]
 	}
-	id, err := loadIdentity()
+	id, err := loadIdentityFor(resource)
 	if err != nil {
 		return 0, err
 	}
@@ -560,7 +589,7 @@ func cmdConnect(args []string) error {
 		return errors.New("usage: meshy connect <service ens name> [--local 127.0.0.1:8001]")
 	}
 	service := enskit.Name(fs.Arg(0))
-	id, err := loadIdentity()
+	id, err := loadIdentityFor(service)
 	if err != nil {
 		return err
 	}
@@ -615,7 +644,7 @@ func cmdCurl(args []string) (int, error) {
 	if fs.NArg() > 1 {
 		path = fs.Arg(1)
 	}
-	id, err := loadIdentity()
+	id, err := loadIdentityFor(service)
 	if err != nil {
 		return 0, err
 	}

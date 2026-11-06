@@ -50,7 +50,7 @@ fi
 
 cp "$ROOT/web/public/install.sh" "$OUT/install.sh"
 rm -rf "$OUT/obj"
-(cd "$OUT" && shasum -a 256 *.tar.gz *.zip *.dmg install.sh 2>/dev/null > checksums.txt)
+(cd "$OUT" && shopt -s nullglob && shasum -a 256 *.tar.gz *.zip *.dmg install.sh > checksums.txt)
 echo "› $(ls "$OUT" | wc -l | tr -d ' ') files in $OUT"
 
 if [[ "$PUBLISH" == --publish ]]; then

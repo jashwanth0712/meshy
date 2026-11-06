@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/jashwanth0712/meshy/meshy/enskit"
 	"github.com/jashwanth0712/meshy/meshy/meshadmit"
 )
 
@@ -21,12 +22,19 @@ import (
 // the mesh, and only where a live ENS grant has opened a policy.
 func cmdMeshJoin(args []string) error {
 	fs := flag.NewFlagSet("mesh-join", flag.ExitOnError)
-	provider := fs.String("provider", env("MESHY_PROVIDER", ""), "meshy-sync URL")
+	provider := fs.String("provider", env("MESHY_PROVIDER", "https://api.meshy.live"), "meshy-sync URL")
+	org := fs.String("org", "", "which org's identity to join with (default: MESHY_HOME, else ~/.meshy)")
 	fs.Parse(args)
 	if *provider == "" {
 		return errors.New("usage: meshy mesh-join --provider <meshy-sync url>")
 	}
-	id, err := loadIdentity()
+	var id *Identity
+	var err error
+	if *org != "" {
+		id, err = loadIdentityFor(enskit.Name("x." + *org))
+	} else {
+		id, err = loadIdentity()
+	}
 	if err != nil {
 		return err
 	}
