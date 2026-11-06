@@ -51,6 +51,7 @@ var (
 
 type grant struct {
 	Name, Agent, Resource, Status string
+	Kind                          string // "device" or "service"
 	Expiry                        int64
 }
 
@@ -123,20 +124,23 @@ func loadMap(ctx context.Context, s *snapshot) {
 			s.resources = append(s.resources, rn)
 		}
 	}
-	// meshy-sync lists grants flat: fullName = <agent>.<target>. Keep only
-	// those whose first label is a known agent (children of a device registry
-	// can also be services).
+	// meshy-sync classifies each grant: kind (device|service), agent and
+	// target (the device, or the service such as camera.pi.home.acme.eth).
 	for _, g := range list(m["grants"]) {
 		gm := obj(g)
-		full := str(gm["fullName"])
-		parts := strings.SplitN(full, ".", 2)
-		if len(parts) != 2 {
-			continue
+		full, target, kind := str(gm["fullName"]), str(gm["target"]), str(gm["kind"])
+		agent := strings.SplitN(full, ".", 2)[0]
+		if target == "" { // older meshy-sync: fullName = <agent>.<target>
+			parts := strings.SplitN(full, ".", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			if _, isAgent := s.agents[parts[0]]; !isAgent {
+				continue
+			}
+			target, kind = parts[1], "device"
 		}
-		if _, isAgent := s.agents[parts[0]]; !isAgent {
-			continue
-		}
-		s.grants = append(s.grants, grant{Name: full, Agent: parts[0], Resource: parts[1], Status: str(gm["status"]), Expiry: num(gm["expiry"])})
+		s.grants = append(s.grants, grant{Name: full, Agent: agent, Resource: target, Kind: kind, Status: str(gm["status"]), Expiry: num(gm["expiry"])})
 	}
 }
 
@@ -493,8 +497,14 @@ func (u *ui) paintGrants(s snapshot) {
 			if mine[g.Agent] {
 				tag = " (this Mac)"
 			}
-			it.SetTitle(fmt.Sprintf("🔑 %s → %s · %s left%s", g.Agent, strings.SplitN(g.Resource, ".", 2)[0], left(g.Expiry), tag))
-			u.grantCmd[i] = "meshy ssh " + g.Resource + " -- "
+			if g.Kind == "service" {
+				svc := strings.SplitN(g.Resource, ".", 3) // camera.pi.home...
+				it.SetTitle(fmt.Sprintf("🔌 %s → %s on %s · %s left%s", g.Agent, svc[0], svc[1], left(g.Expiry), tag))
+				u.grantCmd[i] = "meshy connect " + g.Resource
+			} else {
+				it.SetTitle(fmt.Sprintf("🔑 %s → %s · %s left%s", g.Agent, strings.SplitN(g.Resource, ".", 2)[0], left(g.Expiry), tag))
+				u.grantCmd[i] = "meshy ssh " + g.Resource + " -- "
+			}
 			it.Show()
 		} else {
 			u.grantCmd[i] = ""

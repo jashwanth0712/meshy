@@ -1,6 +1,6 @@
 # Status: done, improved, pending
 
-Last updated Fri 6 Nov 2026, about 09:10 IST, after the first full lifecycle run by a human wallet on real Sepolia. "Verified" means we ran it and saw the result. The evidence is next to each claim.
+Last updated Fri 6 Nov 2026, about 11:00 IST, after the provider mesh went live on AWS (NetBird + meshy-sync) and the first revoke over WireGuard. "Verified" means we ran it and saw the result. The evidence is next to each claim.
 
 ## Headline results (verified)
 - **Revocation on real Sepolia:** a live agent session is killed in the block that revokes the grant.
@@ -13,6 +13,17 @@ Last updated Fri 6 Nov 2026, about 09:10 IST, after the first full lifecycle run
   3. It grants `claude-1` read-only `models`. The policy is sealed in the browser and decrypted by rig1's daemon.
   4. The agent reads `models`. `datasets` and writes are `MESHY_BLOCKED`, and the sandbox has no network.
   5. The wallet revokes from the dashboard, and the live session is killed.
+- **The provider mesh is live, with ENS enforced on NetBird** (`https://16-4-10-3.sslip.io`, meshy-sync at `https://sync.16-4-10-3.sslip.io`):
+  1. `db1` joined as its own WireGuard peer through `meshyd mesh-join` (admitted with the daemon key, then an EIP-712 attestation).
+  2. `claude-1` joined as its own peer through `meshy mesh-join`.
+  3. The ENS grant became the NetBird policy `meshy:grant:claude-1.db1…` (agent group → db1 group, tcp/22). The default allow-all policy is deleted.
+  4. `meshy ssh db1.prod.meshydemo.eth -- ls …/reports` ran **over the mesh**.
+  5. An on-chain revoke (block 12074344) killed the streaming session **9.03 s after the tx was sent** (0.75 s after mining). The mesh policy was gone at about 27 s.
+- **Slashing has real evidence:** every admission is signed as a `ProviderRegistry` EIP-712 `Attestation`, verified against the deployed contract with `eth_call`:
+  - an honest one → `no fraud detected`
+  - a tampered one → `bad signature`
+  - one for a revoked name → `Slashed(1, 0.01 ETH, "expired at issuance")`
+- **Seats enforced at admission:** `meshydemo.eth` uses 4 of 5 paid seats (`GET /v1/seats`). Over the limit, no subscription, or the wrong provider each return 402.
 - **Devices and services as names:** `camera.pi.home.meshydemo.eth` → `http 127.0.0.1:8001`. A service grant opens that one port (`meshy curl`) but not a shell.
 - **Arkiv:**
   - Live audit from 2 daemons; 12+ batches with 0 failures on the demo org.
@@ -75,9 +86,20 @@ Last updated Fri 6 Nov 2026, about 09:10 IST, after the first full lifecycle run
   - `/v1/agent/device-flow/start|poll` (World IdP OIDC device flow, with ID-token validation via JWKS)
   - `/v1/agent/attest-dev` (behind `--dev-attest`)
   - `/v1/map` (org tree from ENS logs)
-  - `/v1/admit` (EIP-191 → NetBird setup key)
-- [x] **NetBird reconciler:** groups, policies and DNS zones over the REST API. Tested against a fake NetBird.
-- [x] **Compose stack** for NetBird `combined` plus meshy-sync, with a Dockerfile.
+  - `/v1/admit`: EIP-191 by the name's addr record (daemon or agent key) or owner. It checks the name is live and the seats (`seatsOf`, 402), then returns a one-off setup key into the name's group plus a signed **EIP-712 attestation** (`provider/admit.go`).
+  - `/v1/attestations` (slashing evidence, persisted to `attestations.jsonl`) and `/v1/seats`.
+  - `/v1/map` **classifies** device children: services (those with a `meshy.service` record) are listed under their device, and each grant carries `kind`, `agent`, `target` and `device`.
+- [x] **NetBird reconciler, running live** (`provider/netbird/reconciler.go`, every 10 s per `--orgs`):
+  - one group per ENS device or agent, with the peer matched by name
+  - one tcp/22 policy per live grant
+  - deletes the allow-all `Default` policy
+  - evicts peers whose ENS name is gone (after 2 passes)
+  - tests: 4 tests against a fake NetBird, including the real API's object-shaped `sources`
+- [x] **Deployed on AWS** (EC2 t3.medium, ap-south-1, elastic IP 16.4.10.3):
+  - NetBird's official `getting-started.sh`: combined server, embedded IdP, Traefik with Let's Encrypt
+  - meshy-sync on NetBird's network at `sync.<domain>`
+  - reproducible with `deploy/provider/bootstrap.sh`
+  - provider #1's on-chain endpoint updated to the live URL (tx `0x636a7150…`)
 
 ### Contracts (`contracts/`, Sepolia)
 - [x] **`ProviderRegistry`:** stake ≥ 0.01 ETH, unbond and withdraw, EIP-712 `slash()` fraud proof checked against ENSv2 on-chain, 50% to the reporter.
@@ -98,7 +120,11 @@ Last updated Fri 6 Nov 2026, about 09:10 IST, after the first full lifecycle run
 - [x] Shows agent identities on this Mac, live grants with countdowns, local meshyd sessions and Arkiv blocks/revocations (with notifications). Packaged as `Meshy.app` (LSUIElement).
 
 ### Mesh transport (`meshnet/`)
-- [x] `meshy-mesh serve | proxy | status` on NetBird `client/embed` (userspace). It **builds**.
+- [x] `meshy-mesh serve | proxy | status | keygen` on NetBird `client/embed` (userspace, no root). **Verified on the live provider.**
+  - The WireGuard key is seeded into NetBird's `config.json` before the first join, so its public key is what gets signed in `/v1/admit`.
+  - The peer name is the ENS name with dashes.
+  - `proxy` resolves an ENS name to the mesh IP of the peer admitted under it.
+- [x] `meshyd mesh-join` (admit with the daemon key, then exec `meshy-mesh serve`) and `meshy mesh-join` (the agent becomes its own peer; `ssh`/`connect`/`curl` then dial over the mesh). The shared client is `meshy/meshadmit`.
 
 ---
 
@@ -130,16 +156,20 @@ Last updated Fri 6 Nov 2026, about 09:10 IST, after the first full lifecycle run
 
    The current attestation for `claude-1` is a **dev signature**.
 2. **Public repo + live demo URL + video.**
-   - The repo is private, and auto mode blocked making it public, so a human must: `gh repo edit jashwanth0712/meshy --visibility public --accept-visibility-change-consequences`.
-   - Deploy `web/` (for example to Vercel) with `SEPOLIA_RPC`, `ARKIV_RPC`, `NEXT_PUBLIC_MESHY_SYNC` and a reachable meshy-sync.
+   - ~~Make the repo public~~ **done** (6 Nov).
+   - ~~Deploy `web/`~~ **done:** https://meshy-bay.vercel.app (Vercel project `meshy`, deployed from the CLI, so a push doesn't redeploy). It uses a public Sepolia RPC; the Alchemy and Arkiv keys aren't uploaded. meshy-sync `--cors` allows that origin.
+   - **UI revamp merged** (ETHGlobal style, shadcn): plan and mockups in `docs/ui-revamp/`, the new UI in `web/src`, and a native Mac app in `mac/` that loads the live dashboard. The new UI is live at https://meshy-next.vercel.app. Still to check: a live grant and revoke through the new UI on Sepolia.
    - The video should be 2:30–3:00. `e2e/live-demo.sh` is the script.
 
 ### P1: depth gaps
-3. **The NetBird mesh has never run.** It needs a VPS (domain, 443/80/3478udp). Deploy `deploy/provider`, then `meshy-mesh serve` next to meshyd, and an agent with `meshy-mesh proxy`. Until then, agents reach meshyd over TCP on localhost (`meshy.endpoint`).
-4. **Provider admission attestations** (EIP-712, matching `ProviderRegistry.Attestation`) aren't produced by meshy-sync yet. So slashing has no real evidence source, and no slash has been demoed.
-5. **Seat enforcement:** `/v1/admit` doesn't check `MeshySubscription.seatsOf` yet.
+3. ~~NetBird mesh~~ **done**: live on AWS, revoke verified over WireGuard. What's left:
+   - only `db1` and `claude-1` are joined; pi and rig1 are not
+   - a cross-machine run (agent on another host)
+   - `meshy-mesh proxy` starts a fresh embed client per connection (about 8–25 s to connect). A long-running local agent peer would make that instant.
+4. ~~Admission attestations~~ **done**. A **real `slash` tx** hasn't been sent (only simulated) because it would burn the demo provider's stake. If wanted, send one against a throwaway provider.
+5. ~~Seat enforcement~~ **done**, but the 402 path is unit-logic only and hasn't been triggered live: the org is at 4/5 seats.
 6. **People and devices for humans** (`alice.people.<org>`, `meshy.wg` keys) aren't implemented. Only agents and resources exist.
-7. **meshy-sync `/v1/map` doesn't classify services.** It lists them as grants. The menu bar filters around this.
+7. ~~Classify services in `/v1/map`~~ **done**; the menu bar now shows service grants (🔌, copies `meshy connect`). The dashboard still reads ENS directly, so it isn't affected.
 
 ### P2: polish and verification
 8. **The Claude Code plugin** has never run inside a real Claude Code session (only stdio tests).

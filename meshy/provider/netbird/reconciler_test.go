@@ -13,371 +13,218 @@ import (
 	"github.com/jashwanth0712/meshy/meshy/provider/netbird"
 )
 
-// fakeNetBird is an in-memory NetBird management API stub.
+// fakeNetBird is an in-memory stub of the NetBird management REST API.
 type fakeNetBird struct {
 	mu       sync.Mutex
 	groups   map[string]netbird.Group
 	policies map[string]netbird.Policy
-	zones    map[string]netbird.Zone
-	records  map[string]map[string]netbird.DNSRecord // zoneID → recordID → record
-	peers    []netbird.Peer
-	idSeq    int
+	peers    map[string]netbird.Peer
+	keys     []netbird.CreateSetupKeyRequest
+	seq      int
 }
 
-func newFakeNetBird() *fakeNetBird {
-	return &fakeNetBird{
-		groups:   map[string]netbird.Group{},
-		policies: map[string]netbird.Policy{},
-		zones:    map[string]netbird.Zone{},
-		records:  map[string]map[string]netbird.DNSRecord{},
-	}
+func newFake() *fakeNetBird {
+	return &fakeNetBird{groups: map[string]netbird.Group{}, policies: map[string]netbird.Policy{}, peers: map[string]netbird.Peer{}}
 }
 
-func (f *fakeNetBird) nextID() string {
-	f.idSeq++
-	return fmt.Sprintf("id%d", f.idSeq)
-}
+func (f *fakeNetBird) id() string { f.seq++; return fmt.Sprintf("id%d", f.seq) }
 
-func (f *fakeNetBird) handler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/groups", f.handleGroups)
-	mux.HandleFunc("/api/groups/", f.handleGroup)
-	mux.HandleFunc("/api/policies", f.handlePolicies)
-	mux.HandleFunc("/api/policies/", f.handlePolicy)
-	mux.HandleFunc("/api/setup-keys", f.handleSetupKeys)
-	mux.HandleFunc("/api/peers", f.handlePeers)
-	mux.HandleFunc("/api/dns/zones", f.handleZones)
-	mux.HandleFunc("/api/dns/zones/", f.handleZoneOrRecords)
-	return mux
-}
-
-func jsonDecode(r *http.Request, out any) error {
-	return json.NewDecoder(r.Body).Decode(out)
-}
-
-func jsonWrite(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
-}
-
-func (f *fakeNetBird) handleGroups(w http.ResponseWriter, r *http.Request) {
+func (f *fakeNetBird) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if r.Method == "GET" {
-		out := make([]netbird.Group, 0, len(f.groups))
+	w.Header().Set("Content-Type", "application/json")
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/"), "/")
+	res, id := parts[0], ""
+	if len(parts) > 1 {
+		id = parts[1]
+	}
+	enc := json.NewEncoder(w)
+	switch {
+	case res == "groups" && r.Method == "GET":
+		out := []netbird.Group{}
 		for _, g := range f.groups {
 			out = append(out, g)
 		}
-		jsonWrite(w, out)
-		return
-	}
-	if r.Method == "POST" {
+		enc.Encode(out)
+	case res == "groups" && (r.Method == "POST" || r.Method == "PUT"):
 		var req netbird.GroupRequest
-		jsonDecode(r, &req)
-		id := f.nextID()
+		json.NewDecoder(r.Body).Decode(&req)
+		if id == "" {
+			id = f.id()
+		}
 		g := netbird.Group{ID: id, Name: req.Name}
+		for _, p := range req.Peers {
+			g.Peers = append(g.Peers, netbird.PeerMinimum{ID: p})
+		}
 		f.groups[id] = g
-		jsonWrite(w, g)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handleGroup(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/api/groups/")
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if r.Method == "DELETE" {
+		enc.Encode(g)
+	case res == "groups" && r.Method == "DELETE":
 		delete(f.groups, id)
-		w.WriteHeader(200)
-		return
-	}
-	if r.Method == "PUT" {
-		var req netbird.GroupRequest
-		jsonDecode(r, &req)
-		g := netbird.Group{ID: id, Name: req.Name}
-		f.groups[id] = g
-		jsonWrite(w, g)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handlePolicies(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if r.Method == "GET" {
-		out := make([]netbird.Policy, 0, len(f.policies))
+	case res == "policies" && r.Method == "GET":
+		out := []netbird.Policy{}
 		for _, p := range f.policies {
 			out = append(out, p)
 		}
-		jsonWrite(w, out)
-		return
-	}
-	if r.Method == "POST" {
+		enc.Encode(out)
+	case res == "policies" && r.Method == "POST":
 		var req netbird.PolicyCreate
-		jsonDecode(r, &req)
-		id := f.nextID()
-		p := netbird.Policy{ID: id, Name: req.Name, Enabled: req.Enabled}
-		f.policies[id] = p
-		jsonWrite(w, p)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handlePolicy(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/api/policies/")
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if r.Method == "DELETE" {
+		json.NewDecoder(r.Body).Decode(&req)
+		p := netbird.Policy{ID: f.id(), Name: req.Name, Enabled: req.Enabled, Rules: req.Rules}
+		f.policies[p.ID] = p
+		enc.Encode(p)
+	case res == "policies" && r.Method == "DELETE":
 		delete(f.policies, id)
-		w.WriteHeader(200)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handleSetupKeys(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	case res == "peers" && r.Method == "GET":
+		out := []netbird.Peer{}
+		for _, p := range f.peers {
+			out = append(out, p)
+		}
+		enc.Encode(out)
+	case res == "peers" && r.Method == "DELETE":
+		delete(f.peers, id)
+	case res == "setup-keys" && r.Method == "POST":
 		var req netbird.CreateSetupKeyRequest
-		jsonDecode(r, &req)
-		jsonWrite(w, netbird.SetupKeyClear{
-			ID: "sk1", Key: "FAKE-SETUP-KEY", Name: req.Name,
-			Type: req.Type, Valid: true, AutoGroups: req.AutoGroups,
-		})
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handlePeers(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if r.Method == "GET" {
-		jsonWrite(w, f.peers)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handleZones(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if r.Method == "GET" {
-		out := make([]netbird.Zone, 0, len(f.zones))
-		for _, z := range f.zones {
-			out = append(out, z)
-		}
-		jsonWrite(w, out)
-		return
-	}
-	if r.Method == "POST" {
-		var req netbird.ZoneRequest
-		jsonDecode(r, &req)
-		id := f.nextID()
-		z := netbird.Zone{ID: id, Domain: req.Domain}
-		f.zones[id] = z
-		f.records[id] = map[string]netbird.DNSRecord{}
-		jsonWrite(w, z)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (f *fakeNetBird) handleZoneOrRecords(w http.ResponseWriter, r *http.Request) {
-	// /api/dns/zones/{id}  or  /api/dns/zones/{id}/records[/{rid}]
-	path := strings.TrimPrefix(r.URL.Path, "/api/dns/zones/")
-	parts := strings.SplitN(path, "/", 3)
-	zoneID := parts[0]
-
-	if len(parts) == 1 {
-		// Zone CRUD.
-		f.mu.Lock()
-		defer f.mu.Unlock()
-		if r.Method == "DELETE" {
-			delete(f.zones, zoneID)
-			delete(f.records, zoneID)
-			w.WriteHeader(200)
-			return
-		}
+		json.NewDecoder(r.Body).Decode(&req)
+		f.keys = append(f.keys, req)
+		enc.Encode(netbird.SetupKeyClear{ID: f.id(), Key: "KEY-" + req.Name, AutoGroups: req.AutoGroups})
+	default:
 		http.NotFound(w, r)
-		return
-	}
-
-	if len(parts) >= 2 && parts[1] == "records" {
-		if len(parts) == 2 {
-			f.mu.Lock()
-			defer f.mu.Unlock()
-			if r.Method == "GET" {
-				recs := f.records[zoneID]
-				out := make([]netbird.DNSRecord, 0, len(recs))
-				for _, rec := range recs {
-					out = append(out, rec)
-				}
-				jsonWrite(w, out)
-				return
-			}
-			if r.Method == "POST" {
-				var req netbird.DNSRecordRequest
-				jsonDecode(r, &req)
-				rid := f.nextID()
-				rec := netbird.DNSRecord{ID: rid, Name: req.Name, Type: req.Type, RData: req.RData, Enabled: req.Enabled}
-				if f.records[zoneID] == nil {
-					f.records[zoneID] = map[string]netbird.DNSRecord{}
-				}
-				f.records[zoneID][rid] = rec
-				jsonWrite(w, rec)
-				return
-			}
-		}
-		if len(parts) == 3 {
-			rid := parts[2]
-			f.mu.Lock()
-			defer f.mu.Unlock()
-			if r.Method == "DELETE" {
-				if recs, ok := f.records[zoneID]; ok {
-					delete(recs, rid)
-				}
-				w.WriteHeader(200)
-				return
-			}
-		}
-	}
-	http.NotFound(w, r)
-}
-
-func TestReconcilerCreateObjects(t *testing.T) {
-	fake := newFakeNetBird()
-	srv := httptest.NewServer(fake.handler())
-	defer srv.Close()
-
-	client := netbird.NewClient(srv.URL, "test-token")
-	rec := &netbird.Reconciler{Client: client}
-
-	snap := netbird.OrgSnapshot{
-		Org:      "acme.eth",
-		Networks: []netbird.NetworkSnap{{Name: "prod"}},
-		Agents:   []netbird.AgentSnap{{Label: "claude-1"}},
-		Grants: []netbird.GrantSnap{{
-			AgentLabel: "claude-1", ResourceLabel: "db1", NetworkLabel: "prod",
-		}},
-	}
-
-	ctx := context.Background()
-	if err := rec.Sync(ctx, snap); err != nil {
-		t.Fatal("sync:", err)
-	}
-
-	// Verify groups were created.
-	fake.mu.Lock()
-	defer fake.mu.Unlock()
-
-	var groupNames []string
-	for _, g := range fake.groups {
-		groupNames = append(groupNames, g.Name)
-	}
-	t.Logf("groups: %v", groupNames)
-
-	hasGroup := func(name string) bool {
-		for _, g := range fake.groups {
-			if g.Name == name {
-				return true
-			}
-		}
-		return false
-	}
-	if !hasGroup("meshy:net:prod.acme.eth") {
-		t.Error("missing network group")
-	}
-	if !hasGroup("meshy:agent:claude-1.agents.acme.eth") {
-		t.Error("missing agent group")
-	}
-	if !hasGroup("meshy:res:db1.prod.acme.eth") {
-		t.Error("missing resource group")
-	}
-
-	// Verify policy was created.
-	if len(fake.policies) != 1 {
-		t.Fatalf("expected 1 policy, got %d", len(fake.policies))
-	}
-	for _, p := range fake.policies {
-		if !strings.HasPrefix(p.Name, "meshy:grant:claude-1.db1.prod.acme.eth") {
-			t.Errorf("unexpected policy name: %s", p.Name)
-		}
 	}
 }
 
-// TestReconcilerIdempotent verifies syncing twice doesn't create duplicates.
-func TestReconcilerIdempotent(t *testing.T) {
-	fake := newFakeNetBird()
-	srv := httptest.NewServer(fake.handler())
-	defer srv.Close()
-
-	client := netbird.NewClient(srv.URL, "test-token")
-	rec := &netbird.Reconciler{Client: client}
-
-	snap := netbird.OrgSnapshot{
-		Org:      "acme.eth",
-		Networks: []netbird.NetworkSnap{{Name: "prod"}},
-		Agents:   []netbird.AgentSnap{{Label: "claude-1"}},
-		Grants:   []netbird.GrantSnap{{AgentLabel: "claude-1", ResourceLabel: "db1", NetworkLabel: "prod"}},
+func (f *fakeNetBird) policyNames() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []string
+	for _, p := range f.policies {
+		out = append(out, p.Name)
 	}
+	return out
+}
 
-	ctx := context.Background()
-	if err := rec.Sync(ctx, snap); err != nil {
-		t.Fatal("sync 1:", err)
+func (f *fakeNetBird) groupByName(n string) (netbird.Group, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, g := range f.groups {
+		if g.Name == n {
+			return g, true
+		}
 	}
-	groupCount1 := len(fake.groups)
-	policyCount1 := len(fake.policies)
+	return netbird.Group{}, false
+}
 
-	if err := rec.Sync(ctx, snap); err != nil {
-		t.Fatal("sync 2:", err)
-	}
-	if len(fake.groups) != groupCount1 {
-		t.Errorf("group count changed on second sync: %d → %d", groupCount1, len(fake.groups))
-	}
-	if len(fake.policies) != policyCount1 {
-		t.Errorf("policy count changed on second sync: %d → %d", policyCount1, len(fake.policies))
+const org = "acme.eth"
+
+func snap(grants ...netbird.GrantSnap) netbird.OrgSnapshot {
+	return netbird.OrgSnapshot{
+		Org:       org,
+		Resources: []string{"db1.prod.acme.eth", "pi.home.acme.eth"},
+		Agents:    []string{"claude-1.agents.acme.eth"},
+		Grants:    grants,
 	}
 }
 
-// TestReconcilerRemoveStalePolicy verifies that removing a grant removes its policy.
-func TestReconcilerRemoveStalePolicy(t *testing.T) {
-	fake := newFakeNetBird()
-	srv := httptest.NewServer(fake.handler())
-	defer srv.Close()
+var g1 = netbird.GrantSnap{Name: "claude-1.db1.prod.acme.eth", Agent: "claude-1.agents.acme.eth", Resource: "db1.prod.acme.eth"}
+var g2 = netbird.GrantSnap{Name: "claude-1.camera.pi.home.acme.eth", Agent: "claude-1.agents.acme.eth", Resource: "pi.home.acme.eth"}
 
-	client := netbird.NewClient(srv.URL, "test-token")
-	rec := &netbird.Reconciler{Client: client}
+func setup(t *testing.T) (*fakeNetBird, *netbird.Reconciler) {
+	f := newFake()
+	f.policies["d"] = netbird.Policy{ID: "d", Name: "Default", Enabled: true}
+	f.peers["p1"] = netbird.Peer{ID: "p1", Name: "db1-prod-acme-eth", IP: "100.64.0.1"}
+	f.peers["p2"] = netbird.Peer{ID: "p2", Name: "claude-1-agents-acme-eth", IP: "100.64.0.2"}
+	f.peers["p3"] = netbird.Peer{ID: "p3", Name: "laptop", IP: "100.64.0.3"} // not meshy-managed
+	srv := httptest.NewServer(f)
+	t.Cleanup(srv.Close)
+	return f, &netbird.Reconciler{Client: netbird.NewClient(srv.URL, "t")}
+}
 
-	ctx := context.Background()
-
-	// First sync with a grant.
-	snapWith := netbird.OrgSnapshot{
-		Org:      "acme.eth",
-		Networks: []netbird.NetworkSnap{{Name: "prod"}},
-		Agents:   []netbird.AgentSnap{{Label: "claude-1"}},
-		Grants:   []netbird.GrantSnap{{AgentLabel: "claude-1", ResourceLabel: "db1", NetworkLabel: "prod"}},
-	}
-	if err := rec.Sync(ctx, snapWith); err != nil {
+func TestSyncGroupsPoliciesDenyByDefault(t *testing.T) {
+	f, r := setup(t)
+	if err := r.Sync(context.Background(), snap(g1, g2)); err != nil {
 		t.Fatal(err)
 	}
-	if len(fake.policies) != 1 {
-		t.Fatalf("expected 1 policy after first sync, got %d", len(fake.policies))
+	names := f.policyNames()
+	for _, n := range names {
+		if n == "Default" {
+			t.Fatal("allow-all Default policy must be deleted")
+		}
 	}
+	if len(names) != 2 {
+		t.Fatalf("want 2 grant policies, got %v", names)
+	}
+	g, ok := f.groupByName(netbird.ResGroup("db1.prod.acme.eth"))
+	if !ok || len(g.Peers) != 1 || g.Peers[0].ID != "p1" {
+		t.Fatalf("res group should contain db1 peer: %+v", g)
+	}
+	a, _ := f.groupByName(netbird.AgentGroup("claude-1.agents.acme.eth"))
+	if len(a.Peers) != 1 || a.Peers[0].ID != "p2" {
+		t.Fatalf("agent group should contain agent peer: %+v", a)
+	}
+	// pi's group exists but is empty until its peer joins.
+	pi, ok := f.groupByName(netbird.ResGroup("pi.home.acme.eth"))
+	if !ok || len(pi.Peers) != 0 {
+		t.Fatalf("pi group: %+v", pi)
+	}
+	// Rule shape: agent -> resource, tcp/22 only.
+	for _, p := range f.policies {
+		if p.Name == "meshy:grant:"+g1.Name {
+			rl := p.Rules[0]
+			if rl.Protocol != "tcp" || len(rl.Ports) != 1 || rl.Ports[0] != "22" || rl.Bidirectional {
+				t.Fatalf("bad rule %+v", rl)
+			}
+			if rl.Sources[0] != a.ID || rl.Destinations[0] != g.ID {
+				t.Fatalf("rule direction wrong %+v", rl)
+			}
+		}
+	}
+}
 
-	// Second sync without the grant (revoked).
-	snapWithout := netbird.OrgSnapshot{
-		Org:      "acme.eth",
-		Networks: []netbird.NetworkSnap{{Name: "prod"}},
-		Agents:   []netbird.AgentSnap{{Label: "claude-1"}},
-		Grants:   []netbird.GrantSnap{}, // no grants
+func TestSyncRevokeRemovesPolicyIdempotent(t *testing.T) {
+	f, r := setup(t)
+	ctx := context.Background()
+	r.Sync(ctx, snap(g1, g2))
+	r.Sync(ctx, snap(g1, g2)) // idempotent
+	if n := len(f.policyNames()); n != 2 {
+		t.Fatalf("idempotency: %d policies", n)
 	}
-	if err := rec.Sync(ctx, snapWithout); err != nil {
+	r.Sync(ctx, snap(g2)) // g1 revoked on ENS
+	names := f.policyNames()
+	if len(names) != 1 || names[0] != "meshy:grant:"+g2.Name {
+		t.Fatalf("after revoke: %v", names)
+	}
+	if r.Last.PoliciesRemoved != 1 {
+		t.Fatalf("stats: %+v", r.Last)
+	}
+}
+
+func TestSyncEvictsPeerAfterTwoPasses(t *testing.T) {
+	f, r := setup(t)
+	ctx := context.Background()
+	s := snap(g1)
+	s.Agents = nil // agent identity unregistered on ENS
+	r.Sync(ctx, s)
+	if _, ok := f.peers["p2"]; !ok {
+		t.Fatal("must not evict on the first missing pass")
+	}
+	r.Sync(ctx, s)
+	if _, ok := f.peers["p2"]; ok {
+		t.Fatal("agent peer should be evicted after two passes")
+	}
+	if _, ok := f.peers["p3"]; !ok {
+		t.Fatal("non-meshy peer must never be touched")
+	}
+	if _, ok := f.peers["p1"]; !ok {
+		t.Fatal("live device evicted")
+	}
+}
+
+func TestGroupRefsDecodeBothShapes(t *testing.T) {
+	var p netbird.Policy
+	raw := `{"id":"x","name":"n","enabled":true,"rules":[{"name":"r","enabled":true,"bidirectional":false,"protocol":"tcp","action":"accept","sources":[{"id":"g1","name":"All"}],"destinations":["g2"]}]}`
+	if err := json.Unmarshal([]byte(raw), &p); err != nil {
 		t.Fatal(err)
 	}
-	if len(fake.policies) != 0 {
-		t.Fatalf("expected 0 policies after revocation sync, got %d", len(fake.policies))
+	if p.Rules[0].Sources[0] != "g1" || p.Rules[0].Destinations[0] != "g2" {
+		t.Fatalf("%+v", p.Rules[0])
 	}
 }

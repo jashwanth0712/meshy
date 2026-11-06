@@ -50,9 +50,12 @@ type Identity struct {
 	Org   string `json:"org"`   // acme.eth
 	Addr  string `json:"addr"`
 	SSH   string `json:"ssh"` // authorized_keys line
-	dir   string
-	key   gossh.Signer
-	eth   *ecdsa.PrivateKey
+	// Mesh is the provider management URL once `meshy mesh-join` succeeded;
+	// resources are then dialled by ENS name over the WireGuard mesh.
+	Mesh string `json:"mesh,omitempty"`
+	dir  string
+	key  gossh.Signer
+	eth  *ecdsa.PrivateKey
 }
 
 func (i *Identity) Name() enskit.Name { return enskit.Name(i.Agent + ".agents." + i.Org) }
@@ -146,6 +149,8 @@ func main() {
 		err = cmdGrants(os.Args[2:])
 	case "connect":
 		err = cmdConnect(os.Args[2:])
+	case "mesh-join":
+		err = cmdMeshJoin(os.Args[2:])
 	case "curl":
 		var code int
 		code, err = cmdCurl(os.Args[2:])
@@ -175,6 +180,7 @@ func usage() {
   meshy grants <resource>...            what you can access and for how long
   meshy ssh <resource> [--] <command>   run a command on a resource (folder sandbox)
   meshy connect <service> [--local :8001]  tunnel to a service, e.g. camera.pi.home.acme.eth
+  meshy mesh-join --provider <url>      join the provider's WireGuard mesh as this agent's own peer
   meshy curl <service> [/path]          one HTTP request to a service
 
 Errors are machine-readable: MESHY_BLOCKED, MESHY_REVOKED, MESHY_EXPIRED,
@@ -444,7 +450,28 @@ func dialResource(id *Identity, resource enskit.Name, endpoint string) (*gossh.C
 		HostKeyCallback: gossh.FixedHostKey(hostKey),
 		Timeout:         15 * time.Second,
 	}
-	conn, err := gossh.Dial("tcp", addr, cfg)
+	var conn *gossh.Client
+	if id.Mesh != "" && endpoint == "" {
+		// Over the provider mesh: the endpoint record is ignored and the
+		// resource is found by its ENS name among mesh peers.
+		nc, derr := meshDial(id, string(resource), "22")
+		if derr == nil {
+			var c gossh.Conn
+			var chans <-chan gossh.NewChannel
+			var reqs <-chan *gossh.Request
+			c, chans, reqs, err = gossh.NewClientConn(nc, string(resource)+":22", cfg)
+			if err == nil {
+				conn = gossh.NewClient(c, chans, reqs)
+			} else {
+				nc.Close()
+			}
+		} else {
+			err = derr
+		}
+		addr = "mesh:" + string(resource)
+	} else {
+		conn, err = gossh.Dial("tcp", addr, cfg)
+	}
 	if err != nil {
 		if strings.Contains(err.Error(), "unable to authenticate") {
 			return nil, fmt.Errorf("MESHY_NOT_ADMITTED resource=%s agent=%s (identity not approved, key mismatch, or not human-backed; run `meshy whoami`)", resource, id.Name())

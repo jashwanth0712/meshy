@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/jashwanth0712/meshy/meshy/enskit"
+	"github.com/jashwanth0712/meshy/meshy/provider/netbird"
 	"github.com/jashwanth0712/meshy/meshy/worldid"
 )
 
@@ -42,6 +43,18 @@ type ResourceInfo struct {
 	SSHHost  string `json:"sshHost,omitempty"`
 	Roots    string `json:"roots,omitempty"`
 	Endpoint string `json:"endpoint,omitempty"`
+	Kind     string `json:"kind,omitempty"`
+	Meta     string `json:"meta,omitempty"`
+	// Services are children of the device that carry a meshy.service record.
+	Services []ServiceInfo `json:"services,omitempty"`
+}
+
+// ServiceInfo is one port on a device, e.g. camera.pi.home.acme.eth.
+type ServiceInfo struct {
+	Name     string `json:"name"`
+	FullName string `json:"fullName"`
+	Device   string `json:"device"`
+	Spec     string `json:"spec"` // raw meshy.service JSON {proto,target,desc}
 }
 
 type AgentInfo struct {
@@ -60,6 +73,16 @@ type GrantInfo struct {
 	Owner    string `json:"owner,omitempty"`
 	Expiry   uint64 `json:"expiry"`
 	Status   string `json:"status"` // "live", "expired", "revoked"
+	// Kind is "device" (folders on a device, sealed meshy.policy) or
+	// "service" (one port on a device).
+	Kind string `json:"kind"`
+	// Agent is the grantee's identity name (<label>.agents.<org>).
+	Agent string `json:"agent"`
+	// Target is what the grant opens: the device or the service name.
+	Target string `json:"target"`
+	// Device is the device the agent connects to (the service's parent for
+	// service grants). The mesh policy is agent -> Device, tcp/22.
+	Device string `json:"device"`
 }
 
 // mapCache holds a cached OrgMap and when it was built.
@@ -256,23 +279,53 @@ func (b *MapBuilder) buildNetwork(ctx context.Context, netName enskit.Name, netS
 			if v, err := resRec.Text(ctx, b.ENS, "meshy.endpoint"); err == nil {
 				ri.Endpoint = v
 			}
+			if v, err := resRec.Text(ctx, b.ENS, "meshy.kind"); err == nil {
+				ri.Kind = v
+			}
+			if v, err := resRec.Text(ctx, b.ENS, "meshy.meta"); err == nil {
+				ri.Meta = v
+			}
 			if a, err := b.ENS.Addr(ctx, resRec.Resolver, resName); err == nil && a != (common.Address{}) {
 				ri.Addr = a.Hex()
 			}
 		}
 		info.Resources = append(info.Resources, ri)
 
-		// Enumerate grants in the resource's subregistry (already known from event scan).
+		// Children of a device are either services (they carry meshy.service)
+		// or device grants. Children of a service are service grants.
 		if resSubreg != (common.Address{}) {
-			grantChildren, err := enskit.ChildSubregs(ctx, b.ETH, resSubreg, b.FromBlock)
+			children, err := enskit.ChildSubregs(ctx, b.ETH, resSubreg, b.FromBlock)
 			if err != nil {
-				b.log().Warn("enumerate grants", "resource", resName, "err", err)
-			} else {
-				for grantLabel := range grantChildren {
-					grantName := enskit.Name(grantLabel + "." + string(resName))
-					gi := b.buildGrant(ctx, grantName, resSubreg, grantLabel)
-					grants = append(grants, gi)
+				b.log().Warn("enumerate device children", "resource", resName, "err", err)
+				continue
+			}
+			for label, childSubreg := range children {
+				childName := enskit.Name(label + "." + string(resName))
+				if spec := b.serviceSpec(ctx, childName); spec != "" {
+					svc := ServiceInfo{Name: label, FullName: string(childName), Device: string(resName), Spec: spec}
+					ri := &info.Resources[len(info.Resources)-1]
+					ri.Services = append(ri.Services, svc)
+					if childSubreg == (common.Address{}) {
+						continue
+					}
+					sg, err := enskit.ChildSubregs(ctx, b.ETH, childSubreg, b.FromBlock)
+					if err != nil {
+						b.log().Warn("enumerate service grants", "service", childName, "err", err)
+						continue
+					}
+					for gl := range sg {
+						gn := enskit.Name(gl + "." + string(childName))
+						gi := b.buildGrant(ctx, gn, childSubreg, gl)
+						gi.Kind, gi.Target, gi.Device = "service", string(childName), string(resName)
+						gi.Agent = gl + ".agents." + orgOf(netName)
+						grants = append(grants, gi)
+					}
+					continue
 				}
+				gi := b.buildGrant(ctx, childName, resSubreg, label)
+				gi.Kind, gi.Target, gi.Device = "device", string(resName), string(resName)
+				gi.Agent = label + ".agents." + orgOf(netName)
+				grants = append(grants, gi)
 			}
 		}
 	}
@@ -365,4 +418,44 @@ func (b *MapBuilder) buildAgents(ctx context.Context, agentsName enskit.Name, ag
 		agents = append(agents, ai)
 	}
 	return agents, nil
+}
+
+// serviceSpec returns the meshy.service record of name, or "" if it is not a
+// service (no resolver or no record).
+func (b *MapBuilder) serviceSpec(ctx context.Context, name enskit.Name) string {
+	rec, err := b.ENS.Lookup(ctx, name)
+	if err != nil || rec.Resolver == (common.Address{}) {
+		return ""
+	}
+	v, err := rec.Text(ctx, b.ENS, "meshy.service")
+	if err != nil {
+		return ""
+	}
+	return v
+}
+
+// orgOf returns the org part of a network name ("prod.acme.eth" -> "acme.eth").
+func orgOf(network enskit.Name) string {
+	_, rest, _ := strings.Cut(string(network), ".")
+	return rest
+}
+
+// Snapshot converts the map into the reconciler's input: live devices,
+// agents and grants only.
+func (m *OrgMap) Snapshot() netbird.OrgSnapshot {
+	s := netbird.OrgSnapshot{Org: m.Org}
+	for _, n := range m.Networks {
+		for _, r := range n.Resources {
+			s.Resources = append(s.Resources, r.FullName)
+		}
+	}
+	for _, a := range m.Agents {
+		s.Agents = append(s.Agents, a.FullName)
+	}
+	for _, g := range m.Grants {
+		if g.Status == "live" {
+			s.Grants = append(s.Grants, netbird.GrantSnap{Name: g.FullName, Agent: g.Agent, Resource: g.Device})
+		}
+	}
+	return s
 }
