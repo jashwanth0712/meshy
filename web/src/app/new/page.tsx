@@ -1,7 +1,7 @@
 "use client";
 // Create an organization: <label>.meshy.eth, owned by your wallet, in one transaction.
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type Address, type Hex, type WalletClient } from "viem";
 import { Logo } from "@/components/Shell";
 import { Button, Field, inputCls } from "@/components/ui";
@@ -13,7 +13,7 @@ import { connectWallet, silentAccount } from "@/lib/wallet";
 type Step = "name" | "key" | "create" | "done";
 
 export default function NewOrg() {
-  const client = publicClient();
+  const client = useMemo(() => publicClient(), []);
   const [wallet, setWallet] = useState<WalletClient>();
   const [account, setAccount] = useState<Address>();
   const [label, setLabel] = useState("");

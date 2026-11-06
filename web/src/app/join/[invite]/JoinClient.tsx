@@ -1,7 +1,8 @@
 "use client";
 // Accept an invite: decode the signed blob, check it on-chain, claim the name in one tx.
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { type Address, type Hex, type WalletClient } from "viem";
 import { Logo } from "@/components/Shell";
 import { Button, Field, inputCls } from "@/components/ui";
@@ -10,9 +11,9 @@ import { publicClient } from "@/lib/ens";
 import { INVITES, type InviteBlob, ZERO_ADDRESS, decodeInvite, invitesAbi, labelOk } from "@/lib/orgs";
 import { connectWallet, silentAccount } from "@/lib/wallet";
 
-export function JoinClient({ params }: { params: Promise<{ invite: string }> }) {
-  const { invite } = use(params);
-  const client = publicClient();
+export function JoinClient() {
+  const { invite } = useParams<{ invite: string }>();
+  const client = useMemo(() => publicClient(), []);
   const [blob, setBlob] = useState<InviteBlob | null>();
   const [wallet, setWallet] = useState<WalletClient>();
   const [account, setAccount] = useState<Address>();
