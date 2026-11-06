@@ -35,6 +35,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/jashwanth0712/meshy/meshy/provider"
@@ -55,6 +56,12 @@ func main() {
 	netbirdToken := fs.String("netbird-token", env("NETBIRD_TOKEN", ""), "NetBird PAT")
 	netbirdMgmt := fs.String("netbird-management-url", env("NETBIRD_MANAGEMENT_URL", ""), "NetBird management URL for peers")
 	fromBlock := fs.Uint64("from-block", 12072900, "start block for ENS log scanning")
+	orgs := fs.String("orgs", env("MESHY_ORGS", ""), "comma-separated orgs to reconcile into NetBird (e.g. meshydemo.eth)")
+	reconcileEvery := fs.Duration("reconcile-every", 10*time.Second, "NetBird reconcile interval")
+	subscription := fs.String("subscription", env("MESHY_SUBSCRIPTION", ""), "MeshySubscription address (enables seat enforcement in /v1/admit)")
+	registry := fs.String("provider-registry", env("MESHY_PROVIDER_REGISTRY", "0x8B93557b315E825C657D48A4CB962A3fF7E4eEec"), "ProviderRegistry address (EIP-712 domain)")
+	providerID := fs.Uint64("provider-id", 0, "this provider's id in ProviderRegistry (attested in admissions)")
+	stateDir := fs.String("state", env("MESHY_SYNC_STATE", ""), "state dir for attestations.jsonl (default: dir of the signer key)")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		os.Exit(2)
@@ -97,6 +104,20 @@ func main() {
 		NetBirdMgmtURL:    *netbirdMgmt,
 		FromBlock:         *fromBlock,
 		Log:               log,
+		ProviderRegistry:  common.HexToAddress(*registry),
+		ProviderID:        *providerID,
+		StateDir:          *stateDir,
+	}
+	if cfg.StateDir == "" {
+		cfg.StateDir = filepath.Dir(*signerKeyFile)
+	}
+	if *subscription != "" {
+		cfg.Subscription = common.HexToAddress(*subscription)
+	}
+	for _, o := range strings.Split(*orgs, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			cfg.Orgs = append(cfg.Orgs, o)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -107,6 +128,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	go srv.RunReconciler(context.Background(), *reconcileEvery)
 	h := srv.Handler()
 	log.Info("HTTP server ready", "addr", *listen)
 	if err := http.ListenAndServe(*listen, h); err != nil {

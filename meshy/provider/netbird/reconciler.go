@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -11,46 +12,59 @@ import (
 
 const meshyPrefix = "meshy:"
 
-// OrgSnapshot is the snapshot of one org's ENS state that the reconciler
-// syncs into NetBird. The provider package fills this and passes it to Sync.
+// OrgSnapshot is the slice of one org's ENS state that the mesh needs.
+// All names are full ENS names (e.g. "db1.prod.acme.eth").
 type OrgSnapshot struct {
-	Org      string // e.g. "acme.eth"
-	Networks []NetworkSnap
-	Agents   []AgentSnap
-	Grants   []GrantSnap // live grants only
-	Peers    []PeerSnap  // resource peers known to NetBird
+	Org       string
+	Resources []string    // live devices (each runs meshyd + meshy-mesh serve)
+	Agents    []string    // live agent identities (claude-1.agents.acme.eth)
+	Grants    []GrantSnap // live grants only
 }
 
-type NetworkSnap struct {
-	Name string // e.g. "prod"
-}
-
-type AgentSnap struct {
-	Label string // e.g. "claude-1"
-}
-
+// GrantSnap is one live grant. Resource is always the *device* the agent
+// reaches: for a service grant (claude-1.camera.pi.home.acme.eth) it is the
+// service's parent device, because services are reached through meshyd's
+// SSH direct-tcpip on that device.
 type GrantSnap struct {
-	AgentLabel    string // e.g. "claude-1"
-	ResourceLabel string // e.g. "db1"
-	NetworkLabel  string // e.g. "prod"
+	Name     string // claude-1.db1.prod.acme.eth
+	Agent    string // claude-1.agents.acme.eth
+	Resource string // db1.prod.acme.eth
 }
 
-// PeerSnap maps a resource ENS name to its NetBird peer IP.
-type PeerSnap struct {
-	ResourceName string // e.g. "db1.prod.acme.eth" (dots replaced with dashes in NB peer name)
-	PeerName     string // e.g. "db1-prod-acme-eth"
-	IP           string
-}
-
-// Reconciler keeps NetBird in sync with ENS grant state.
-// It is idempotent: all objects it creates use the meshy: name prefix and are
-// diffed on every Sync call.
+// Reconciler keeps NetBird in sync with ENS. ENS is the source of truth:
+//
+//   - every resource and agent gets a group "meshy:res:<name>" / "meshy:agent:<name>"
+//     whose only member is the peer named PeerName(<name>)
+//   - every live grant becomes one policy "meshy:grant:<grant>" allowing
+//     tcp/22 from the agent group to the resource group
+//   - NetBird's allow-all "Default" policy is deleted (deny by default)
+//   - peers whose ENS name no longer exists (revoked device or agent) are deleted
+//
+// It is idempotent and only touches objects it owns (meshy: prefix, *-eth peers).
 type Reconciler struct {
 	Client *Client
 	Log    *slog.Logger
+	// KeepDefaultPolicy leaves NetBird's allow-all policy in place (tests/dev).
+	KeepDefaultPolicy bool
 
 	mu      sync.Mutex
 	lastRun time.Time
+	missing map[string]int // peer name -> consecutive passes absent from ENS
+	// Stats from the last run, for /v1/health.
+	Last SyncStats
+}
+
+// SyncStats summarises one reconcile pass.
+type SyncStats struct {
+	At              time.Time `json:"at"`
+	Org             string    `json:"org"`
+	Groups          int       `json:"groups"`
+	Policies        int       `json:"policies"`
+	PeersMatched    int       `json:"peersMatched"`
+	PeersEvicted    int       `json:"peersEvicted"`
+	PoliciesAdded   int       `json:"policiesAdded"`
+	PoliciesRemoved int       `json:"policiesRemoved"`
+	Err             string    `json:"err,omitempty"`
 }
 
 func (r *Reconciler) log() *slog.Logger {
@@ -60,10 +74,23 @@ func (r *Reconciler) log() *slog.Logger {
 	return r.Log
 }
 
-// Sync reconciles the given snapshot into NetBird.
-func (r *Reconciler) Sync(ctx context.Context, snap OrgSnapshot) error {
+// ResGroup / AgentGroup are the NetBird group names for an ENS name.
+func ResGroup(name string) string    { return meshyPrefix + "res:" + name }
+func AgentGroup(name string) string  { return meshyPrefix + "agent:" + name }
+func grantPolicy(name string) string { return meshyPrefix + "grant:" + name }
+
+// Sync reconciles snap into NetBird.
+func (r *Reconciler) Sync(ctx context.Context, snap OrgSnapshot) (err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	st := SyncStats{At: time.Now(), Org: snap.Org}
+	defer func() {
+		if err != nil {
+			st.Err = err.Error()
+		}
+		r.Last = st
+		r.lastRun = time.Now()
+	}()
 
 	groups, err := r.Client.ListGroups(ctx)
 	if err != nil {
@@ -77,216 +104,181 @@ func (r *Reconciler) Sync(ctx context.Context, snap OrgSnapshot) error {
 	if err != nil {
 		return fmt.Errorf("reconciler: list peers: %w", err)
 	}
-	zones, err := r.Client.ListZones(ctx)
-	if err != nil {
-		return fmt.Errorf("reconciler: list zones: %w", err)
-	}
 
-	// Index existing meshy-managed objects.
-	groupByName := map[string]Group{}
-	for _, g := range groups {
-		if strings.HasPrefix(g.Name, meshyPrefix) {
-			groupByName[g.Name] = g
-		}
-	}
-	policyByName := map[string]Policy{}
-	for _, p := range policies {
-		if strings.HasPrefix(p.Name, meshyPrefix) {
-			policyByName[p.Name] = p
-		}
-	}
-	zoneByDomain := map[string]Zone{}
-	for _, z := range zones {
-		if strings.HasPrefix(z.Domain, meshyPrefix) {
-			zoneByDomain[z.Domain] = z
-		}
-	}
-	// Peer lookup: name (dots→dashes) → Peer
+	orgSuffix := PeerName(snap.Org) // "acme-eth"
 	peerByName := map[string]Peer{}
 	for _, p := range peers {
 		peerByName[p.Name] = p
 	}
 
-	// Desired group names.
-	desiredGroups := map[string]GroupRequest{}
-
-	// Per-network group.
-	for _, net := range snap.Networks {
-		name := meshyPrefix + "net:" + net.Name + "." + snap.Org
-		desiredGroups[name] = GroupRequest{Name: name}
+	// 1. Desired groups and their single member.
+	desired := map[string]string{} // group name -> ENS name
+	for _, n := range snap.Resources {
+		desired[ResGroup(n)] = n
 	}
-	// Per-agent group.
-	for _, ag := range snap.Agents {
-		name := meshyPrefix + "agent:" + ag.Label + ".agents." + snap.Org
-		desiredGroups[name] = GroupRequest{Name: name}
+	for _, n := range snap.Agents {
+		desired[AgentGroup(n)] = n
 	}
-	// Per-resource group.
-	resourceGroups := map[string]string{} // resource full name → group name
-	for _, net := range snap.Networks {
-		for _, g := range snap.Grants {
-			if g.NetworkLabel != net.Name {
-				continue
-			}
-			resName := g.ResourceLabel + "." + g.NetworkLabel + "." + snap.Org
-			resGroupName := meshyPrefix + "res:" + resName
-			if _, ok := resourceGroups[resName]; !ok {
-				resourceGroups[resName] = resGroupName
-				desiredGroups[resGroupName] = GroupRequest{Name: resGroupName}
-			}
+	byName := map[string]Group{}
+	for _, g := range groups {
+		if strings.HasPrefix(g.Name, meshyPrefix) {
+			byName[g.Name] = g
 		}
 	}
-
-	// Ensure all desired groups exist; create if missing.
-	for name, req := range desiredGroups {
-		if _, exists := groupByName[name]; !exists {
-			g, err := r.Client.CreateGroup(ctx, req)
+	for gname, ens := range desired {
+		var members []string
+		if p, ok := peerByName[PeerName(ens)]; ok {
+			members = []string{p.ID}
+			st.PeersMatched++
+		}
+		g, exists := byName[gname]
+		switch {
+		case !exists:
+			ng, err := r.Client.CreateGroup(ctx, GroupRequest{Name: gname, Peers: members})
 			if err != nil {
-				r.log().Warn("reconciler: create group", "name", name, "err", err)
+				r.log().Warn("reconciler: create group", "name", gname, "err", err)
 				continue
 			}
-			groupByName[name] = g
-			r.log().Info("reconciler: created group", "name", name)
-		}
-	}
-
-	// Remove stale groups (no longer desired).
-	for name, g := range groupByName {
-		if _, desired := desiredGroups[name]; !desired {
-			if err := r.Client.DeleteGroup(ctx, g.ID); err != nil {
-				r.log().Warn("reconciler: delete group", "name", name, "err", err)
-			} else {
-				r.log().Info("reconciler: deleted stale group", "name", name)
+			byName[gname] = ng
+		case !sameMembers(g.Peers, members):
+			ng, err := r.Client.UpdateGroup(ctx, g.ID, GroupRequest{Name: gname, Peers: members})
+			if err != nil {
+				r.log().Warn("reconciler: update group", "name", gname, "err", err)
+				continue
 			}
+			ng.Peers = toMin(members)
+			byName[gname] = ng
 		}
 	}
 
-	// Desired policies: one per live grant.
-	desiredPolicies := map[string]PolicyCreate{}
-	for _, grant := range snap.Grants {
-		agentGroupName := meshyPrefix + "agent:" + grant.AgentLabel + ".agents." + snap.Org
-		resName := grant.ResourceLabel + "." + grant.NetworkLabel + "." + snap.Org
-		resGroupName := meshyPrefix + "res:" + resName
-		agentGroup, hasAgent := groupByName[agentGroupName]
-		resGroup, hasRes := groupByName[resGroupName]
-		if !hasAgent || !hasRes {
+	// 2. Desired policies: one per live grant.
+	want := map[string]PolicyCreate{}
+	for _, g := range snap.Grants {
+		ag, ok1 := byName[AgentGroup(g.Agent)]
+		rg, ok2 := byName[ResGroup(g.Resource)]
+		if !ok1 || !ok2 {
 			continue
 		}
-		polName := meshyPrefix + "grant:" + grant.AgentLabel + "." + resName
-		desiredPolicies[polName] = PolicyCreate{
-			Name:    polName,
+		pn := grantPolicy(g.Name)
+		want[pn] = PolicyCreate{
+			Name:    pn,
 			Enabled: true,
 			Rules: []PolicyRule{{
-				Name:          polName + ":ssh",
-				Enabled:       true,
-				Bidirectional: false,
-				Protocol:      "tcp",
-				Action:        "accept",
-				Ports:         []string{"22"},
-				Sources:       []string{agentGroup.ID},
-				Destinations:  []string{resGroup.ID},
+				Name: pn, Enabled: true, Bidirectional: false,
+				Protocol: "tcp", Action: "accept", Ports: []string{"22"},
+				Sources: []string{ag.ID}, Destinations: []string{rg.ID},
 			}},
 		}
 	}
-
-	// Ensure all desired policies exist.
-	for name, req := range desiredPolicies {
-		if _, exists := policyByName[name]; !exists {
-			p, err := r.Client.CreatePolicy(ctx, req)
-			if err != nil {
-				r.log().Warn("reconciler: create policy", "name", name, "err", err)
-				continue
-			}
-			policyByName[name] = p
-			r.log().Info("reconciler: created policy", "name", name)
-		}
-	}
-
-	// Remove stale policies.
-	for name, p := range policyByName {
-		if _, desired := desiredPolicies[name]; !desired {
+	have := map[string]Policy{}
+	for _, p := range policies {
+		switch {
+		case strings.HasPrefix(p.Name, meshyPrefix):
+			have[p.Name] = p
+		case p.Name == "Default" && !r.KeepDefaultPolicy:
 			if err := r.Client.DeletePolicy(ctx, p.ID); err != nil {
-				r.log().Warn("reconciler: delete policy", "name", name, "err", err)
+				r.log().Warn("reconciler: delete Default policy", "err", err)
 			} else {
-				r.log().Info("reconciler: deleted stale policy", "name", name)
+				r.log().Info("reconciler: removed allow-all Default policy (deny by default)")
 			}
 		}
 	}
-
-	// DNS zones and records: one zone per network, A records per resource.
-	for _, net := range snap.Networks {
-		zoneDomain := meshyPrefix + net.Name + "." + snap.Org + "."
-		zone, exists := zoneByDomain[zoneDomain]
-		if !exists {
-			z, err := r.Client.CreateZone(ctx, ZoneRequest{
-				Domain:      zoneDomain,
-				Description: "meshy: " + net.Name + "." + snap.Org,
-			})
-			if err != nil {
-				r.log().Warn("reconciler: create zone", "domain", zoneDomain, "err", err)
-				continue
-			}
-			zone = z
-			zoneByDomain[zoneDomain] = zone
-			r.log().Info("reconciler: created zone", "domain", zoneDomain)
-		}
-
-		existingRecs, err := r.Client.ListRecords(ctx, zone.ID)
-		if err != nil {
-			r.log().Warn("reconciler: list records", "zone", zoneDomain, "err", err)
+	for pn, req := range want {
+		if _, ok := have[pn]; ok {
 			continue
 		}
-		recByName := map[string]DNSRecord{}
-		for _, rec := range existingRecs {
-			recByName[rec.Name] = rec
+		if _, err := r.Client.CreatePolicy(ctx, req); err != nil {
+			r.log().Warn("reconciler: create policy", "name", pn, "err", err)
+			continue
 		}
+		st.PoliciesAdded++
+		r.log().Info("reconciler: grant -> policy", "grant", strings.TrimPrefix(pn, meshyPrefix+"grant:"))
+	}
+	// Only remove policies belonging to this org.
+	for pn, p := range have {
+		if _, ok := want[pn]; ok || !strings.HasSuffix(pn, "."+snap.Org) {
+			continue
+		}
+		if err := r.Client.DeletePolicy(ctx, p.ID); err != nil {
+			r.log().Warn("reconciler: delete policy", "name", pn, "err", err)
+			continue
+		}
+		st.PoliciesRemoved++
+		r.log().Info("reconciler: grant gone -> policy removed", "grant", strings.TrimPrefix(pn, meshyPrefix+"grant:"))
+	}
 
-		// Add A records for resources whose peer IP is known.
-		for _, ps := range snap.Peers {
-			// ps.ResourceName e.g. "db1.prod.acme.eth"
-			parts := strings.SplitN(ps.ResourceName, ".", 2)
-			if len(parts) < 1 {
-				continue
-			}
-			resLabel := parts[0]
-			resNet := ""
-			if len(parts) > 1 {
-				resNetAndOrg := parts[1]
-				netAndOrgParts := strings.SplitN(resNetAndOrg, ".", 2)
-				if len(netAndOrgParts) > 0 {
-					resNet = netAndOrgParts[0]
-				}
-			}
-			if resNet != net.Name {
-				continue
-			}
-			recName := resLabel + "." + net.Name + "." + snap.Org + "."
-			if _, ok := recByName[recName]; !ok && ps.IP != "" {
-				rec, err := r.Client.CreateRecord(ctx, zone.ID, DNSRecordRequest{
-					Name:    recName,
-					Type:    "A",
-					RData:   ps.IP,
-					TTL:     60,
-					Enabled: true,
-				})
-				if err != nil {
-					r.log().Warn("reconciler: create DNS record", "name", recName, "err", err)
-				} else {
-					recByName[recName] = rec
-					r.log().Info("reconciler: created DNS record", "name", recName, "ip", ps.IP)
-				}
-			}
+	// 3. Remove this org's groups that are no longer desired (after policies,
+	// which reference them).
+	for gname, g := range byName {
+		if _, ok := desired[gname]; ok || !strings.HasSuffix(gname, "."+snap.Org) {
+			continue
+		}
+		if err := r.Client.DeleteGroup(ctx, g.ID); err != nil {
+			r.log().Warn("reconciler: delete group", "name", gname, "err", err)
 		}
 	}
 
-	// Build PeerSnap lookup for peer matching by resource name.
-	_ = peerByName // used if we need to match peers for group membership
+	// 4. Evict peers of this org whose ENS name is gone. A name must be absent
+	// in two consecutive passes, so one flaky RPC read never evicts a device.
+	live := map[string]bool{}
+	for _, n := range desired {
+		live[PeerName(n)] = true
+	}
+	if r.missing == nil {
+		r.missing = map[string]int{}
+	}
+	for _, p := range peers {
+		if !strings.HasSuffix(p.Name, "-"+orgSuffix) || live[p.Name] {
+			delete(r.missing, p.Name)
+			continue
+		}
+		if r.missing[p.Name]++; r.missing[p.Name] < 2 {
+			continue
+		}
+		delete(r.missing, p.Name)
+		if err := r.Client.DeletePeer(ctx, p.ID); err != nil {
+			r.log().Warn("reconciler: evict peer", "peer", p.Name, "err", err)
+			continue
+		}
+		st.PeersEvicted++
+		r.log().Info("reconciler: ENS name gone -> peer evicted", "peer", p.Name)
+	}
 
-	r.lastRun = time.Now()
+	st.Groups = len(desired)
+	st.Policies = len(want)
 	return nil
 }
 
-// PeerName returns the NetBird peer name for a resource ENS name
-// (dots replaced with dashes).
-func PeerName(resourceENS string) string {
-	return strings.ReplaceAll(resourceENS, ".", "-")
+func sameMembers(have []PeerMinimum, want []string) bool {
+	if len(have) != len(want) {
+		return false
+	}
+	a := make([]string, len(have))
+	for i, p := range have {
+		a[i] = p.ID
+	}
+	b := append([]string(nil), want...)
+	sort.Strings(a)
+	sort.Strings(b)
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func toMin(ids []string) []PeerMinimum {
+	out := make([]PeerMinimum, len(ids))
+	for i, id := range ids {
+		out[i] = PeerMinimum{ID: id}
+	}
+	return out
+}
+
+// PeerName returns the NetBird peer name for an ENS name (dots -> dashes).
+// meshy-mesh registers each device/agent with exactly this name, and
+// resolves ENS names to mesh IPs through it.
+func PeerName(ens string) string {
+	return strings.ReplaceAll(strings.ToLower(ens), ".", "-")
 }
