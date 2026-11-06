@@ -44,6 +44,7 @@ const abiJSON = `[
  {"type":"function","name":"findParentRegistry","stateMutability":"view","inputs":[{"name":"name","type":"bytes"}],"outputs":[{"type":"address"}]},
  {"type":"function","name":"getState","stateMutability":"view","inputs":[{"name":"anyId","type":"uint256"}],"outputs":[{"type":"tuple","components":[
    {"name":"status","type":"uint8"},{"name":"expiry","type":"uint64"},{"name":"latestOwner","type":"address"},{"name":"tokenId","type":"uint256"},{"name":"resource","type":"uint256"}]}]},
+ {"type":"function","name":"getSubregistry","stateMutability":"view","inputs":[{"name":"anyId","type":"uint256"}],"outputs":[{"type":"address"}]},
  {"type":"function","name":"getResolver","stateMutability":"view","inputs":[{"name":"label","type":"string"}],"outputs":[{"type":"address"}]},
  {"type":"function","name":"text","stateMutability":"view","inputs":[{"name":"node","type":"bytes32"},{"name":"key","type":"string"}],"outputs":[{"type":"string"}]},
  {"type":"function","name":"addr","stateMutability":"view","inputs":[{"name":"node","type":"bytes32"}],"outputs":[{"type":"address"}]},
@@ -128,6 +129,18 @@ func (c *Client) State(ctx context.Context, registry common.Address, label strin
 		Resource    *big.Int       `json:"resource"`
 	})
 	return State{Status(raw.Status), raw.Expiry, raw.LatestOwner, raw.TokenId, raw.Resource}, nil
+}
+
+// Subregistry returns the subregistry address for label in registry by calling
+// getSubregistry(keccak256(label)) on the registry contract directly.
+// This is more reliable than decoding State.Resource because different registry
+// implementations may use different internal resource-field encodings.
+func (c *Client) Subregistry(ctx context.Context, registry common.Address, label string, block *big.Int) (common.Address, error) {
+	res, err := c.call(ctx, registry, block, "getSubregistry", LabelID(label))
+	if err != nil {
+		return common.Address{}, err
+	}
+	return res[0].(common.Address), nil
 }
 
 // Resolver returns the resolver set directly on label in registry (no
