@@ -80,7 +80,7 @@ function hexToBytes(h: string): Uint8Array {
   return out;
 }
 
-function toRow(e: Entity): Row {
+export function toRow(e: Entity): Row {
   const a = e.attrs;
   return {
     key: e.key,
@@ -147,6 +147,41 @@ export async function orgFeed(org: string, orgPriv?: string, limit = 60, writers
     .map(toRow)
     .map((r) => decryptRow(r, orgPriv))
     .sort((a, b) => b.ts - a.ts);
+}
+
+/** Rabdi caps a page at 100 rows, and a cursor only works at the head block it was issued at,
+ *  so page backwards by timestamp instead (keyset pagination). Numeric literals must be
+ *  typed u64(): u256() against a u64 attribute silently matches nothing. */
+export async function queryAll(where: string, max = 600): Promise<Entity[]> {
+  const PAGE = 100;
+  const seen = new Set<string>();
+  const out: Entity[] = [];
+  let before: number | undefined;
+  while (out.length < max) {
+    const page = await query(`${where}${before !== undefined ? ` AND ts <= u64(${before})` : ""} ORDER BY ts:u64 DESC`, PAGE);
+    let fresh = 0;
+    for (const e of page) {
+      if (seen.has(e.key)) continue;
+      seen.add(e.key);
+      out.push(e);
+      fresh++;
+    }
+    if (page.length < PAGE || fresh === 0) break;
+    const last = Number(page[page.length - 1].attrs.ts);
+    if (!Number.isFinite(last)) break;
+    before = last; // `<=` plus dedupe, so rows sharing the boundary timestamp aren't skipped
+  }
+  return out;
+}
+
+/** Every session and refusal entity for an org (newest first), from verified writers only. */
+export async function orgHistory(org: string, writers: string[] = [], max = 600): Promise<Row[]> {
+  const of = ownerClause(writers);
+  const [s, b] = await Promise.all([
+    queryAll(`arkiv.schema = str('meshy.session') AND org = str('${esc(org)}')${of}`, max),
+    queryAll(`arkiv.schema = str('meshy.blocked') AND org = str('${esc(org)}')${of}`, max),
+  ]);
+  return [...s, ...b].map(toRow).sort((a, b) => b.ts - a.ts);
 }
 
 export async function revokesFor(org: string, grant: string): Promise<Row[]> {
