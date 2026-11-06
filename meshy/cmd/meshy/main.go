@@ -2,6 +2,7 @@
 //
 //	meshy join <invite-url>               generate keys, open approval page, wait for ENS
 //	meshy whoami                          show this agent's identity and records
+//	meshy top [--demo]                    live mission-control dashboard (JSON when piped)
 //	meshy grants <resource>...            grant status (expiry countdown) per resource
 //	meshy ssh <resource> [--] <command>   run a command on a resource (ENS-pinned host key)
 package main
@@ -33,6 +34,7 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 
 	"github.com/jashwanth0712/meshy/meshy/enskit"
+	"github.com/jashwanth0712/meshy/meshy/tui"
 )
 
 const defaultRPC = "https://ethereum-sepolia-rpc.publicnode.com"
@@ -145,6 +147,8 @@ func main() {
 		err = cmdJoin(os.Args[2:])
 	case "whoami":
 		err = cmdWhoami()
+	case "top":
+		err = cmdTop(os.Args[2:])
 	case "grants":
 		err = cmdGrants(os.Args[2:])
 	case "connect":
@@ -185,11 +189,32 @@ func usage() {
   meshy mesh-join --provider <url>      join the provider's WireGuard mesh as this agent's own peer
   meshy curl <service> [/path]          one HTTP request to a service
   meshy verify-siwe --sig 0x… < msg     check a Sign-In with Ethereum message, print the signer
+  meshy top [--org o.eth] [--demo]      live mission-control view of the org (JSON when piped)
 
 Errors are machine-readable: MESHY_BLOCKED, MESHY_REVOKED, MESHY_EXPIRED,
 MESHY_NO_GRANT, MESHY_NOT_HUMAN_BACKED.
 `)
 	os.Exit(2)
+}
+
+// ---- top ----
+
+func cmdTop(args []string) error {
+	fs := flag.NewFlagSet("top", flag.ExitOnError)
+	var o tui.Options
+	o.Flags(fs)
+	fs.Parse(args)
+	o.Mode = "agent"
+	if id, err := loadIdentity(); err == nil {
+		o.Me = string(id.Name())
+		if o.Org == "" {
+			o.Org = id.Org
+		}
+	}
+	if o.Org == "" {
+		o.Org = "meshydemo.eth"
+	}
+	return tui.Run(context.Background(), o)
 }
 
 // ---- join ----

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/x/term"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -23,6 +24,7 @@ import (
 	"github.com/jashwanth0712/meshy/meshy/audit"
 	"github.com/jashwanth0712/meshy/meshy/enskit"
 	"github.com/jashwanth0712/meshy/meshy/meshyd"
+	"github.com/jashwanth0712/meshy/meshy/tui"
 )
 
 type ecdhPub = ecdh.PublicKey
@@ -123,8 +125,12 @@ func getStatus(sock string) (*Status, error) {
 
 func cmdStatus(args []string) error {
 	fs, sock := ctlFlags("status", args)
-	watch := fs.Bool("w", false, "watch (refresh every second)")
+	watch := fs.Bool("w", false, "watch: opens the dashboard on a terminal")
+	plain := fs.Bool("plain", false, "with -w: the plain refreshing text view")
 	fs.Parse(args)
+	if *watch && !*plain && term.IsTerminal(os.Stdout.Fd()) {
+		return runTop(tui.Options{Control: *sock, NoSplash: true})
+	}
 	for {
 		st, err := getStatus(*sock)
 		if err != nil {
@@ -177,6 +183,28 @@ func renderStatus(w io.Writer, st *Status) {
 		}
 		fmt.Fprintf(w, "  %s %s%-14s\033[0m %-10s %s\n", e.TS.Format("15:04:05"), color, e.Kind, e.Agent, detail)
 	}
+}
+
+// cmdTop is the mission-control dashboard (meshy/tui). On a non-TTY stdout
+// it prints the same state as JSON, so agents can call it safely.
+func cmdTop(args []string) error {
+	fs, sock := ctlFlags("top", args)
+	var o tui.Options
+	o.Flags(fs)
+	fs.Parse(args)
+	o.Control = *sock
+	if o.Org == "" && os.Getenv("MESHY_NAME") != "" {
+		o.Org = string(enskit.Name(os.Getenv("MESHY_NAME")).Org())
+	}
+	return runTop(o)
+}
+
+func runTop(o tui.Options) error {
+	o.Mode = "daemon"
+	if o.Demo {
+		o.Control = ""
+	}
+	return tui.Run(context.Background(), o)
 }
 
 func cmdSessions(args []string) error {

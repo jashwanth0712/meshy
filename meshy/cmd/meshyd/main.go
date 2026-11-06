@@ -2,7 +2,7 @@
 //
 //	meshyd init  --name db1.prod.acme.eth --roots /srv        # keys + ENS records to set
 //	meshyd run   --name db1.prod.acme.eth --roots /srv --sepolia wss://...
-//	meshyd status [-w] | sessions | kill <id> | logs -f | doctor
+//	meshyd top [--demo] | status [-w] | sessions | kill <id> | logs -f | doctor
 package main
 
 import (
@@ -29,6 +29,7 @@ import (
 	"github.com/jashwanth0712/meshy/meshy/enskit"
 	"github.com/jashwanth0712/meshy/meshy/meshyd"
 	"github.com/jashwanth0712/meshy/meshy/policy"
+	"github.com/jashwanth0712/meshy/meshy/tui"
 	"github.com/jashwanth0712/meshy/meshy/worldid"
 )
 
@@ -87,6 +88,8 @@ func main() {
 		err = cmdRun(os.Args[2:])
 	case "status":
 		err = cmdStatus(os.Args[2:])
+	case "top":
+		err = cmdTop(os.Args[2:])
 	case "sessions":
 		err = cmdSessions(os.Args[2:])
 	case "kill":
@@ -111,7 +114,8 @@ func usage() {
 
   meshyd init     --name <ens> [--roots /srv] [--endpoint host:port]
   meshyd run      --name <ens> [--roots /srv] --sepolia <ws/http url> [--listen :22]
-  meshyd status   [-w]          live status (identity, chain, sessions, blocks)
+  meshyd top      [--demo] [--json]  mission-control dashboard (topology, grants, sessions, chain, audit)
+  meshyd status   [-w] [-plain]  status; -w opens the dashboard on a terminal (-plain: old view)
   meshyd sessions               list active sessions
   meshyd kill     <session-id>  terminate a session now
   meshyd logs     [-f]          audit events
@@ -154,6 +158,7 @@ func cmdInit(args []string) error {
 		SSHHost: strings.TrimSpace(string(gossh.MarshalAuthorizedKey(k.Host.PublicKey()))),
 		Roots:   c.rootList(), Endpoint: *endpoint,
 	}
+	tui.PrintLogo(os.Stderr)
 	b, _ := json.MarshalIndent(j, "", "  ")
 	code, _ := json.Marshal(j)
 	fmt.Printf("Keys in %s\n\nENS records to set on %s:\n%s\n\nJoin code (paste into the dashboard → Add resource):\n  meshy-join:%s\n",

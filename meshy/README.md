@@ -42,7 +42,8 @@ meshyd init --name db1.prod.acme.eth --roots /srv                # prints ENS re
 meshy-admin resource add --org acme.eth --network prod --join meshy-join:...   # or use the dashboard
 meshyd run --name db1.prod.acme.eth --roots /srv --sepolia wss://<sepolia-ws> --listen 127.0.0.1:2222
 meshy-mesh serve --setup-key KEY --management https://provider --forward 22=127.0.0.1:2222   # mesh-only (../meshnet)
-meshyd status -w                                                 # live view
+meshyd status -w                                                 # live view (opens the dashboard on a TTY; -plain for text)
+meshyd top [--demo]                                              # mission-control TUI (JSON when piped); see docs/cli-tui/PLAN.md
 ```
 Under Docker on Linux, add `--device /dev/fuse --cap-add SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined`.
 
