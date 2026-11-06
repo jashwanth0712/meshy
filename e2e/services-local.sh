@@ -119,7 +119,7 @@ grep -q MESHY_NO_GRANT "$WORK/connect2.log" && ok "reconnect to $FEED after revo
 out=$("$BIN/meshy" curl "$SVC" /snapshot.json 2>&1); [[ $out == *front-door* ]] && ok "camera grant (not revoked) still works — revocation is per service" || fail "camera: $out"
 
 say "EAC: delegated network admin"
-$A admin add --org "$ORG" --network home --addr "$DEL_ADDR" | sed 's/^/  /'
+$A admin add --org "$ORG" --network home --addr "$DEL_ADDR" --devices | sed 's/^/  /'
 S=$(cat "$WORK/admin/$ORG.json")
 SVCREG=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])['resources']['$DEV'])" "$S")
 RES=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])['resolver'])" "$S")
@@ -128,6 +128,9 @@ EXP=$(( $(date +%s) + 3600 ))
 cast send "$SVCREG" "register(string,address,address,address,uint256,uint64)" claude-1 "$AG" 0x0000000000000000000000000000000000000000 "$RES" 0 $EXP --private-key "$DEL_KEY" --rpc-url "$RPC" >/dev/null 2>&1 && ok "delegated admin can grant claude-1 on $DEV" || fail "delegated admin could not register a grant"
 DNS=$(python3 -c "import sys;n=sys.argv[1];print('0x'+''.join('%02x'%len(l)+l.encode().hex() for l in n.split('.'))+'00')" "claude-1.$DEV")
 cast send "$RES" "setText(bytes,string,string)" "$DNS" meshy.policy test --private-key "$DEL_KEY" --rpc-url "$RPC" >/dev/null 2>&1 && ok "delegated admin can write meshy.policy" || fail "delegated admin could not write meshy.policy"
+NDNS=$(python3 -c "import sys;n=sys.argv[1];print('0x'+''.join('%02x'%len(l)+l.encode().hex() for l in n.split('.'))+'00')" "rig1.home.$ORG")
+cast send "$RES" "setAddress(bytes,uint256,bytes)" "$NDNS" 60 "$DEL_ADDR" --private-key "$DEL_KEY" --rpc-url "$RPC" >/dev/null 2>&1 && ok "delegated admin (--devices) can write a device addr record" || fail "delegated admin could not set addr"
+cast send "$RES" "setText(bytes,string,string)" "$NDNS" meshy.kind gpu-server --private-key "$DEL_KEY" --rpc-url "$RPC" >/dev/null 2>&1 && ok "delegated admin (--devices) can write meshy.kind" || fail "delegated admin could not set meshy.kind"
 ODNS=$(python3 -c "import sys;n=sys.argv[1];print('0x'+''.join('%02x'%len(l)+l.encode().hex() for l in n.split('.'))+'00')" "$ORG")
 if cast send "$RES" "setText(bytes,string,string)" "$ODNS" meshy.orgkey attacker --private-key "$DEL_KEY" --rpc-url "$RPC" >/dev/null 2>&1; then fail "delegated admin could overwrite meshy.orgkey!"; else ok "delegated admin CANNOT touch meshy.orgkey (EAC setter scope)"; fi
 

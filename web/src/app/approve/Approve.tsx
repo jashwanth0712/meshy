@@ -33,7 +33,7 @@ export function Approve({ org, agent, addr, ssh }: { org: string; agent: string;
   const [done, setDone] = useState(false);
   const polling = useRef(false);
   const valid = /^[a-z0-9-]{1,63}$/.test(agent) && isAddress(addr) && ssh.startsWith("ssh-");
-  const isOwner = !!account && !!tree && tree.owner.toLowerCase() === account.toLowerCase();
+  const isOwner = !!account; // roles are enforced on-chain (owner or delegated admin)
   const already = tree?.agents.find((a) => a.label === agent);
 
   useEffect(() => {
@@ -88,7 +88,6 @@ export function Approve({ org, agent, addr, ssh }: { org: string; agent: string;
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
     const records = {
       "meshy.ssh": ssh.trim(),
-      "meshy.owner": account,
       "meshy.worldid": attestation,
       "agent-context": `Meshy agent ${agent}. Access is granted per resource via ENS subnames <agent>.<resource>.`,
     };
@@ -160,7 +159,7 @@ export function Approve({ org, agent, addr, ssh }: { org: string; agent: string;
             {error && <p className="mb-2 text-sm text-bad">{error}</p>}
             {account ? (
               <div className="text-sm">
-                <Short v={account} /> {isOwner ? <Badge tone="ok">org owner</Badge> : <Badge tone="bad">not the owner of {org}</Badge>}
+                <Short v={account} /> {tree && tree.owner.toLowerCase() === account.toLowerCase() ? <Badge tone="ok">org owner</Badge> : <Badge tone="info">must be the owner or a delegated admin</Badge>}
               </div>
             ) : (
               <Button kind="primary" onClick={connect}>

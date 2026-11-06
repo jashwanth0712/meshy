@@ -380,6 +380,15 @@ func (a *Admin) GrantTextKey(ctx context.Context, resolver common.Address, key s
 	return a.tx(ctx, resolver, "grantSetterRoles", setter, account)
 }
 
+// GrantAddrSetter lets account set the ETH addr record (coin type 60) on resolver.
+func (a *Admin) GrantAddrSetter(ctx context.Context, resolver common.Address, account common.Address) (*types.Receipt, error) {
+	setter, err := pack("setAddress", []byte{0}, big.NewInt(60), []byte{})
+	if err != nil {
+		return nil, err
+	}
+	return a.tx(ctx, resolver, "grantSetterRoles", setter, account)
+}
+
 // AdminRoles are the registry roles a delegated admin gets on a network or a
 // resource's grants registry: create, revoke and renew names.
 var AdminRoles = new(big.Int).Or(new(big.Int).Or(RoleRegistrar, RoleUnregister), RoleRenew)

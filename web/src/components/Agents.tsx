@@ -5,13 +5,17 @@ import { useState } from "react";
 import { Badge, Button, Card, Empty, Field, Name, OnChain, Short, inputCls } from "@/components/ui";
 import { useMeshy } from "@/lib/store";
 
-export default function AgentsPage() {
+export function Agents() {
   const { tree, org } = useMeshy();
   const [label, setLabel] = useState("claude-2");
   const [copied, setCopied] = useState(false);
   if (!tree) return null;
   const invite = typeof window !== "undefined" ? `${window.location.origin}/approve?org=${org}&agent=${label}` : "";
-  const grantsByAgent = (a: string) => tree.networks.flatMap((n) => n.resources).flatMap((r) => r.grants.filter((g) => g.agent === a && g.status === "live").map((g) => ({ g, r })));
+  const grantsByAgent = (a: string) => {
+    const devs = tree.networks.flatMap((n) => n.resources);
+    const targets = [...devs, ...devs.flatMap((d) => d.services)];
+    return targets.flatMap((r) => r.grants.filter((g) => g.agent === a && g.status === "live" && g.expiry > Date.now() / 1000).map((g) => ({ g, r })));
+  };
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
       <Card title="Agents">

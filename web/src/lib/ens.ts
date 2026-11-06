@@ -302,14 +302,14 @@ export async function loadOrg(c: PublicClient, org: string): Promise<OrgTree> {
               const an = `${a}.${name}`;
               const { state: ast, resolver: res } = await nodeInfo(c, sub, a);
               if (ast.status !== 2) return null;
-              const [addr, ssh, ownerTxt, worldid, ctx] = await Promise.all([
+              const [addr, ssh, worldid, ctx] = await Promise.all([
                 addrRecord(c, res, an),
                 text(c, res, an, "meshy.ssh"),
-                text(c, res, an, "meshy.owner"),
                 text(c, res, an, "meshy.worldid"),
                 text(c, res, an, "agent-context"),
               ]);
-              return { name: an, label: a, addr, ssh, owner: ownerTxt, worldid, agentContext: ctx } as AgentNode;
+              // The approving human is simply the ENS owner of the agent's name.
+              return { name: an, label: a, addr, ssh, owner: ast.latestOwner, worldid, agentContext: ctx } as AgentNode;
             }),
           )
         ).filter(Boolean) as AgentNode[];

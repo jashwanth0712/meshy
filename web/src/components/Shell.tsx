@@ -1,5 +1,5 @@
 "use client";
-import { Activity, Bot, CreditCard, KeyRound, Network, RefreshCw, Server, Settings, ShieldCheck, Wallet } from "lucide-react";
+import { Activity, CreditCard, KeyRound, Network, RefreshCw, Settings, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -7,11 +7,11 @@ import { useMeshy } from "@/lib/store";
 import { Badge, Button, Short, cx } from "./ui";
 
 const NAV = [
-  { href: "", label: "Network map", icon: Network },
-  { href: "/resources", label: "Resources", icon: Server },
-  { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/grants", label: "Access grants", icon: KeyRound },
+  { href: "", label: "Access", icon: KeyRound },
+  { href: "/directory", label: "Directory", icon: Network },
   { href: "/activity", label: "Activity", icon: Activity },
+];
+const ORG_NAV = [
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/provider", label: "Provider", icon: ShieldCheck },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -39,23 +39,25 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="mono truncate text-sm text-fg">{org}</div>
         </div>
         <nav className="flex-1 space-y-0.5 px-2">
-          {NAV.map(({ href, label, icon: I }) => {
-            const to = base + href;
-            const active = href === "" ? path === base : path.startsWith(to);
-            return (
-              <Link
-                key={label}
-                href={to}
-                className={cx(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm",
-                  active ? "bg-panel-2 text-fg" : "text-muted hover:bg-panel-2 hover:text-fg",
-                )}
-              >
-                <I size={16} />
-                {label}
-              </Link>
-            );
-          })}
+          {[NAV, ORG_NAV].map((group, gi) => (
+            <div key={gi} className={gi ? "mt-6 border-t border-line pt-4" : ""}>
+              {gi === 1 && <div className="px-3 pb-1 text-[10px] uppercase tracking-wider text-muted">Org</div>}
+              {group.map(({ href, label, icon: I }) => {
+                const to = base + href;
+                const active = href === "" ? path === base : path.startsWith(to);
+                return (
+                  <Link
+                    key={label}
+                    href={to}
+                    className={cx("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm", active ? "bg-panel-2 text-fg" : "text-muted hover:bg-panel-2 hover:text-fg")}
+                  >
+                    <I size={16} />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="space-y-1 border-t border-line p-4 text-[11px] text-muted">
           <div>Source of truth: ENSv2 · Sepolia</div>
@@ -86,7 +88,7 @@ export function Shell({ children }: { children: ReactNode }) {
             {account ? (
               <>
                 {!chainOk && <Badge tone="bad">wrong network</Badge>}
-                {isOwner ? <Badge tone="ok">org owner</Badge> : tree && <Badge tone="warn">not the org owner</Badge>}
+                {isOwner && <Badge tone="ok">owner</Badge>}
                 <span className="mono rounded-lg border border-line px-2.5 py-1.5 text-xs">
                   <Short v={account} n={4} />
                 </span>

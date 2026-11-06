@@ -14,15 +14,17 @@ function parseJoin(code: string): Join {
   return JSON.parse(atob(b + "=".repeat((4 - (b.length % 4)) % 4))) as Join;
 }
 
-export default function ResourcesPage() {
+export function Devices() {
   const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
   const [mode, setMode] = useState<"none" | "network" | "resource" | "service">("none");
   const [svcForm, setSvcForm] = useState({ device: "", name: "camera", target: "127.0.0.1:8001", proto: "http", desc: "" });
   const [netLabel, setNetLabel] = useState("");
   const [code, setCode] = useState("");
+  const [devKind, setDevKind] = useState("server");
+  const [devMeta, setDevMeta] = useState({ model: "", location: "", gpus: "" });
   const [steps, setSteps] = useState<Step[]>();
   if (!tree) return null;
-  const isOwner = !!account && tree.owner.toLowerCase() === account.toLowerCase();
+  const isOwner = !!account; // roles are enforced on-chain (owner or delegated admin)
   const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const fail = (e: unknown) => {
     const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
@@ -66,12 +68,7 @@ export default function ResourcesPage() {
       await send(wallet, client, { address: dev.registry, abi: registryAbi, functionName: "register", args: [svcForm.name, account, reg, tree!.resolver, 0n, yearFromNow()] });
       up(1, { state: "done" });
       up(2, { state: "doing" });
-      const texts: Record<string, string> = {
-        "meshy.service": JSON.stringify({ proto: svcForm.proto, target: svcForm.target, desc: svcForm.desc }),
-        "meshy.kind": "service",
-        url: `${svcForm.proto}://${name}`,
-      };
-      if (svcForm.desc) texts.description = svcForm.desc;
+      const texts: Record<string, string> = { "meshy.service": JSON.stringify({ proto: svcForm.proto, target: svcForm.target, desc: svcForm.desc }) };
       await send(wallet, client, { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(name, texts)] });
       up(2, { state: "done" });
       toast(`Service ${name} published`, "ok");
@@ -111,6 +108,9 @@ export default function ResourcesPage() {
       up(2, { state: "doing" });
       const texts: Record<string, string> = { "meshy.enckey": j["meshy.enckey"], "meshy.ssh-host": j["meshy.ssh-host"], "meshy.roots": JSON.stringify(j["meshy.roots"]) };
       if (j["meshy.endpoint"]) texts["meshy.endpoint"] = j["meshy.endpoint"];
+      if (devKind) texts["meshy.kind"] = devKind;
+      const meta = Object.fromEntries(Object.entries(devMeta).filter(([, v]) => v.trim()));
+      if (Object.keys(meta).length) texts["meshy.meta"] = JSON.stringify(meta);
       await send(wallet, client, { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(j.name, texts, getAddress(j.addr) as Address)] });
       up(2, { state: "done" });
       toast(`Resource ${j.name} registered`, "ok");
@@ -121,9 +121,9 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div>
       <Card
-        title="Resources"
+        title="Devices & services"
         actions={
           <>
             <Button onClick={() => (setMode("network"), setSteps(undefined))} disabled={!isOwner}>
@@ -190,72 +190,74 @@ export default function ResourcesPage() {
             <Field label="Join code">
               <textarea className={inputCls + " h-24"} value={code} onChange={(e) => setCode(e.target.value)} placeholder="meshy-join:eyJuYW1lIjoi…" />
             </Field>
+            <div className="grid gap-3 md:grid-cols-4">
+              <Field label="Kind">
+                <select className={inputCls} value={devKind} onChange={(e) => setDevKind(e.target.value)}>
+                  {["server", "gpu-server", "raspberry-pi", "laptop", "nas", "camera-hub"].map((k) => (
+                    <option key={k}>{k}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Model">
+                <input className={inputCls} value={devMeta.model} onChange={(e) => setDevMeta({ ...devMeta, model: e.target.value })} placeholder="Raspberry Pi 5" />
+              </Field>
+              <Field label="GPUs">
+                <input className={inputCls} value={devMeta.gpus} onChange={(e) => setDevMeta({ ...devMeta, gpus: e.target.value })} placeholder="2× RTX 4090" />
+              </Field>
+              <Field label="Location">
+                <input className={inputCls} value={devMeta.location} onChange={(e) => setDevMeta({ ...devMeta, location: e.target.value })} placeholder="lab rack 2" />
+              </Field>
+            </div>
             {steps ? <Steps steps={steps} /> : <Button kind="primary" disabled={!code} onClick={addResource}>Register resource (3 tx)</Button>}
           </div>
         )}
         {tree.networks.length === 0 ? (
           <Empty>No networks yet.</Empty>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-7">
             {tree.networks.map((n) => (
               <div key={n.name}>
-                <div className="mb-2 flex items-center gap-2 text-sm">
-                  <Network size={14} className="text-accent-2" /> <Name name={n.name} /> <OnChain name={n.name} />
+                <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+                  <Network size={12} /> {n.name} <OnChain name={n.name} />
                 </div>
                 {n.resources.length === 0 ? (
-                  <Empty>No resources in this network.</Empty>
+                  <div className="py-3 text-sm text-muted">No devices.</div>
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="divide-y divide-line border-y border-line">
                     {n.resources.map((r) => {
                       const live = r.grants.filter((g) => g.status === "live" && g.expiry > Date.now() / 1000).length;
+                      const facts = [r.kind, r.meta.model, r.meta.location, r.meta.gpus].filter(Boolean);
                       return (
-                        <div key={r.name} className="rounded-xl border border-line bg-bg p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Server size={15} />
+                        <div key={r.name} className="py-3">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <div className="flex min-w-0 items-baseline gap-2">
+                              <Server size={14} className="translate-y-0.5 text-muted" />
                               <Name name={r.name} />
-                              {r.kind && <Badge tone="info">{r.kind}</Badge>}
+                              <span className="truncate text-xs text-muted">{facts.join(" · ")}</span>
                             </div>
-                            {live ? <Badge tone="ok">{live} live grant{live > 1 ? "s" : ""}</Badge> : <Badge>idle</Badge>}
+                            <span className="shrink-0 text-xs text-muted">
+                              {live ? <span className="text-accent">{live} live folder grant{live > 1 ? "s" : ""}</span> : "no folder grants"}
+                            </span>
                           </div>
-                          <div className="mt-3 grid grid-cols-[100px_1fr] gap-y-1.5 text-xs">
-                            <span className="text-muted">daemon</span>
-                            <Short v={r.addr} />
-                            <span className="text-muted">roots</span>
-                            <span className="mono">{r.roots.join(", ") || "—"}</span>
-                            <span className="text-muted">reach</span>
-                            <span className="mono">{r.endpoint || `${r.name}:22 (mesh)`}</span>
-                            <span className="text-muted">host key</span>
-                            <Short v={r.sshHost.split(" ")[1] ?? ""} n={8} />
+                          <div className="mt-1 pl-6 text-xs text-muted">
+                            folders {r.roots.join(", ") || "—"} · daemon <Short v={r.addr} n={4} /> · <span className="mono">meshy ssh {r.name}</span>
                           </div>
-                          {Object.keys(r.meta).length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {Object.entries(r.meta).map(([k, v]) => (
-                                <Badge key={k}>{k}: {v}</Badge>
-                              ))}
-                            </div>
-                          )}
-                          {r.services.length > 0 && (
-                            <div className="mt-3 space-y-1.5">
-                              {r.services.map((sv) => {
-                                const sl = sv.grants.filter((g) => g.status === "live" && g.expiry > Date.now() / 1000).length;
-                                return (
-                                  <div key={sv.name} className="flex items-center justify-between rounded-lg border border-line bg-panel px-3 py-2 text-xs">
-                                    <span className="flex items-center gap-2">
-                                      <Camera size={13} className="text-accent" />
-                                      <span className="mono">{sv.name}</span>
-                                    </span>
-                                    <span className="mono text-muted">
-                                      {sv.proto}://{sv.target} {sl ? <Badge tone="ok">{sl} live</Badge> : null}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <div className="mt-3 rounded-lg border border-line bg-panel px-3 py-2 text-[11px] text-muted">
-                            agents connect with <span className="mono text-fg">meshy ssh {r.name} -- &lt;cmd&gt;</span>
-                          </div>
+                          {r.services.map((sv) => {
+                            const sl = sv.grants.filter((g) => g.status === "live" && g.expiry > Date.now() / 1000).length;
+                            return (
+                              <div key={sv.name} className="mt-2 flex items-baseline justify-between gap-3 pl-6 text-sm">
+                                <span className="flex min-w-0 items-baseline gap-2">
+                                  <Camera size={13} className="translate-y-0.5 text-accent" />
+                                  <span className="mono">{sv.label}</span>
+                                  <span className="truncate text-xs text-muted">
+                                    {sv.proto} → {sv.target}
+                                    {sv.desc ? ` · ${sv.desc}` : ""}
+                                  </span>
+                                </span>
+                                <span className="shrink-0 text-xs text-muted">{sl ? <span className="text-accent">{sl} live</span> : "no grants"}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}

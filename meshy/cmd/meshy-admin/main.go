@@ -216,7 +216,7 @@ func orgInit(ctx context.Context, args []string) error {
 	}
 	step("agents.%s → registry %s", org, agentsReg.Hex())
 	ok, _ := policy.GenerateKey()
-	texts := map[string]string{"meshy.orgkey": policy.EncodePublicKey(ok.PublicKey()), "description": "Meshy org"}
+	texts := map[string]string{"meshy.orgkey": policy.EncodePublicKey(ok.PublicKey())}
 	if *attestor != "" {
 		texts["meshy.attestor"] = *attestor
 	}
@@ -372,8 +372,8 @@ func agentAdd(ctx context.Context, args []string) error {
 		return err
 	}
 	texts := map[string]string{
-		"meshy.ssh":     ssh,
-		"meshy.owner":   a.From().Hex(),
+		"meshy.ssh": ssh,
+		// No meshy.owner record: the approver is the ENS owner of the name.
 		"agent-context": "Meshy agent " + agent + " (Claude Code). Access is granted per resource via ENS subnames.",
 	}
 	if *devAttest != "" {
@@ -569,10 +569,8 @@ func serviceAdd(ctx context.Context, args []string) error {
 		return fmt.Errorf("register %s: %w", svcName, err)
 	}
 	spec, _ := json.Marshal(map[string]string{"proto": *proto, "target": *target, "desc": *desc})
-	texts := map[string]string{"meshy.service": string(spec), "meshy.kind": "service", "url": *proto + "://" + svcName}
-	if *desc != "" {
-		texts["description"] = *desc
-	}
+	// One record says everything; kind/url/description would only repeat it.
+	texts := map[string]string{"meshy.service": string(spec)}
 	if _, err := a.SetRecords(ctx, common.HexToAddress(s.Resolver), enskit.RecordSet{Name: enskit.Name(svcName), Texts: texts}); err != nil {
 		return err
 	}
@@ -591,6 +589,7 @@ func adminAdd(ctx context.Context, args []string) error {
 	org := fs.String("org", "", "org")
 	network := fs.String("network", "", "network label")
 	addrS := fs.String("addr", "", "admin address")
+	devices := fs.Bool("devices", false, "also let the admin add devices/services and approve agents (setter roles for device record keys + agents registry)")
 	fs.Parse(args)
 	s, err := loadState(*org)
 	if err != nil {
@@ -622,5 +621,21 @@ func adminAdd(ctx context.Context, args []string) error {
 		return fmt.Errorf("resolver setter role: %w", err)
 	}
 	step("%s: may set ONLY the meshy.policy text record on the org resolver", who.Hex())
+	if *devices {
+		for _, k := range []string{"meshy.enckey", "meshy.ssh-host", "meshy.roots", "meshy.endpoint", "meshy.kind", "meshy.meta", "meshy.service"} {
+			if _, err := a.GrantTextKey(ctx, common.HexToAddress(s.Resolver), k, who); err != nil {
+				return fmt.Errorf("setter %s: %w", k, err)
+			}
+		}
+		if _, err := a.GrantAddrSetter(ctx, common.HexToAddress(s.Resolver), who); err != nil {
+			return fmt.Errorf("addr setter: %w", err)
+		}
+		step("%s: may also write device/service records (addr, meshy.enckey, meshy.ssh-host, meshy.roots, meshy.endpoint, meshy.kind, meshy.meta, meshy.service)", who.Hex())
+		if _, err := a.GrantRootRoles(ctx, common.HexToAddress(s.AgentsReg), enskit.AdminRoles, who); err != nil {
+			return fmt.Errorf("agents registry: %w", err)
+		}
+		step("%s: may approve agents under agents.%s", who.Hex(), *org)
+	}
+	step("still NOT allowed: meshy.orgkey, meshy.attestor, other networks")
 	return nil
 }

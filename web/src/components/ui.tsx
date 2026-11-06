@@ -58,7 +58,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={cx("inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40", k, className)}
+      className={cx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40", k, className)}
     >
       {children}
     </button>

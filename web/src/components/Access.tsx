@@ -15,7 +15,7 @@ const DURATIONS = [
   { label: "4 hours", s: 14400 },
 ];
 
-function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { resource?: string; agent?: string } }) {
+export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { resource?: string; agent?: string } }) {
   const { tree, wallet, client, account, refresh, toast } = useMeshy();
   const resources = useMemo(() => tree?.networks.flatMap((n) => n.resources) ?? [], [tree]);
   const services = useMemo(() => resources.flatMap((r) => r.services), [resources]);
@@ -30,7 +30,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
   const grantName = agent && (svc || res) ? `${agent}.${(svc ?? res)!.name}` : "";
   const exp = new Date(Date.now() + dur * 1000);
   const ag = tree?.agents.find((a) => a.label === agent);
-  const isOwner = !!account && !!tree && tree.owner.toLowerCase() === account.toLowerCase();
+  const isOwner = !!account; // roles are enforced on-chain (owner or delegated admin)
 
   const valid = svc ? !!ag : !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/") && !!res.encKey && !!tree?.orgKey;
 
@@ -195,7 +195,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
             <div className="text-sm text-muted">Connect the org owner's wallet to grant.</div>
           ) : (
             <Button kind="primary" disabled={!valid || busy || !isOwner} onClick={submit}>
-              <KeyRound size={14} /> {isOwner ? (svc ? "Grant (1 transaction)" : "Grant (2 transactions)") : "Only the org owner can grant"}
+              <KeyRound size={14} /> {isOwner ? (svc ? "Grant (1 transaction)" : "Grant (2 transactions)") : "Connect a wallet to grant"}
             </Button>
           )}
         </div>
@@ -204,7 +204,7 @@ function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?: { reso
   );
 }
 
-function RevokeTimeline({ grant, res, onDone }: { grant: GrantNode; res: { label: string; name: string }; onDone: () => void }) {
+export function RevokeTimeline({ grant, res, onDone }: { grant: GrantNode; res: { label: string; name: string }; onDone: () => void }) {
   const { wallet, client, org, refresh, toast } = useMeshy();
   const [steps, setSteps] = useState<Step[]>([
     { label: "Send unregister() for the grant", state: "doing" },
@@ -271,68 +271,3 @@ function RevokeTimeline({ grant, res, onDone }: { grant: GrantNode; res: { label
     </div>
   );
 }
-
-export default function GrantsPage() {
-  const { tree, account } = useMeshy();
-  const now = useNow();
-  const [drawer, setDrawer] = useState<{ resource?: string; agent?: string } | null>(null);
-  const [revoking, setRevoking] = useState<{ g: GrantNode; r: ResourceNode | ServiceNode }>();
-  if (!tree) return null;
-  const isOwner = !!account && tree.owner.toLowerCase() === account.toLowerCase();
-  const devs = tree.networks.flatMap((n) => n.resources);
-  const rows: { g: GrantNode; r: ResourceNode | ServiceNode }[] = [
-    ...devs.flatMap((r) => r.grants.map((g) => ({ g, r }))),
-    ...devs.flatMap((r) => r.services).flatMap((sv) => sv.grants.map((g) => ({ g, r: sv }))),
-  ];
-  rows.sort((a, b) => Number(b.g.status === "live") - Number(a.g.status === "live") || b.g.expiry - a.g.expiry);
-  return (
-    <div className="space-y-5">
-      <Card
-        title="Access grants"
-        actions={
-          <Button kind="primary" onClick={() => setDrawer({})} disabled={!tree.agents.length}>
-            <Plus size={14} /> Grant access
-          </Button>
-        }
-      >
-        <p className="mb-4 text-sm text-muted">
-          Each grant is an ENSv2 subname <span className="mono">&lt;agent&gt;.&lt;resource&gt;</span> owned by the agent, with a native expiry. Revoking unregisters it; every
-          resource daemon kills that agent&apos;s live sessions on the next block.
-        </p>
-        {rows.length === 0 ? (
-          <Empty>No grants yet.</Empty>
-        ) : (
-          <div className="divide-y divide-line">
-            {rows.map(({ g, r }) => {
-              const live = g.status === "live" && g.expiry > now / 1000;
-              return (
-                <div key={g.name} className={cx("flex items-center gap-4 py-3", !live && "opacity-60")}>
-                  {live ? <Ring until={g.expiry} total={4 * 3600} /> : <div className="w-[26px]" />}
-                  <div className="min-w-0 flex-1">
-                    <Name name={g.name} />
-                    <div className="text-xs text-muted">
-                      agent <span className="mono">{g.agent}</span> on <span className="mono">{r.label}</span> ·{" "}
-                      {"target" in r ? <>port {r.proto}://{r.target}</> : <>folders {g.policySet ? "(sealed policy)" : "—"}</>}
-                    </div>
-                  </div>
-                  {live ? <Countdown until={g.expiry} /> : <Badge tone={g.status === "revoked" ? "bad" : "muted"}>{g.status}</Badge>}
-                  {live ? (
-                    <Button kind="danger" disabled={!isOwner} onClick={() => setRevoking({ g, r })}>
-                      <Zap size={14} /> Revoke
-                    </Button>
-                  ) : (
-                    <Button onClick={() => setDrawer({ resource: r.name, agent: g.agent })}>Re-grant</Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-      {drawer && <GrantDrawer preset={drawer} onClose={() => setDrawer(null)} />}
-      {revoking && <RevokeTimeline grant={revoking.g} res={revoking.r} onDone={() => setRevoking(undefined)} />}
-    </div>
-  );
-}
-
-export type { Address };
