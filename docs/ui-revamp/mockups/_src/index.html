@@ -1,0 +1,61 @@
+<!-- {"title": "All mockups", "shell": "bare"} -->
+<style>
+  .thumb { position: relative; padding-bottom: 62.5%; overflow: hidden; border-bottom: 2px solid var(--foreground); background: var(--background); }
+  .thumb iframe { position: absolute; top: 0; left: 0; width: 1440px; height: 900px; border: 0; transform: scale(var(--s, .27)); transform-origin: 0 0; pointer-events: none; }
+  .show { display: block; border: 2px solid var(--foreground); border-radius: 10px; overflow: hidden; background: var(--card); transition: transform .2s, box-shadow .2s; }
+  .show:hover { transform: translateY(-2px); box-shadow: 6px 6px 0 var(--foreground); }
+</style>
+<header class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
+  <span class="text-foreground">{{lockup:h-7 w-auto}}</span>
+  <div class="flex items-center gap-2"><a href="../PLAN.md" class="btn btn-outline btn-sm"><i data-lucide="file-text"></i>PLAN.md</a><button onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="Toggle theme"><i data-lucide="sun-moon"></i></button></div>
+</header>
+
+<section class="mx-auto max-w-7xl px-6 pb-10 pt-14 lg:px-8">
+  <div class="eyebrow mb-3">UI revamp · mockups</div>
+  <h1 class="text-[clamp(2.5rem,5vw,3.75rem)] font-semibold leading-[1.02] tracking-[-0.035em]">Calm, light, and<br>access-first.</h1>
+  <p class="lede mt-4 max-w-2xl">Static mockups of the whole Meshy dashboard in an ethglobal.com-inspired style: paper background, white cards, ink type, one cobalt accent from the logo, pill buttons and quiet motion. Data is from <span class="mono text-foreground">meshydemo.eth</span> on Sepolia, read on 6 Nov 2026.</p>
+  <div class="mt-6 flex flex-wrap gap-2"><span class="tag">10 screens</span><span class="tag tag-mint">Light + dark</span><span class="tag tag-peach">shadcn/ui mapping</span><span class="tag tag-lilac">Press ⌘K anywhere</span></div>
+</section>
+
+<main class="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <a class="show" href="access.html"><div class="thumb"><iframe src="access.html" loading="lazy" tabindex="-1" title="Access preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Access home</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Live grants with countdown rings, recently ended, a time-axis view, the Arkiv feed with "Grant this", and the setup checklist.</p><div class="mt-3 flex gap-1.5"><span class="tag">Home</span></div></div></a>
+    <a class="show" href="give-access.html"><div class="thumb"><iframe src="give-access.html" loading="lazy" tabindex="-1" title="Give access preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Give access sheet</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Four numbered questions, target radio cards, Read / Read + write per folder, and a plain-words preview before any signature.</p><div class="mt-3 flex gap-1.5"><span class="tag tag-peach">Sheet</span></div></div></a>
+    <a class="show" href="revoke.html"><div class="thumb"><iframe src="revoke.html" loading="lazy" tabindex="-1" title="Revoke preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Revoke timeline</h2><p class="mt-2 text-[13.5px] text-muted-foreground">AlertDialog that names what breaks, then a click-to-dead-session timeline with a latency breakdown and a stepper toast.</p><div class="mt-3 flex gap-1.5"><span class="tag tag-peach">AlertDialog</span><span class="tag tag-mint">Sonner</span></div></div></a>
+    <a class="show" href="directory.html"><div class="thumb"><iframe src="directory.html" loading="lazy" tabindex="-1" title="Directory preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Directory</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Master-detail like ethglobal's prize pages: a name tree on the left, a device on the right with services, facts and records.</p><div class="mt-3 flex gap-1.5"><span class="tag">Master-detail</span></div></div></a>
+    <a class="show" href="agent.html"><div class="thumb"><iframe src="agent.html" loading="lazy" tabindex="-1" title="Agent preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Agent detail</h2><p class="mt-2 text-[13.5px] text-muted-foreground">New page. "What can claude-1 touch" as a reach map and a sentence, refused attempts with one-click grants, identity and history.</p><div class="mt-3 flex gap-1.5"><span class="tag tag-lilac">New</span></div></div></a>
+    <a class="show" href="activity.html"><div class="thumb"><iframe src="activity.html" loading="lazy" tabindex="-1" title="Activity preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Activity</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Stat tiles, an org-key banner, a filterable DataTable of Arkiv events with proof links, and the runnable query.</p><div class="mt-3 flex gap-1.5"><span class="tag">DataTable</span></div></div></a>
+    <a class="show" href="billing.html"><div class="thumb"><iframe src="billing.html" loading="lazy" tabindex="-1" title="Billing preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Billing</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Unambiguous dates, a segmented seat meter that names each seat, and a priced, step-by-step plan change.</p><div class="mt-3 flex gap-1.5"><span class="tag tag-mint">USDC</span></div></div></a>
+    <a class="show" href="provider.html"><div class="thumb"><iframe src="provider.html" loading="lazy" tabindex="-1" title="Provider preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Provider</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Provider table, meshy-sync health with honest warnings, and a fraud-proof form that checks before you submit.</p><div class="mt-3 flex gap-1.5"><span class="tag">Tabs</span></div></div></a>
+    <a class="show" href="settings.html"><div class="thumb"><iframe src="settings.html" loading="lazy" tabindex="-1" title="Settings preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Settings</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Org records, a drop-zone for the org key, and delegated admins as a real list with a permission matrix.</p><div class="mt-3 flex gap-1.5"><span class="tag">EAC</span></div></div></a>
+    <a class="show" href="approve.html"><div class="thumb"><iframe src="approve.html" loading="lazy" tabindex="-1" title="Approve preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Approve an agent</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Standalone flow with a 3-step stepper, fingerprint check, World ID or a clearly marked dev attestation.</p><div class="mt-3 flex gap-1.5"><span class="tag tag-lilac">World ID</span></div></div></a>
+    <a class="show" href="access.html?palette=0x35e7"><div class="thumb grid place-items-center bg-muted"><div class="pop w-4/5 p-4 text-left"><div class="flex items-center gap-2 border-b border-border pb-3 text-sm text-muted-foreground"><i data-lucide="search" class="h-4 w-4"></i><span class="mono text-foreground">0x35e7</span></div><div class="mt-3 flex items-center gap-2 text-sm"><span class="grid h-7 w-7 place-items-center rounded-md bg-foreground text-background"><i data-lucide="sparkle" class="h-3.5 w-3.5"></i></span><span class="ens">claude-1<span class="rest">.agents.meshydemo.eth</span></span></div></div></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">⌘K palette</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Opens on every page. Type a name, an address or an action; addresses resolve to ENS names.</p><div class="mt-3 flex gap-1.5"><span class="tag">Command</span></div></div></a>
+    <a class="show" href="access.html?theme=dark"><div class="thumb"><iframe src="access.html?theme=dark" loading="lazy" tabindex="-1" title="Dark preview"></iframe></div><div class="p-5"><h2 class="text-xl font-semibold tracking-tight">Dark theme</h2><p class="mt-2 text-[13.5px] text-muted-foreground">Same tokens on ink. Cobalt 300 replaces cobalt for contrast, as the brand rules require.</p><div class="mt-3 flex gap-1.5"><span class="tag">Ink</span></div></div></a>
+  </div>
+
+  <section class="mt-16">
+    <h2 class="text-3xl font-semibold tracking-tight">Tokens</h2>
+    <p class="mt-2 text-muted-foreground">shadcn/ui variable names, brand values. Full list in PLAN.md.</p>
+    <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+      <div><div class="h-16 rounded-xl border border-border" style="background:#2b3fe0"></div><div class="mt-2 text-[13px] font-semibold">primary</div><div class="mono text-xs text-muted-foreground">#2B3FE0</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#8c9bff"></div><div class="mt-2 text-[13px] font-semibold">primary (dark)</div><div class="mono text-xs text-muted-foreground">#8C9BFF</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#121417"></div><div class="mt-2 text-[13px] font-semibold">foreground</div><div class="mono text-xs text-muted-foreground">#121417</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#f6f6f4"></div><div class="mt-2 text-[13px] font-semibold">background</div><div class="mono text-xs text-muted-foreground">#F6F6F4</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#ffffff"></div><div class="mt-2 text-[13px] font-semibold">card</div><div class="mono text-xs text-muted-foreground">#FFFFFF</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#15803d"></div><div class="mt-2 text-[13px] font-semibold">success</div><div class="mono text-xs text-muted-foreground">#15803D</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#a35200"></div><div class="mt-2 text-[13px] font-semibold">warning</div><div class="mono text-xs text-muted-foreground">#A35200</div></div>
+      <div><div class="h-16 rounded-xl border border-border" style="background:#d92d20"></div><div class="mt-2 text-[13px] font-semibold">destructive</div><div class="mono text-xs text-muted-foreground">#D92D20</div></div>
+    </div>
+    <div class="mt-8 grid gap-6 md:grid-cols-3">
+      <div class="card card-b"><div class="eyebrow">Type</div><div class="mt-3 text-4xl font-semibold tracking-[-0.03em]">Geist 600</div><div class="mono mt-2 text-lg">Geist Mono · db1.prod</div><p class="mt-2 text-[13px] text-muted-foreground">Free stand-in for ethglobal's Roobert, and the brand's own UI face.</p></div>
+      <div class="card card-b"><div class="eyebrow">Shape</div><div class="mt-4 flex flex-wrap items-center gap-2"><span class="btn btn-primary btn-sm">Pill button</span><span class="btn btn-outline btn-sm">Outline</span><span class="tag">Event tag</span><span class="badge b-live">Live</span></div><p class="mt-3 text-[13px] text-muted-foreground">10 px radius, 2 px outlines, 1 px hairlines, almost no shadow.</p></div>
+      <div class="card card-b"><div class="eyebrow">Brand</div><div class="mt-3 flex items-center gap-4 text-primary">{{mark:h-14 w-14}}{{icon:h-14 w-14}}</div><p class="mt-3 text-[13px] text-muted-foreground">The spark with a gap means "agent, held apart". The UI reuses it as the agent glyph.</p></div>
+    </div>
+  </section>
+  <p class="mt-12 text-xs text-muted-foreground">Names, addresses, blocks, latencies and counts come from the live org. SSH fingerprints, the World ID code, the payment rows and claude-2 are illustrative. Rebuild with <code>python3 docs/ui-revamp/mockups/build.py</code>.</p>
+</main>
+<script>
+  // scale each live preview to its card width
+  const fit = () => document.querySelectorAll(".thumb").forEach((t) => t.style.setProperty("--s", t.clientWidth / 1440));
+  addEventListener("resize", fit); fit();
+</script>

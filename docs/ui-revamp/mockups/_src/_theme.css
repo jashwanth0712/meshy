@@ -1,0 +1,117 @@
+/* Meshy design tokens: the same variables PLAN.md proposes for web/src/app/globals.css.
+   shadcn/ui semantic names, values built from the brand (brand/README.md) and the
+   ethglobal.com look: paper background, white cards, ink text, one cobalt accent. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-info-soft: var(--info-soft);
+  --color-cobalt-50: #eef0ff;
+  --color-cobalt-100: #e0e4ff;
+  --color-cobalt-200: #c4cbff;
+  --color-cobalt-300: #8c9bff;
+  --color-cobalt-400: #5e70f5;
+  --color-cobalt-500: #2b3fe0;
+  --color-cobalt-600: #2233c4;
+  --color-cobalt-700: #1c2a9e;
+  --color-cobalt-800: #18237d;
+  --color-cobalt-900: #141c5e;
+  --color-ink: #121417;
+  --color-paper: #f6f6f4;
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: calc(var(--radius) * 1.6);
+}
+
+:root {
+  --radius: 0.625rem; /* 10px, ethglobal.com cards */
+  --background: #f6f6f4; /* brand paper */
+  --foreground: #121417; /* brand ink */
+  --card: #ffffff;
+  --card-foreground: #121417;
+  --popover: #ffffff;
+  --popover-foreground: #121417;
+  --primary: #2b3fe0; /* brand cobalt: 7.27:1 with white */
+  --primary-foreground: #ffffff;
+  --secondary: #efefec;
+  --secondary-foreground: #121417;
+  --muted: #f1f1ee;
+  --muted-foreground: #66696f; /* 5.3:1 on white, 4.9:1 on paper */
+  --accent: #eef0ff; /* cobalt-50: hover and selected rows */
+  --accent-foreground: #1c2a9e;
+  --destructive: #d92d20;
+  --destructive-foreground: #ffffff;
+  --border: #e8e8e4;
+  --border-strong: #d9d9d4;
+  --input: #dcdcd6;
+  --ring: #2b3fe0;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #a35200;
+  --warning-soft: #fef3c7;
+  --danger-soft: #fee4e2;
+  --info-soft: #e0e4ff;
+  --shadow-soft: 0 0 30px 0.5px rgb(40 50 70 / 0.07);
+  --shadow-pop: 0 12px 40px -8px rgb(18 20 23 / 0.18), 0 2px 6px rgb(18 20 23 / 0.06);
+}
+
+.dark {
+  --background: #0e1013;
+  --foreground: #ecedee;
+  --card: #15181c;
+  --card-foreground: #ecedee;
+  --popover: #181b20;
+  --popover-foreground: #ecedee;
+  --primary: #8c9bff; /* cobalt-300: brand rule, never cobalt-500 on ink */
+  --primary-foreground: #0e1013;
+  --secondary: #1d2126;
+  --secondary-foreground: #ecedee;
+  --muted: #1b1e23;
+  --muted-foreground: #9a9ea6;
+  --accent: #1b2142;
+  --accent-foreground: #c4cbff;
+  --destructive: #f97066;
+  --destructive-foreground: #0e1013;
+  --border: #24282e;
+  --border-strong: #30353c;
+  --input: #2c3137;
+  --ring: #8c9bff;
+  --success: #4ade80;
+  --success-soft: #0f2a1a;
+  --warning: #fbbf24;
+  --warning-soft: #2a2110;
+  --danger-soft: #2d1414;
+  --info-soft: #1b2142;
+  --shadow-soft: 0 0 0 1px rgb(255 255 255 / 0.02);
+  --shadow-pop: 0 16px 48px -8px rgb(0 0 0 / 0.6);
+}

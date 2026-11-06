@@ -1,0 +1,107 @@
+<!-- {"title": "Agent: claude-1", "active": "directory", "shell": "app", "orgkey": true} -->
+<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
+  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><a href="directory.html">directory</a><span class="dot-sep"> / </span><span class="text-foreground">agents</span></nav>
+  <div class="flex flex-wrap items-end justify-between gap-6">
+    <div class="flex items-center gap-5">
+      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-foreground text-background"><i data-lucide="sparkle" class="h-8 w-8"></i></span>
+      <div>
+        <h1 class="ens text-[2.25rem] font-semibold leading-none tracking-tight"><a href="#">claude-1</a><span class="text-muted-foreground">.agents.meshydemo.eth</span></h1>
+        <div class="mt-3 flex flex-wrap items-center gap-1.5"><span class="tag tag-mint"><i data-lucide="fingerprint" class="h-3 w-3"></i>Human-backed · World ID</span><span class="tag">Claude Code</span><span class="tag tag-peach"><span class="dot dot-live"></span>1 live grant</span></div>
+      </div>
+    </div>
+    <div class="flex gap-2"><button class="btn btn-outline"><i data-lucide="copy"></i>Copy name</button><a href="give-access.html" class="btn btn-primary btn-lg"><i data-lucide="key-round"></i>Give access</a></div>
+  </div>
+</section>
+
+<main class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+  <div class="space-y-6">
+    <!-- reach explainer -->
+    <section class="card overflow-hidden">
+      <div class="card-h"><div><h2 class="h3">What claude-1 can touch right now</h2><p class="text-[13px] text-muted-foreground">Computed from live ENS names, not from a config file. Changes the moment a grant lands or expires.</p></div><div class="seg"><button aria-pressed="true">Map</button><button>List</button></div></div>
+      <div class="grid md:grid-cols-[minmax(0,1fr)_280px]">
+        <!-- map -->
+        <div class="relative min-h-[320px] bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:18px_18px] p-6">
+          <svg viewBox="0 0 520 300" class="h-full w-full" aria-label="Reach map">
+            <path d="M150 150 C 240 150, 250 60, 340 60" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M150 150 C 240 150, 260 150, 340 150" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="4 6"/>
+            <path d="M150 150 C 240 150, 250 240, 340 240" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="4 6"/>
+            <path d="M351 240 L 429 240" fill="none" stroke="var(--border-strong)" stroke-width="2" stroke-dasharray="4 6"/>
+            <!-- agent: the logo's spark, held apart by a gap -->
+            <circle cx="120" cy="150" r="34" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="2 4"/>
+            <path d="M120 122Q125 145 148 150Q125 155 120 178Q115 155 92 150Q115 145 120 122Z" fill="var(--foreground)"/>
+            <text x="120" y="205" text-anchor="middle" font-family="Geist Mono" font-size="13" font-weight="600" fill="var(--foreground)">claude-1</text>
+            <!-- db1: live -->
+            <circle cx="340" cy="60" r="12" fill="var(--card)" stroke="var(--primary)" stroke-width="6"/>
+            <text x="362" y="56" font-family="Geist Mono" font-size="13" font-weight="600" fill="var(--foreground)">db1.prod</text>
+            <text x="362" y="74" font-family="Geist" font-size="11.5" fill="var(--success)">read · 57m left</text>
+            <!-- rig1: revoked -->
+            <circle cx="340" cy="150" r="10" fill="var(--card)" stroke="var(--border-strong)" stroke-width="4"/>
+            <text x="362" y="146" font-family="Geist Mono" font-size="12" fill="var(--muted-foreground)">rig1.home</text>
+            <text x="362" y="162" font-family="Geist" font-size="11" fill="var(--destructive)">revoked 3h ago</text>
+            <!-- pi: never granted -->
+            <circle cx="340" cy="240" r="10" fill="var(--card)" stroke="var(--border-strong)" stroke-width="4"/>
+            <text x="340" y="270" text-anchor="middle" font-family="Geist Mono" font-size="12" fill="var(--muted-foreground)">pi.home</text>
+            <text x="340" y="285" text-anchor="middle" font-family="Geist" font-size="11" fill="var(--muted-foreground)">refused 2h ago</text>
+            <!-- camera service on pi: expired -->
+            <circle cx="438" cy="240" r="8" fill="var(--card)" stroke="var(--border-strong)" stroke-width="3"/>
+            <text x="438" y="268" text-anchor="middle" font-family="Geist Mono" font-size="11.5" fill="var(--muted-foreground)">camera</text>
+            <text x="438" y="283" text-anchor="middle" font-family="Geist" font-size="10.5" fill="var(--muted-foreground)">expired 2h ago</text>
+          </svg>
+          <div class="absolute bottom-4 left-6 flex gap-4 text-[11.5px] text-muted-foreground"><span class="flex items-center gap-1.5"><span class="h-0.5 w-5 rounded bg-primary"></span>Live grant</span><span class="flex items-center gap-1.5"><span class="h-0 w-5 border-t-2 border-dashed border-border-strong"></span>No access</span></div>
+        </div>
+        <!-- sentence -->
+        <div class="border-t border-border p-5 md:border-l md:border-t-0">
+          <div class="eyebrow mb-2">In plain words</div>
+          <p class="text-[15px] leading-relaxed">claude-1 can <b>read</b> <span class="mono text-[13.5px]">~/meshy-demo/srv/reports</span> on <b class="mono">db1.prod</b> for <b class="tnum" data-left="3420">57m 00s</b>.</p>
+          <p class="mt-3 text-[14px] leading-relaxed text-muted-foreground">It <b class="text-foreground">cannot</b> write anywhere, open a shell on <span class="mono">pi</span> or <span class="mono">rig1</span>, reach <span class="mono">camera</span>, or use the network from inside its sandbox.</p>
+          <div class="mt-4 rounded-xl border border-warning/30 bg-warning-soft p-3 text-[12.5px] text-warning"><i data-lucide="lock-open" class="mr-1 inline h-3.5 w-3.5"></i>Folder paths are shown because the org key is loaded in this browser. Without it you see "sealed policy".</div>
+          <div class="mt-4 flex gap-2"><a href="revoke.html" class="btn btn-danger btn-sm"><i data-lucide="zap"></i>Revoke all</a><button class="btn btn-outline btn-sm"><i data-lucide="timer-reset"></i>Extend</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- blocked attempts -->
+    <section class="card">
+      <div class="card-h"><div><h2 class="h3">What it tried and was refused</h2><p class="text-[13px] text-muted-foreground">Each refusal carries what the agent asked for, so turning it into a grant takes one click.</p></div><span class="badge b-bad">7 in 24 h</span></div>
+      <div class="overflow-x-auto">
+        <table class="tbl">
+          <thead><tr><th>When</th><th>Where</th><th>Reason</th><th>Asked for</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="text-muted-foreground">2h ago</td><td><span class="ens">pi.home</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-muted-foreground">shell</td><td class="text-right"><a href="give-access.html" class="btn btn-outline btn-sm">Grant this</a></td></tr>
+            <tr><td class="text-muted-foreground">2h ago</td><td><span class="ens">camera.pi.home</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-muted-foreground">http port 8001</td><td class="text-right"><a href="give-access.html" class="btn btn-outline btn-sm">Grant this</a></td></tr>
+            <tr><td class="text-muted-foreground">4h ago</td><td><span class="ens">db1.prod</span></td><td><code class="text-xs">MESHY_NO_GRANT</code></td><td class="text-muted-foreground">shell</td><td class="text-right"><span class="text-xs text-muted-foreground">Granted since</span></td></tr>
+            <tr><td class="text-muted-foreground">5h ago</td><td><span class="ens">rig1.home</span></td><td><code class="text-xs">MESHY_BLOCKED</code></td><td><span class="mono text-[13px]">datasets/</span> <span class="badge b-muted h-5">write</span></td><td class="text-right"><a href="give-access.html" class="btn btn-outline btn-sm">Grant this</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card">
+      <div class="card-h"><h2 class="h3">Identity</h2><a href="#" class="text-xs font-semibold text-primary hover:underline">ENS ↗</a></div>
+      <dl class="divide text-[13px]">
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Address</dt><dd class="mono">0x35e7…A62f</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">SSH key</dt><dd class="mono">ed25519 …v08v2g6Ahf</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Approved by</dt><dd class="mono">0x45e8…E0EA <span class="badge b-info h-5 font-sans">Owner</span></dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Human check</dt><dd class="text-right">World ID attestation<br><span class="mono text-xs text-muted-foreground">by 0x6Aaf…0EC4</span></dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="text-muted-foreground">Resolver</dt><dd class="text-right">Its own<br><span class="text-xs text-muted-foreground">may change only <span class="mono">meshy.ssh</span></span></dd></div>
+      </dl>
+      <div class="border-t border-border px-5 py-3 text-[12.5px] leading-relaxed text-muted-foreground"><span class="eyebrow mb-1 block">agent-context</span>Meshy agent claude-1 (Claude Code). Access is granted per resource via ENS subnames.</div>
+    </section>
+    <section class="card card-b">
+      <h2 class="h3">Grant history</h2>
+      <ol class="relative mt-4 space-y-4 border-l border-border pl-4 text-[13px]">
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-primary"></span><b class="font-semibold">db1.prod</b> · folders · 1h<div class="text-xs text-muted-foreground">granted 2m ago · live</div></li>
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-border-strong"></span><b class="font-semibold">camera.pi.home</b> · port 8001<div class="text-xs text-muted-foreground">expired 2h ago</div></li>
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-destructive"></span><b class="font-semibold">rig1.home</b> · models (read)<div class="text-xs text-muted-foreground">revoked 3h ago by 0xf846…Fc98</div></li>
+        <li><span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full bg-destructive"></span><b class="font-semibold">db1.prod</b> · folders<div class="text-xs text-muted-foreground">revoked 4h ago · session killed 132 ms after block</div></li>
+      </ol>
+    </section>
+    <section class="card card-b">
+      <h2 class="h3 text-destructive">Remove agent</h2>
+      <p class="mt-1 text-[13px] text-muted-foreground">Unregisters <span class="ens">claude-1.agents.meshydemo.eth</span>. Its grants stop working at once.</p>
+      <button class="btn btn-danger btn-sm mt-3"><i data-lucide="user-minus"></i>Remove claude-1</button>
+    </section>
+  </aside>
+</main>

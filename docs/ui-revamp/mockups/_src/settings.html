@@ -1,0 +1,73 @@
+<!-- {"title": "Settings", "active": "settings", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
+  <nav class="ens mb-4 text-[13px] text-muted-foreground"><a href="#">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">settings</span></nav>
+  <h1 class="display">Settings</h1>
+  <p class="lede mt-3 max-w-2xl">The org is an ENS name. These are its records, its encryption key and the people who can manage parts of it.</p>
+</section>
+
+<main class="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:px-8">
+  <nav class="sticky top-24 hidden h-fit space-y-0.5 text-[14px] lg:block" aria-label="Settings sections">
+    <a href="#org" class="flex items-center gap-2 rounded-lg bg-foreground/5 px-3 py-2 font-semibold"><i data-lucide="at-sign" class="h-4 w-4"></i>Organization</a>
+    <a href="#org-key" class="flex items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground"><i data-lucide="key-square" class="h-4 w-4"></i>Org key</a>
+    <a href="#admins" class="flex items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground"><i data-lucide="shield-plus" class="h-4 w-4"></i>Admins</a>
+  </nav>
+
+  <div class="space-y-8">
+    <section id="org" class="card overflow-hidden">
+      <div class="card-h"><div><h2 class="h3">Organization</h2><p class="text-[13px] text-muted-foreground">Read live from ENSv2 on Sepolia.</p></div><div class="flex gap-2"><a href="#" class="btn btn-outline btn-sm">ENS app ↗</a><a href="#" class="btn btn-outline btn-sm">Etherscan ↗</a></div></div>
+      <table class="tbl">
+        <tbody>
+          <tr><td class="w-48 text-muted-foreground">Name</td><td><span class="ens text-[15px] font-semibold">meshydemo.eth</span></td><td></td></tr>
+          <tr><td class="text-muted-foreground">Owner</td><td class="mono">0x45e874…A1E0EA <span class="badge b-info ml-1 h-5 font-sans">you</span></td><td class="text-right"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button></td></tr>
+          <tr><td class="text-muted-foreground">Resolver</td><td class="mono">0x439ba1…a40d88</td><td class="text-right"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button></td></tr>
+          <tr><td class="text-muted-foreground">Org registry</td><td class="mono">0xBFCCAf…91cE00</td><td class="text-right"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button></td></tr>
+          <tr><td class="text-muted-foreground">Trusted attestors</td><td class="mono">0x6Aafef…6e0EC4 <span class="ml-1 font-sans text-xs text-muted-foreground">meshy-sync provider #1</span></td><td class="text-right"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button></td></tr>
+          <tr><td class="text-muted-foreground">meshy.orgkey</td><td class="mono">X25519 public key · published</td><td class="text-right"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Copy"><i data-lucide="copy"></i></button></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="org-key" class="card">
+      <div class="card-h"><div><h2 class="h3">Org encryption key</h2><p class="text-[13px] text-muted-foreground">Grant policies and Arkiv audit payloads are sealed to it. The private half never leaves your machines.</p></div><span class="badge b-warn"><i data-lucide="lock"></i>Not loaded</span></div>
+      <div class="grid gap-6 p-5 md:grid-cols-[minmax(0,1fr)_260px]">
+        <label class="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border-strong bg-muted/40 p-6 text-center hover:border-foreground">
+          <i data-lucide="file-key-2" class="h-7 w-7 text-muted-foreground"></i>
+          <span class="text-[14px] font-semibold">Drop <span class="mono">meshydemo.eth.json</span> or paste the key</span>
+          <span class="mono text-xs text-muted-foreground">~/.meshy/admin/meshydemo.eth.json</span>
+        </label>
+        <ul class="space-y-3 text-[13px] text-muted-foreground">
+          <li class="flex gap-2"><i data-lucide="hard-drive" class="mt-0.5 h-4 w-4 shrink-0"></i>Stored only in this browser (local storage). Nothing is uploaded.</li>
+          <li class="flex gap-2"><i data-lucide="badge-check" class="mt-0.5 h-4 w-4 shrink-0"></i>Checked against <span class="mono">meshy.orgkey</span> before it is accepted.</li>
+          <li class="flex gap-2"><i data-lucide="eye" class="mt-0.5 h-4 w-4 shrink-0"></i>Unlocks folder paths in grants and commands and paths in Activity.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="admins" class="card overflow-hidden">
+      <div class="card-h"><div><h2 class="h3">Delegated admins</h2><p class="text-[13px] text-muted-foreground">Admin rights over one network without handing over the org (ENSv2 Enhanced Access Control).</p></div><button class="btn btn-primary btn-sm"><i data-lucide="shield-plus"></i>Add admin</button></div>
+      <table class="tbl">
+        <thead><tr><th>Admin</th><th>Scope</th><th>Can</th><th>Cannot</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="whitespace-nowrap"><span class="mono font-semibold">0xf846…Fc98</span><div class="text-xs text-muted-foreground">added by owner</div></td>
+            <td><div class="flex gap-1"><span class="tag">home</span><span class="tag tag-lilac">agents</span></div></td>
+            <td class="text-[13px]">Register, revoke, renew names · write <span class="mono">meshy.policy</span> · add devices · approve agents</td>
+            <td class="text-[13px] text-muted-foreground">Touch <span class="mono">prod</span>, the org key or attestors</td>
+            <td class="text-right"><button class="btn btn-danger btn-sm"><i data-lucide="user-minus"></i>Remove</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="border-t border-border p-5">
+        <div class="eyebrow mb-3">Permission matrix</div>
+        <div class="overflow-x-auto"><table class="w-full text-center text-[13px]">
+          <thead><tr class="text-xs text-muted-foreground"><th class="pb-2 text-left font-medium"></th><th class="pb-2 font-medium">Grant / revoke</th><th class="pb-2 font-medium">Add device</th><th class="pb-2 font-medium">Approve agent</th><th class="pb-2 font-medium">Org key</th></tr></thead>
+          <tbody class="[&_td]:py-1.5">
+            <tr><td class="ens text-left">home</td><td><i data-lucide="check" class="mx-auto h-4 w-4 text-success"></i></td><td><i data-lucide="check" class="mx-auto h-4 w-4 text-success"></i></td><td>—</td><td><i data-lucide="x" class="mx-auto h-4 w-4 text-muted-foreground"></i></td></tr>
+            <tr><td class="ens text-left">agents</td><td>—</td><td>—</td><td><i data-lucide="check" class="mx-auto h-4 w-4 text-success"></i></td><td><i data-lucide="x" class="mx-auto h-4 w-4 text-muted-foreground"></i></td></tr>
+            <tr><td class="ens text-left">prod</td><td><i data-lucide="x" class="mx-auto h-4 w-4 text-muted-foreground"></i></td><td><i data-lucide="x" class="mx-auto h-4 w-4 text-muted-foreground"></i></td><td>—</td><td><i data-lucide="x" class="mx-auto h-4 w-4 text-muted-foreground"></i></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+  </div>
+</main>

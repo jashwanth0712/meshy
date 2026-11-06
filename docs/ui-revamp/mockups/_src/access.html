@@ -1,0 +1,154 @@
+<!-- {"title": "Access", "active": "access", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-8 pt-12 lg:px-8">
+  <nav class="ens mb-4 text-[13px] text-muted-foreground" aria-label="Breadcrumb"><a href="settings.html">meshydemo.eth</a><span class="dot-sep"> / </span><span class="text-foreground">access</span></nav>
+  <div class="flex flex-wrap items-end justify-between gap-6">
+    <div>
+      <h1 class="display">Access right now</h1>
+      <p class="lede mt-3 max-w-2xl">One agent can reach one thing. Every grant is an ENS name that expires on its own, and revoking one kills live sessions in the next block.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="directory.html" class="btn btn-outline"><i data-lucide="user-plus"></i>Invite agent</a>
+      <a href="give-access.html" class="btn btn-primary btn-lg"><i data-lucide="key-round"></i>Give access<kbd class="ml-1 border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground">G</kbd></a>
+    </div>
+  </div>
+  <div class="mt-6 flex flex-wrap items-center gap-2">
+    <span class="tag"><span class="dot dot-live"></span>1 live grant</span>
+    <span class="tag tag-peach"><i data-lucide="hourglass" class="h-3 w-3"></i>Next expiry in 58m</span>
+    <span class="tag tag-mint"><i data-lucide="zap" class="h-3 w-3"></i>Revoke → session dead: 1.6 s after the block</span>
+  </div>
+</section>
+
+<main class="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
+  <div class="space-y-6">
+    <!-- grants list -->
+    <section class="card overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 pt-2">
+        <div class="tabs border-0" role="tablist">
+          <button role="tab" aria-selected="true">Live <span class="count">1</span></button>
+          <button role="tab">Ended <span class="count count-soft">2</span></button>
+          <button role="tab">All</button>
+        </div>
+        <div class="flex items-center gap-2 pb-2">
+          <div class="relative"><i data-lucide="filter" class="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground"></i><input class="input h-8 w-48 rounded-full pl-8 text-[13px]" placeholder="Filter by agent or name"></div>
+          <div class="seg"><button aria-pressed="true">List</button><button>Timeline</button></div>
+        </div>
+      </div>
+
+      <!-- live grant row -->
+      <div class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-5 py-5">
+        <div class="relative h-12 w-12" title="58 minutes of 1 hour left">
+          <svg viewBox="0 0 48 48" class="h-12 w-12 -rotate-90"><circle cx="24" cy="24" r="21" fill="none" stroke-width="3" class="ring-track"/><circle cx="24" cy="24" r="21" fill="none" stroke-width="3" stroke-linecap="round" class="ring-val" stroke-dasharray="131.95" stroke-dashoffset="4" data-ring data-left="3518" data-total="3600"/></svg>
+          <span class="absolute inset-[7px] grid place-items-center rounded-full bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span>
+        </div>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span class="ens text-[15px] font-semibold"><a href="agent.html">claude-1</a></span>
+            <i data-lucide="arrow-right" class="h-3.5 w-3.5 text-muted-foreground"></i>
+            <span class="ens text-[15px] font-semibold"><a href="directory.html">db1</a><span class="dot-sep">.</span><a href="directory.html">prod</a></span>
+            <span class="badge b-live"><span class="dot dot-live" style="width:6px;height:6px"></span>Session open</span>
+          </div>
+          <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+            <span class="inline-flex items-center gap-1"><i data-lucide="folder-lock" class="h-3.5 w-3.5"></i>Folders · sealed policy</span>
+            <span class="inline-flex items-center gap-1"><i data-lucide="lock" class="h-3.5 w-3.5"></i>Paths hidden: <a href="settings.html#org-key" class="font-medium text-foreground underline-offset-2 hover:underline">import org key</a></span>
+            <span>Granted 2m ago by <span class="mono">0x45e8…E0EA</span></span>
+          </div>
+          <div class="ens mt-1 text-xs text-muted-foreground/80">claude-1.db1.prod.meshydemo.eth</div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="mono tnum text-lg font-semibold" data-left="3518">58m 38s</div>
+            <div class="text-xs text-muted-foreground">until 15:04 today</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button class="btn btn-outline btn-sm" title="Renew the name for another hour (1 transaction)"><i data-lucide="timer-reset"></i>+1h</button>
+            <a href="revoke.html" class="btn btn-danger btn-sm"><i data-lucide="zap"></i>Revoke</a>
+            <button class="btn btn-ghost btn-sm btn-icon" aria-label="More"><i data-lucide="ellipsis"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between border-t border-border bg-muted/40 px-5 py-2.5">
+        <span class="eyebrow">Recently ended</span><span class="text-xs text-muted-foreground">Kept for 24 h. Re-grant uses the same scope.</span>
+      </div>
+      <div class="divide">
+        <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 opacity-75">
+          <span class="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-border-strong text-muted-foreground"><i data-lucide="zap-off" class="h-4 w-4"></i></span>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-x-2"><span class="ens font-semibold"><a href="agent.html">claude-1</a></span><i data-lucide="arrow-right" class="h-3.5 w-3.5 text-muted-foreground"></i><span class="ens font-semibold"><a href="directory.html">rig1</a><span class="dot-sep">.</span><a href="directory.html">home</a></span><span class="badge b-bad">Revoked</span></div>
+            <div class="mt-1 text-[13px] text-muted-foreground">Folders · revoked 3h ago by <span class="mono">0xf846…Fc98</span> (admin of home) · live session killed 216 ms after block 12,073,941</div>
+          </div>
+          <button class="btn btn-outline btn-sm"><i data-lucide="rotate-ccw"></i>Grant again</button>
+        </div>
+        <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 opacity-75">
+          <span class="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-border-strong text-muted-foreground"><i data-lucide="clock" class="h-4 w-4"></i></span>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-x-2"><span class="ens font-semibold"><a href="agent.html">claude-1</a></span><i data-lucide="arrow-right" class="h-3.5 w-3.5 text-muted-foreground"></i><span class="ens font-semibold"><a href="directory.html">camera</a><span class="dot-sep">.</span><a href="directory.html">pi</a><span class="dot-sep">.</span><a href="directory.html">home</a></span><span class="badge b-muted">Expired</span></div>
+            <div class="mt-1 text-[13px] text-muted-foreground">One port · http → 127.0.0.1:8001 · expired on its own 2h ago</div>
+          </div>
+          <button class="btn btn-outline btn-sm"><i data-lucide="rotate-ccw"></i>Grant again</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- timeline -->
+    <section class="card">
+      <div class="card-h"><div><h2 class="h3">Who has access, when</h2><p class="text-[13px] text-muted-foreground">Grants on a time axis. Bars end where the ENS name expires.</p></div><span class="badge b-outline">Today · local time</span></div>
+      <div class="card-b pb-7">
+        <div class="relative">
+          <div class="grid grid-cols-[150px_1fr] items-end pb-2 text-[11px] text-muted-foreground">
+            <span></span>
+            <div class="mono relative flex justify-between"><span>11:00</span><span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span><span>16:00</span></div>
+          </div>
+          <div class="space-y-2.5">
+            <div class="grid grid-cols-[150px_1fr] items-center"><span class="ens truncate text-[13px]">claude-1 → db1.prod</span>
+              <div class="relative h-7 rounded-md bg-muted"><div class="absolute inset-y-0 rounded-md bg-primary" style="left:61.3%;width:20%"></div><span class="mono absolute top-1/2 -translate-y-1/2 text-[11px] font-medium text-primary-foreground" style="left:62.5%">1h · folders</span></div></div>
+            <div class="grid grid-cols-[150px_1fr] items-center"><span class="ens truncate text-[13px] text-muted-foreground">claude-1 → camera.pi</span>
+              <div class="relative h-7 rounded-md bg-muted"><div class="absolute inset-y-0 rounded-md border border-border-strong" style="left:2%;width:20%;background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--foreground) 8%,transparent) 6px 7px)"></div><span class="absolute top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground" style="left:23%">expired</span></div></div>
+            <div class="grid grid-cols-[150px_1fr] items-center"><span class="ens truncate text-[13px] text-muted-foreground">claude-1 → rig1.home</span>
+              <div class="relative h-7 rounded-md bg-muted"><div class="absolute inset-y-0 rounded-l-md border-r-[3px] border-destructive bg-destructive/15" style="left:0%;width:3%"></div><span class="absolute top-1/2 -translate-y-1/2 text-[11px] text-destructive" style="left:4%">revoked 11:09</span></div></div>
+          </div>
+          <div class="pointer-events-none absolute -bottom-1 top-7 ml-[150px]" style="left:calc((100% - 150px) * .62)"><div class="h-full w-px bg-foreground"></div><span class="absolute -bottom-4 -translate-x-1/2 rounded-full bg-foreground px-1.5 text-[10px] font-semibold text-background">now</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- right rail -->
+  <aside class="space-y-6">
+    <section class="card">
+      <div class="card-h"><h2 class="h3 flex items-center gap-2"><span class="dot dot-live"></span>Happening now</h2><span class="tag tag-mint">Arkiv</span></div>
+      <ul class="divide text-[13.5px] leading-snug">
+        <li class="fade-in flex gap-3 px-5 py-3"><i data-lucide="play" class="mt-0.5 h-4 w-4 shrink-0 text-success"></i><span class="flex-1"><span class="mono font-medium">claude-1</span> opened a session on <span class="mono">db1.prod</span></span><span class="shrink-0 text-xs text-muted-foreground">1m</span></li>
+        <li class="flex gap-3 px-5 py-3"><i data-lucide="ban" class="mt-0.5 h-4 w-4 shrink-0 text-destructive"></i><span class="flex-1"><span class="mono font-medium">claude-1</span> was refused on <span class="mono">pi.home</span>: no live grant<br><a href="give-access.html" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"><i data-lucide="key-round" class="h-3 w-3"></i>Grant this</a></span><span class="shrink-0 text-xs text-muted-foreground">2h</span></li>
+        <li class="flex gap-3 px-5 py-3"><i data-lucide="ban" class="mt-0.5 h-4 w-4 shrink-0 text-destructive"></i><span class="flex-1"><span class="mono font-medium">claude-1</span> was refused a connection to <span class="mono">camera.pi.home</span><br><a href="give-access.html" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"><i data-lucide="key-round" class="h-3 w-3"></i>Grant this</a></span><span class="shrink-0 text-xs text-muted-foreground">2h</span></li>
+        <li class="flex gap-3 px-5 py-3"><i data-lucide="zap" class="mt-0.5 h-4 w-4 shrink-0 text-warning"></i><span class="flex-1"><span class="mono font-medium">claude-1</span>'s session on <span class="mono">db1.prod</span> was killed by a revocation <span class="text-muted-foreground">· block 12,073,050 · 132 ms</span></span><span class="shrink-0 text-xs text-muted-foreground">4h</span></li>
+        <li class="flex gap-3 px-5 py-3"><i data-lucide="play" class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"></i><span class="flex-1"><span class="mono font-medium">claude-1</span> opened a session on <span class="mono">db1.prod</span></span><span class="shrink-0 text-xs text-muted-foreground">4h</span></li>
+      </ul>
+      <a href="activity.html" class="flex items-center justify-between border-t border-border px-5 py-3 text-[13px] font-semibold hover:bg-muted/50">Open the full audit log<i data-lucide="arrow-right" class="h-4 w-4"></i></a>
+    </section>
+
+    <section class="card card-b">
+      <div class="flex items-center justify-between"><h2 class="h3">Setup</h2><span class="text-xs font-semibold text-muted-foreground">5 of 6</span></div>
+      <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div class="h-full w-5/6 rounded-full bg-foreground"></div></div>
+      <ul class="mt-4 space-y-2.5 text-[13.5px]">
+        <li class="flex items-center gap-2.5 text-muted-foreground line-through decoration-border-strong"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span>Create a network</li>
+        <li class="flex items-center gap-2.5 text-muted-foreground line-through decoration-border-strong"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span>Add a device</li>
+        <li class="flex items-center gap-2.5 text-muted-foreground line-through decoration-border-strong"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span>Invite and approve an agent</li>
+        <li class="flex items-center gap-2.5 text-muted-foreground line-through decoration-border-strong"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span>Give your first grant</li>
+        <li class="flex items-center gap-2.5 text-muted-foreground line-through decoration-border-strong"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span>Revoke and watch it land</li>
+        <li class="flex items-center gap-2.5 font-medium"><span class="step-dot h-5 w-5"></span>Load the org key to read sealed paths<a href="settings.html#org-key" class="ml-auto text-xs font-semibold text-primary">Do it</a></li>
+      </ul>
+    </section>
+
+    <section class="card card-b">
+      <h2 class="h3">Your mesh</h2>
+      <dl class="mt-3 grid grid-cols-4 gap-2 text-center">
+        <div class="rounded-lg bg-muted/60 py-2.5"><dt class="text-[11px] text-muted-foreground">Networks</dt><dd class="text-xl font-semibold tnum">2</dd></div>
+        <div class="rounded-lg bg-muted/60 py-2.5"><dt class="text-[11px] text-muted-foreground">Devices</dt><dd class="text-xl font-semibold tnum">3</dd></div>
+        <div class="rounded-lg bg-muted/60 py-2.5"><dt class="text-[11px] text-muted-foreground">Services</dt><dd class="text-xl font-semibold tnum">1</dd></div>
+        <div class="rounded-lg bg-muted/60 py-2.5"><dt class="text-[11px] text-muted-foreground">Agents</dt><dd class="text-xl font-semibold tnum">1</dd></div>
+      </dl>
+      <a href="directory.html" class="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-primary hover:underline">Open the directory<i data-lucide="arrow-right" class="h-3.5 w-3.5"></i></a>
+    </section>
+  </aside>
+</main>
