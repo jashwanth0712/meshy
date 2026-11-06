@@ -95,3 +95,10 @@ Signing (later): Apple Developer ID and notarisation for `Meshy.app` (the user h
   - the GitHub release (public, so it waits for a go-ahead)
   - the production redeploy with `/download`
   - the DNS records, then `api.`/`mesh.` on the VPS (blocked on the review)
+
+## 8. Status (6 Nov, 17:45 IST): live
+- The `.live` registry delegates to `ns1/ns2.vercel-dns.com` (switched in Hostinger at about 17:00; propagated at 17:17).
+- `https://meshy.live` (dashboard), `www` (redirect) and `get` (installer): one Vercel certificate for all three, issued with `vercel certs issue`.
+- `https://api.meshy.live`: Traefik on the VPS, `Host(sync.16-4-10-3.sslip.io) || Host(api.meshy.live)`, with a Let's Encrypt certificate. meshy-sync `--cors` includes `https://meshy.live` and `https://www.meshy.live`.
+- Vercel DNS also has `mesh A 16.4.10.3` (NetBird is not moved yet; phase 2) and `_meshy TXT "v=meshy1 org=meshydemo.eth provider=https://api.meshy.live"`.
+- Vercel env `NEXT_PUBLIC_MESHY_SYNC=https://api.meshy.live`. ProviderRegistry #1's endpoint is `https://api.meshy.live` (tx `0xcb434496…5dfa`).
