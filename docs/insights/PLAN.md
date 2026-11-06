@@ -607,6 +607,13 @@ Effort is for one agent working in this repo: **S** ≤ 2 h, **M** ≈ half a da
 
 ### 8.1 Before judging: web only, no daemon change, demoable
 
+> **Built (6 Nov):** J1–J3, on the branch `insights-j1-j3`.
+> - J1, the join: `web/src/lib/insights.ts`, plus `queryAll`/`orgHistory` in `web/src/lib/arkiv.ts`.
+> - J2, the Access history Gantt: route `/org/[org]/activity/access`.
+> - J3, the kill-latency strip: on Activity and on Access history.
+>
+> All of it is checked against live `meshydemo.eth` data: 6 grants, 5 kills, one of them fail-closed.
+
 | # | Item | Effort | Files | Demo value |
 |---|---|---|---|---|
 | J1 | `lib/insights.ts`: `GrantInterval` from ENS logs (keep `sender`, `tokenId`; add `ExpiryUpdated`; block timestamps), `InsightEvent` from Arkiv rows, join rules 1–3 | M (2 h) | `web/src/lib/ens.ts` (expose grant events with sender and blocks), `web/src/lib/arkiv.ts` (`orgHistory`: keyset pagination on `ts`, `u64` literals, `count`), new `web/src/lib/insights.ts` | Foundation |

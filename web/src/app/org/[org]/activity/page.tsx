@@ -2,7 +2,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Ext, PageHeader, Tabs, cx, links, useNow } from "@/components/ui";
+import { KillLatency } from "@/components/insights/KillLatency";
+import { ViewSwitch } from "@/components/insights/ViewSwitch";
 import { type Row, liveSessions, orgFeed, runnableQuery } from "@/lib/arkiv";
+import { kills } from "@/lib/insights";
 import { useMeshy } from "@/lib/store";
 
 type F = "all" | "refused" | "sessions" | "revocations";
@@ -62,7 +65,13 @@ export default function ActivityPage() {
       <PageHeader
         title="Activity"
         sub={rows ? `${live} live session${live === 1 ? "" : "s"} · ${refused.length} refused · ${revokes.length} revocation${revokes.length === 1 ? "" : "s"}` : "Reading Arkiv…"}
+        action={<ViewSwitch org={org} current="feed" />}
       />
+      {rows && revokes.length > 0 && (
+        <div className="mb-8">
+          <KillLatency kills={kills(all)} />
+        </div>
+      )}
       <Tabs
         value={f}
         onChange={setF}
