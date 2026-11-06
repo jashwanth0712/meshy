@@ -158,7 +158,7 @@ Last updated Fri 6 Nov 2026, about 11:00 IST, after the provider mesh went live 
 2. **Public repo + live demo URL + video.**
    - ~~Make the repo public~~ **done** (6 Nov).
    - ~~Deploy `web/`~~ **done:** https://meshy-bay.vercel.app (Vercel project `meshy`, deployed from the CLI, so a push doesn't redeploy). It uses a public Sepolia RPC; the Alchemy and Arkiv keys aren't uploaded. meshy-sync `--cors` allows that origin.
-   - A UI revamp in the ETHGlobal style (shadcn) is being planned in `docs/ui-revamp/`.
+   - **UI revamp merged** (ETHGlobal style, shadcn): plan and mockups in `docs/ui-revamp/`, the new UI in `web/src`, and a native Mac app in `mac/` that loads the live dashboard. The new UI is live at https://meshy-next.vercel.app. Still to check: a live grant and revoke through the new UI on Sepolia.
    - The video should be 2:30–3:00. `e2e/live-demo.sh` is the script.
 
 ### P1: depth gaps
