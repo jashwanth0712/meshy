@@ -21,7 +21,9 @@ var (
 	RabdiRPC       = "https://rpc.rabdi.db-chain.testnet.arkiv.network"
 	RabdiExplorer  = "https://rabdi.explorer.arkiv.network"
 	MaxLifetime    = uint64(7_884_000) // blocks (~182 days at 2s)
-	Lifetime30Days = uint64(1_296_000) // blocks
+	Lifetime30Days = uint64(1_296_000) // blocks (30 days at 2s/block)
+	Lifetime90Days = uint64(3_888_000) // blocks (90 days at 2s/block)
+	RabdiBlockSecs = uint64(2)         // Rabdi block time in seconds
 )
 
 // Operation codes.

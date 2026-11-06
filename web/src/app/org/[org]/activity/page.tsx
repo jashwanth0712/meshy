@@ -65,19 +65,23 @@ function describe(r: Row, hasKey: boolean) {
 }
 
 export default function ActivityPage() {
-  const { org, orgKey } = useMeshy();
+  const { org, orgKey, tree } = useMeshy();
   const now = useNow(5000);
   const [rows, setRows] = useState<Row[]>();
   const [err, setErr] = useState<string>();
   const [f, setF] = useState<(typeof FILTERS)[number]>("all");
+  // Collect the ENS addr records of all resource daemons: only trust entities
+  // whose $owner matches one of these addresses (spoof-proof reads).
+  const writers = tree?.networks.flatMap((n) => n.resources).map((r) => r.addr as string) ?? [];
   const load = useCallback(async () => {
     try {
-      setRows(await orgFeed(org, orgKey, 80));
+      setRows(await orgFeed(org, orgKey, 80, writers));
       setErr(undefined);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
-  }, [org, orgKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [org, orgKey, writers.join(",")]);
   useEffect(() => {
     load();
     const t = setInterval(load, 5000);
@@ -128,6 +132,14 @@ export default function ActivityPage() {
         {!orgKey && (
           <div className="mb-4 rounded-lg border border-warn/30 bg-warn/5 p-3 text-sm text-warn">
             Paths and commands are encrypted to your org key (Arkiv is public). <Link href={`/org/${org}/settings`} className="underline">Import the org key</Link> to decrypt them here.
+          </div>
+        )}
+        {writers.length > 0 && (
+          <div className="mb-3 rounded-lg border border-line bg-panel-2 p-2.5 text-xs text-muted">
+            <span className="font-medium text-fg">Verified writers</span> (ENS addr records, filtered via{" "}
+            <span className="mono">$owner</span>): {writers.map((w) => (
+              <span key={w} className="mono ml-1">{w.slice(0, 10)}…{w.slice(-4)}</span>
+            ))}
           </div>
         )}
         {err && <div className="mb-3 text-sm text-bad">{err}</div>}

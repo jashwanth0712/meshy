@@ -224,7 +224,7 @@ func (s *Server) handle(sess ssh.Session) {
 	if s.Watcher != nil {
 		s.Watcher.Watch(ss.id, az.Grant)
 	}
-	s.emit(audit.Event{Kind: audit.SessionStart, Session: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name), Argv: argv})
+	s.emit(audit.Event{Kind: audit.SessionStart, Session: ss.id, Agent: az.Agent, Grant: string(az.Grant.Name), Argv: argv, GrantExpiry: az.Expiry})
 	s.log().Info("session started", "session", ss.id, "agent", az.Agent, "argv", argv, "expires", az.Expiry)
 
 	// Local expiry timer: sub-block precision. The watcher also catches
