@@ -58,25 +58,23 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 /* badges */
 .badge { display: inline-flex; align-items: center; gap: .3rem; height: 1.375rem; padding: 0 .55rem; border-radius: 9999px; font-size: .75rem; font-weight: 600; line-height: 1; white-space: nowrap; }
 .badge svg { width: 12px; height: 12px; }
-.b-live { background: var(--success-soft); color: var(--success); }
-.b-warn { background: var(--warning-soft); color: var(--warning); }
-.b-bad { background: var(--danger-soft); color: var(--destructive); }
-.b-info { background: var(--info-soft); color: var(--accent-foreground); }
+.b-live { background: var(--tag-lime-bg); color: var(--tag-lime-fg); }
+.b-warn { background: var(--tag-sun-bg); color: var(--tag-sun-fg); }
+.b-bad { background: var(--tag-pink-bg); color: var(--tag-pink-fg); }
+.b-info { background: var(--tag-cyan-bg); color: var(--tag-cyan-fg); }
 .b-muted { background: var(--muted); color: var(--muted-foreground); }
 .b-outline { border: 1px solid var(--border-strong); color: var(--muted-foreground); background: var(--card); }
-/* tags: fun minimal. Soft fill, deep text, a bright dot, mono lowercase label */
-.tag { --bg: var(--tag-cobalt-bg); --fg: var(--tag-cobalt-fg); --dt: var(--tag-cobalt-dot);
-  display: inline-flex; align-items: center; gap: .4rem; height: 1.5rem; padding: 0 .6rem 0 .5rem; border-radius: 9999px;
-  background: var(--bg); color: var(--fg); font-family: "Geist Mono", ui-monospace, monospace; font-size: .75rem; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
-.tag::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--dt); flex: none; }
-.tag:has(> .dot)::before, .tag:has(> svg)::before, .tag:has(> i)::before { display: none; }
-.tag svg { width: 12px; height: 12px; color: var(--dt); }
-.tag-sky { --bg: var(--tag-sky-bg); --fg: var(--tag-sky-fg); --dt: var(--tag-sky-dot); }
-.tag-mint { --bg: var(--tag-mint-bg); --fg: var(--tag-mint-fg); --dt: var(--tag-mint-dot); }
-.tag-lemon { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
-.tag-coral { --bg: var(--tag-coral-bg); --fg: var(--tag-coral-fg); --dt: var(--tag-coral-dot); }
-.tag-lilac { --bg: var(--tag-lilac-bg); --fg: var(--tag-lilac-fg); --dt: var(--tag-lilac-dot); }
-.tag-peach { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
+/* tags: Electric. Solid saturated chips, bold sans label, no outline */
+.tag { --bg: var(--tag-cobalt-bg); --fg: var(--tag-cobalt-fg);
+  display: inline-flex; align-items: center; gap: .35rem; height: 1.5rem; padding: 0 .6rem; border-radius: 9999px;
+  background: var(--bg); color: var(--fg); font-size: .75rem; font-weight: 650; letter-spacing: -0.005em; white-space: nowrap; }
+.tag svg { width: 12px; height: 12px; }
+.tag .dot-live { background: currentColor; animation: none; box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent); width: 6px; height: 6px; }
+.tag-cyan, .tag-sky { --bg: var(--tag-cyan-bg); --fg: var(--tag-cyan-fg); }
+.tag-lime, .tag-mint { --bg: var(--tag-lime-bg); --fg: var(--tag-lime-fg); }
+.tag-sun, .tag-lemon, .tag-peach { --bg: var(--tag-sun-bg); --fg: var(--tag-sun-fg); }
+.tag-pink, .tag-coral { --bg: var(--tag-pink-bg); --fg: var(--tag-pink-fg); }
+.tag-lilac { --bg: var(--tag-lilac-bg); --fg: var(--tag-lilac-fg); }
 .ndot { width: 8px; height: 8px; border-radius: 3px; display: inline-block; flex: none; }
 
 .dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; flex: none; }

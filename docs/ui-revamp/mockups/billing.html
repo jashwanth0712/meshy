@@ -13,7 +13,7 @@
 /* Meshy design tokens: the same variables PLAN.md proposes for web/src/app/globals.css.
    shadcn/ui semantic names. Values come from the logo (cobalt + white) and the hero's
    GradientASCII colours (#1e3fd8 cobalt, #f6f8ff ice, #a5d8ff sky, #38bdf8 cyan),
-   with a small set of candy tag colours. */
+   and the Electric tag set: solid, saturated chips (palette B, picked by the user). */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
@@ -72,39 +72,39 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #f6f8ff; /* ice: the white of the hero gradient */
-  --foreground: #0b1533; /* navy ink */
+  --background: #ffffff; /* Electric: white page */
+  --foreground: #0a0f2c; /* deep navy ink */
   --card: #ffffff;
-  --card-foreground: #0b1533;
+  --card-foreground: #0a0f2c;
   --popover: #ffffff;
-  --popover-foreground: #0b1533;
-  --primary: #2b3fe0; /* brand cobalt: 7.27:1 with white */
+  --popover-foreground: #0a0f2c;
+  --primary: #1e3fd8; /* electric cobalt (hero #1e3fd8): 7.6:1 with white */
   --primary-foreground: #ffffff;
-  --secondary: #eef2ff;
-  --secondary-foreground: #0b1533;
-  --muted: #f0f3fc;
+  --secondary: #f1f4ff;
+  --secondary-foreground: #0a0f2c;
+  --muted: #f3f5fc;
   --muted-foreground: #5b6787; /* 5.6:1 on white */
   --accent: #eaf0ff;
   --accent-foreground: #1e3fd8;
   --destructive: #e11d48;
   --destructive-foreground: #ffffff;
-  --border: #e3e8f6;
+  --border: #e6e9f5;
   --border-strong: #cdd5ec;
   --input: #d5dcef;
-  --ring: #2b3fe0;
+  --ring: #1e3fd8;
   --success: #15803d;
   --success-soft: #dcfce7;
   --warning: #a16207;
   --warning-soft: #fef9c3;
   --danger-soft: #ffe4e6;
   --info-soft: #e0f2fe;
-  /* fun minimal tag colours: soft fill, deep text, bright dot */
-  --tag-cobalt-bg: #e3e8ff; --tag-cobalt-fg: #2b3fe0; --tag-cobalt-dot: #2b3fe0;
-  --tag-sky-bg: #e0f2fe;    --tag-sky-fg: #0369a1;    --tag-sky-dot: #38bdf8;
-  --tag-mint-bg: #dcfce7;   --tag-mint-fg: #15803d;   --tag-mint-dot: #22c55e;
-  --tag-lemon-bg: #fef9c3;  --tag-lemon-fg: #a16207;  --tag-lemon-dot: #eab308;
-  --tag-coral-bg: #ffe4e6;  --tag-coral-fg: #be123c;  --tag-coral-dot: #fb7185;
-  --tag-lilac-bg: #ede9fe;  --tag-lilac-fg: #6d28d9;  --tag-lilac-dot: #a78bfa;
+  /* Electric tags: solid saturated chips, dark text (white on cobalt) */
+  --tag-cobalt-bg: #1e3fd8; --tag-cobalt-fg: #ffffff;
+  --tag-cyan-bg: #38bdf8;   --tag-cyan-fg: #05213a;
+  --tag-lime-bg: #bef264;   --tag-lime-fg: #1a2e05;
+  --tag-sun-bg: #fde047;    --tag-sun-fg: #3a2e00;
+  --tag-pink-bg: #f9a8d4;   --tag-pink-fg: #4a0d2b;
+  --tag-lilac-bg: #c4b5fd;  --tag-lilac-fg: #2e1065;
   --shadow-soft: 0 1px 2px rgb(11 21 51 / 0.04), 0 8px 24px -12px rgb(30 63 216 / 0.12);
   --shadow-pop: 0 18px 48px -12px rgb(11 21 51 / 0.28), 0 2px 6px rgb(11 21 51 / 0.06);
 }
@@ -136,12 +136,7 @@
   --warning-soft: #2a2610;
   --danger-soft: #2e1022;
   --info-soft: #0c2545;
-  --tag-cobalt-bg: #18245e; --tag-cobalt-fg: #c4cbff; --tag-cobalt-dot: #8c9bff;
-  --tag-sky-bg: #0c2545;    --tag-sky-fg: #a5d8ff;    --tag-sky-dot: #38bdf8;
-  --tag-mint-bg: #0d2a26;   --tag-mint-fg: #86efac;   --tag-mint-dot: #22c55e;
-  --tag-lemon-bg: #2a2610;  --tag-lemon-fg: #fde68a;  --tag-lemon-dot: #eab308;
-  --tag-coral-bg: #2e1022;  --tag-coral-fg: #fda4af;  --tag-coral-dot: #fb7185;
-  --tag-lilac-bg: #1f1645;  --tag-lilac-fg: #c4b5fd;  --tag-lilac-dot: #a78bfa;
+  --tag-cobalt-bg: #8c9bff; --tag-cobalt-fg: #050b24; /* cobalt 300 on dark, per brand */
   --shadow-soft: 0 0 0 1px rgb(140 155 255 / 0.04);
   --shadow-pop: 0 18px 48px -8px rgb(0 0 0 / 0.65);
 }
@@ -170,12 +165,7 @@
   --warning: #fde68a; --warning-soft: rgb(234 179 8 / 0.16);
   --destructive: #fda4af; --danger-soft: rgb(251 113 133 / 0.16);
   --secondary: rgb(255 255 255 / 0.08);
-  --tag-cobalt-bg: rgb(140 155 255 / 0.18); --tag-cobalt-fg: #dfe4ff;
-  --tag-sky-bg: rgb(56 189 248 / 0.16);     --tag-sky-fg: #bae6fd;
-  --tag-mint-bg: rgb(34 197 94 / 0.16);     --tag-mint-fg: #bbf7d0;
-  --tag-lemon-bg: rgb(234 179 8 / 0.16);    --tag-lemon-fg: #fef08a;
-  --tag-coral-bg: rgb(251 113 133 / 0.16);  --tag-coral-fg: #fecdd3;
-  --tag-lilac-bg: rgb(167 139 250 / 0.18);  --tag-lilac-fg: #ddd6fe;
+  --tag-cobalt-bg: #8c9bff; --tag-cobalt-fg: #050b24;
   color: var(--foreground);
 }
 
@@ -241,25 +231,23 @@ body { font-family: var(--font-sans, "Geist"), ui-sans-serif, system-ui, sans-se
 /* badges */
 .badge { display: inline-flex; align-items: center; gap: .3rem; height: 1.375rem; padding: 0 .55rem; border-radius: 9999px; font-size: .75rem; font-weight: 600; line-height: 1; white-space: nowrap; }
 .badge svg { width: 12px; height: 12px; }
-.b-live { background: var(--success-soft); color: var(--success); }
-.b-warn { background: var(--warning-soft); color: var(--warning); }
-.b-bad { background: var(--danger-soft); color: var(--destructive); }
-.b-info { background: var(--info-soft); color: var(--accent-foreground); }
+.b-live { background: var(--tag-lime-bg); color: var(--tag-lime-fg); }
+.b-warn { background: var(--tag-sun-bg); color: var(--tag-sun-fg); }
+.b-bad { background: var(--tag-pink-bg); color: var(--tag-pink-fg); }
+.b-info { background: var(--tag-cyan-bg); color: var(--tag-cyan-fg); }
 .b-muted { background: var(--muted); color: var(--muted-foreground); }
 .b-outline { border: 1px solid var(--border-strong); color: var(--muted-foreground); background: var(--card); }
-/* tags: fun minimal. Soft fill, deep text, a bright dot, mono lowercase label */
-.tag { --bg: var(--tag-cobalt-bg); --fg: var(--tag-cobalt-fg); --dt: var(--tag-cobalt-dot);
-  display: inline-flex; align-items: center; gap: .4rem; height: 1.5rem; padding: 0 .6rem 0 .5rem; border-radius: 9999px;
-  background: var(--bg); color: var(--fg); font-family: "Geist Mono", ui-monospace, monospace; font-size: .75rem; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
-.tag::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--dt); flex: none; }
-.tag:has(> .dot)::before, .tag:has(> svg)::before, .tag:has(> i)::before { display: none; }
-.tag svg { width: 12px; height: 12px; color: var(--dt); }
-.tag-sky { --bg: var(--tag-sky-bg); --fg: var(--tag-sky-fg); --dt: var(--tag-sky-dot); }
-.tag-mint { --bg: var(--tag-mint-bg); --fg: var(--tag-mint-fg); --dt: var(--tag-mint-dot); }
-.tag-lemon { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
-.tag-coral { --bg: var(--tag-coral-bg); --fg: var(--tag-coral-fg); --dt: var(--tag-coral-dot); }
-.tag-lilac { --bg: var(--tag-lilac-bg); --fg: var(--tag-lilac-fg); --dt: var(--tag-lilac-dot); }
-.tag-peach { --bg: var(--tag-lemon-bg); --fg: var(--tag-lemon-fg); --dt: var(--tag-lemon-dot); }
+/* tags: Electric. Solid saturated chips, bold sans label, no outline */
+.tag { --bg: var(--tag-cobalt-bg); --fg: var(--tag-cobalt-fg);
+  display: inline-flex; align-items: center; gap: .35rem; height: 1.5rem; padding: 0 .6rem; border-radius: 9999px;
+  background: var(--bg); color: var(--fg); font-size: .75rem; font-weight: 650; letter-spacing: -0.005em; white-space: nowrap; }
+.tag svg { width: 12px; height: 12px; }
+.tag .dot-live { background: currentColor; animation: none; box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent); width: 6px; height: 6px; }
+.tag-cyan, .tag-sky { --bg: var(--tag-cyan-bg); --fg: var(--tag-cyan-fg); }
+.tag-lime, .tag-mint { --bg: var(--tag-lime-bg); --fg: var(--tag-lime-fg); }
+.tag-sun, .tag-lemon, .tag-peach { --bg: var(--tag-sun-bg); --fg: var(--tag-sun-fg); }
+.tag-pink, .tag-coral { --bg: var(--tag-pink-bg); --fg: var(--tag-pink-fg); }
+.tag-lilac { --bg: var(--tag-lilac-bg); --fg: var(--tag-lilac-fg); }
 .ndot { width: 8px; height: 8px; border-radius: 3px; display: inline-block; flex: none; }
 
 .dot { width: 8px; height: 8px; border-radius: 9999px; display: inline-block; flex: none; }

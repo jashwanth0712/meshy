@@ -7,7 +7,7 @@ Written 6 Nov 2026, from the live dashboard at `/org/meshydemo.eth` and from eth
 **Goal.** Move the dashboard from its current dark, terminal-style look to a calm, minimal style with Meshy's own character. Build it on shadcn/ui, design it around the new logo (`brand/`), and keep the access-first layout the user chose: the home page is the grants feed, not a network map.
 
 **Revision 2 (6 Nov).** The user asked for a Meshy vibe rather than a copy of ethglobal.com. What changed:
-- **Colour.** The logo's cobalt and white, plus the hero's gradient colours (`#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8`), plus fun minimal "candy" tags. Four directions were sampled, and A was picked. See [`mockups/palette.html`](mockups/palette.html) and §2.
+- **Colour.** The logo's cobalt and white, plus the hero's gradient colours (`#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8`). Four directions were sampled in [`mockups/palette.html`](mockups/palette.html), and the user picked **B, Electric**: a white page, electric cobalt, and solid saturated chips (lime, sun, pink, lilac, cyan). See §2.
 - **Hero.** A night-sky `GradientASCII` horizon (`shape="horizon"`) replaces the pastel wash. It runs full size on the landing page, and as a short header band behind the nav and title on every app page. See §5.
 - **Landing.** No longer a showcase grid: it is a hero, then "three moves", then a numbered list of screens.
 
@@ -41,14 +41,14 @@ The values below come from computed styles on `/`, `/events`, `/showcase` and `/
 |---|---|---|---|
 | **Typeface** | One grotesk everywhere. Event banners use a second face. | **Roobert** (commercial, Displaay) at 400 / 500 / 600; banners use Plus Jakarta Sans 700 | **Geist** (free, and already the brand's UI face) for text; **Geist Mono** for ENS names, addresses and numbers |
 | **Type scale** | Big, tight display headings; plain 16 px body; small uppercase eyebrows | Display 60/60 · 600 (`text-6xl`); card title 24 · 600; body 16/24 · 400; small 14; eyebrow 14 uppercase `#737374`; nav 17.6 · 500; table header 12 · 700 uppercase, tracking 0.3 px | Display 44/46 · 600 · −0.03em; h2 20 · 600; body 14–16; eyebrow 12 uppercase; table header 11 · 700 uppercase |
-| **Colour** | Near-black text on white; grey sections; one pastel tint per context; yellow only for the main event CTA | Text `#0A0A0A`; muted `#737374`, `#6B7280`, `#4B5563`; section bg `#F4F4F5`; borders `#E5E7EB`; tag lavender `#C6C9F6`; table header `#F8F5FF`; amounts `#581C87`; CTA yellow `#FFC750`; "New" badge `#DCFCE7` / `#166534` | Navy ink on ice; **cobalt** for action; sky and cyan only for light (glow, focus, the horizon); candy tags with a small dot |
+| **Colour** | Near-black text on white; grey sections; one pastel tint per context; yellow only for the main event CTA | Text `#0A0A0A`; muted `#737374`, `#6B7280`, `#4B5563`; section bg `#F4F4F5`; borders `#E5E7EB`; tag lavender `#C6C9F6`; table header `#F8F5FF`; amounts `#581C87`; CTA yellow `#FFC750`; "New" badge `#DCFCE7` / `#166534` | Navy ink on white; **electric cobalt** for action; sky and cyan for light (glow, focus, the horizon); solid Electric chips |
 | **Background** | White pages. A soft pastel blur (peach, lavender, mint) behind each page header (`projects-blur.png`) | — | **Not taken.** Meshy uses its own night-sky ASCII horizon band instead (§5) |
 | **Radius** | 10 px on cards and panels; full pills on buttons and tags | `rounded` = 10 px (30 uses); `9999px` (37 uses); 12 px and 32 px are rare | `--radius: 0.625rem`; pill buttons, tags and badges; cards 12 px |
 | **Borders** | Their signature: **2 px** outlines on buttons, cards and tags. Black 2 px card borders on the showcase | `2px solid #0A0A0A` (cards, tags); `2px solid #E5E7EB` (secondary button); `2px solid #F4F4F5` (dividers) | **Not taken.** 1 px blue-tinted hairlines everywhere; pills keep the round shape |
 | **Shadow** | Almost none | Panel `0 0 30px 0.5px rgba(40,50,70,.08)`; one drop shadow on a hero card | `--shadow-soft` on cards; `--shadow-pop` only on overlays |
 | **Iconography** | Small line icons inside tags (pin, tag); big flat illustrations in heroes | — | Lucide at 16 px, stroke 1.75; the **spark from the logo** stands for an agent; no illustrations |
 | **Navigation** | Top bar: logo, 7 text links (one with a green "New" pill), Login as a 2 px outline pill on the right; hover `opacity-60`; no sidebar | Container `max-w-7xl`, `px-6 lg:px-8`, 64 px tall | Same top bar; org switcher pill; ⌘K search pill; wallet pill |
-| **Cards and lists** | Showcase: 3-column cards with a 16:9 image, title, two-line description and an uppercase tag. Events: wide banners with a **date tile** ("NOVEMBER 5→7 Thu—Sat") | Tag: 12 px / 600 uppercase, `px-3 py-1`, 2 px ink border, pastel fill | The date tile becomes the expiry **ticket**. Tags are Meshy's own: mono lowercase, soft fill, a bright dot |
+| **Cards and lists** | Showcase: 3-column cards with a 16:9 image, title, two-line description and an uppercase tag. Events: wide banners with a **date tile** ("NOVEMBER 5→7 Thu—Sat") | Tag: 12 px / 600 uppercase, `px-3 py-1`, 2 px ink border, pastel fill | The date tile becomes the expiry **ticket**. Chips are Meshy's own: solid saturated fills, no ink border |
 | **Dense data** | Prizes: a white **master-detail** panel (list with dividers on the left, detail on the right) and tables with a lavender header row | `grid-cols-12 rounded-lg bg-white shadow`; `thead bg-purple-50 text-xs font-semibold uppercase tracking-wide text-gray-600` | Directory as master-detail; every table gets the tinted uppercase header |
 | **Tabs** | Underline tabs ("All · Hackathons · Summits · Meetups") and counts in black circles ("Featured ②") | — | Same underline tabs, in cobalt, with cobalt count pills |
 | **Motion** | Quiet: `transition-colors 200ms`, opacity on hover, carousels | — | 150–200 ms colour and opacity changes; one 350 ms fade-in for overlays; live dots pulse; nothing moves under `prefers-reduced-motion` |
@@ -65,39 +65,45 @@ The logo (`brand/`, from commit `fe22bf8`) is an M drawn as a network. Rings are
 ### Four directions were sampled ([`mockups/palette.html`](mockups/palette.html))
 | | Direction | Verdict |
 |---|---|---|
-| **A** | **Cobalt horizon.** Ice page, white cards, navy ink, cobalt action; sky and cyan for light; candy tags | **Picked.** It is the logo, literally. The tags add play without competing with cobalt |
-| B | **Electric.** White, cobalt and cyan, with solid saturated chips (lime, sun, pink) | Fun, but the chips outshout the data on dense tables |
+| A | **Cobalt horizon.** Ice page, white cards, navy ink, cobalt action; sky and cyan for light; soft "candy" tags with a dot | The calmest of the fun options, but less memorable |
+| **B** | **Electric.** White, electric cobalt and cyan, with solid saturated chips (lime, sun, pink, lilac) | **Picked by the user.** Loud, fun and unmistakable. The risk is chips outshouting data on dense tables, so a table row carries at most one chip (its state) |
 | C | **All blue.** Every tag a shade of blue or cyan | Serene, but live, expiring and refused look alike. State then rests on words alone |
-| D | **Night mesh.** The hero's night sky as the whole theme | Kept as A's **dark theme**, not the default |
+| D | **Night mesh.** The hero's night sky as the whole theme | Kept as B's **dark theme**, with the same chips. Not the default |
 
-### The picked system (A)
+### The picked system (B, Electric)
 | Token | Hex | UI role |
 |---|---|---|
 | Night | `#050B24` | Top nav, ASCII hero band, dark-theme page |
-| Ice | `#F6F8FF` | `--background` (the white of the hero gradient) |
-| White | `#FFFFFF` | `--card`, `--popover` |
-| Navy ink | `#0B1533` | `--foreground` (bluer than the brand's `#121417`, so text sits in the same family) |
-| Cobalt | `#2B3FE0` | `--primary`: one main action per view, links, focus ring, live grant bars, tab underline (`#1E3FD8` is the hero's cobalt, used only inside the canvas) |
+| White | `#FFFFFF` | `--background`, `--card`, `--popover` |
+| Mist | `#F3F5FC` / `#F1F4FF` | `--muted` / `--secondary`: fills and the table header row |
+| Navy ink | `#0A0F2C` | `--foreground` (bluer than the brand's `#121417`, so text sits in the same family) |
+| Electric cobalt | `#1E3FD8` | `--primary` (the hero's cobalt, 7.6 : 1 with white): one main action per view, links, focus ring, live grant bars, tab underline. The logo files keep `#2B3FE0` |
 | Cobalt 300 | `#8C9BFF` | `--primary` in the dark theme. The brand forbids cobalt on dark (2.54 : 1) |
 | Sky | `#A5D8FF` | Glow, focus ring on dark, the hero gradient |
 | Cyan | `#38BDF8` | The horizon edge line, highlights, the sky tag's dot |
-| Hairline | `#E3E8F6` / `#CDD5EC` | `--border` / `--border-strong` |
+| Hairline | `#E6E9F5` / `#CDD5EC` | `--border` / `--border-strong` |
 | Accent | `#EAF0FF` | Hover and selected rows |
 
-**Tags: fun but minimal.** Each tag is mono lowercase on a soft fill, with deep text and a 6 px bright dot. Colour means one thing per family:
+**Chips: Electric.** Each chip is solid and saturated, with a bold sans label in dark text (white on cobalt), and no outline or dot. Colour means one thing per family:
 
-| Tag | Fill / text / dot | Meaning |
-|---|---|---|
-| `mint` | `#DCFCE7` / `#15803D` / `#22C55E` | live, healthy, session open |
-| `lemon` | `#FEF9C3` / `#A16207` / `#EAB308` | expiring soon, demo-only, sealed |
-| `coral` | `#FFE4E6` / `#BE123C` / `#FB7185` | refused, revoked, blocked |
-| `lilac` | `#EDE9FE` / `#6D28D9` / `#A78BFA` | identity: World ID, agents, Arkiv |
-| `sky` | `#E0F2FE` / `#0369A1` / `#38BDF8` | network label (e.g. `home`), kind |
-| `cobalt` (default) | `#E3E8FF` / `#2B3FE0` / `#2B3FE0` | ENS names, `prod`, defaults |
+| Chip | Fill / text | Contrast | Meaning |
+|---|---|---|---|
+| `lime` | `#BEF264` / `#1A2E05` | 11.2 : 1 | live, healthy, session open |
+| `sun` | `#FDE047` / `#3A2E00` | 10.1 : 1 | expiring soon, demo-only, sealed |
+| `pink` | `#F9A8D4` / `#4A0D2B` | 8.4 : 1 | refused, revoked, blocked |
+| `lilac` | `#C4B5FD` / `#2E1065` | 8.3 : 1 | identity: World ID, agents, Arkiv |
+| `cyan` | `#38BDF8` / `#05213A` | 7.6 : 1 | network label (e.g. `home`), kind |
+| `cobalt` (default) | `#1E3FD8` / `#FFFFFF` (dark: `#8C9BFF` / `#050B24`) | 7.6 : 1 | ENS names, `prod`, defaults |
 
-State badges (`Session open`, `Revoked`) use the same mint, lemon and coral values in Geist Sans, with an icon.
+State badges (`Session open`, `Revoked`, `Owner`) use the same solid fills, with an icon.
 
-**On dark surfaces** (the nav and the hero band), an `.on-dark` scope swaps tokens: white text, translucent white cards and borders, white primary buttons with cobalt text, and translucent tag fills. The same components work on the band without extra classes.
+**Rules that keep it from getting loud:**
+- At most one chip per table row: its state.
+- Facts in rows (scope, paths, addresses) stay plain text.
+- Chips never sit inside buttons.
+- Only one cobalt-filled button per view.
+
+**On dark surfaces** (the nav and the hero band), an `.on-dark` scope swaps tokens: white text, translucent white cards and borders, and white primary buttons with cobalt text. Chips stay solid (they glow on night). The same components work on the band without extra classes.
 
 - **Agent glyph.** Agents always show the logo's spark, in navy or white, never coloured. The old UI painted agent names yellow, which read as a warning.
 - **Logo usage.**
@@ -109,14 +115,13 @@ Contrast checks (WCAG AA; computed):
 
 | Pair | Ratio |
 |---|---|
-| Navy ink on white / on ice | 18.0 / 16.9 : 1 |
-| `--muted-foreground` `#5B6787` on white / on ice | 5.6 / 5.3 : 1 |
-| Cobalt on ice | 6.9 : 1 |
-| White on cobalt | 7.3 : 1 |
+| Navy ink on white | 18.8 : 1 |
+| `--muted-foreground` `#5B6787` on white | 5.6 : 1 |
+| Electric cobalt on white, and white on it | 7.6 : 1 |
 | White on night `#050B24` | 19.5 : 1 |
 | Muted on the band (`#D6E0FF` at 74 %) on night | ≥ 10 : 1 |
 | Dark theme: `#93A0C8` / cobalt 300 on card `#0B1435` | 7.0 / 7.1 : 1 |
-| Tag text on its fill (lowest: mint and lemon) | 4.6 : 1 (AA for 12 px medium mono) |
+| Chip text on its fill (lowest: cyan and cobalt) | 7.6 : 1 (AAA) |
 
 ---
 
@@ -259,39 +264,39 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
 
 :root {
   --radius: 0.625rem;
-  --background: #f6f8ff; /* ice: the white of the hero gradient */
-  --foreground: #0b1533; /* navy ink */
+  --background: #ffffff; /* Electric: white page */
+  --foreground: #0a0f2c; /* deep navy ink */
   --card: #ffffff;
-  --card-foreground: #0b1533;
+  --card-foreground: #0a0f2c;
   --popover: #ffffff;
-  --popover-foreground: #0b1533;
-  --primary: #2b3fe0; /* brand cobalt: 7.27:1 with white */
+  --popover-foreground: #0a0f2c;
+  --primary: #1e3fd8; /* electric cobalt (hero #1e3fd8): 7.6:1 with white */
   --primary-foreground: #ffffff;
-  --secondary: #eef2ff;
-  --secondary-foreground: #0b1533;
-  --muted: #f0f3fc;
+  --secondary: #f1f4ff;
+  --secondary-foreground: #0a0f2c;
+  --muted: #f3f5fc;
   --muted-foreground: #5b6787; /* 5.6:1 on white */
   --accent: #eaf0ff;
   --accent-foreground: #1e3fd8;
   --destructive: #e11d48;
   --destructive-foreground: #ffffff;
-  --border: #e3e8f6;
+  --border: #e6e9f5;
   --border-strong: #cdd5ec;
   --input: #d5dcef;
-  --ring: #2b3fe0;
+  --ring: #1e3fd8;
   --success: #15803d;
   --success-soft: #dcfce7;
   --warning: #a16207;
   --warning-soft: #fef9c3;
   --danger-soft: #ffe4e6;
   --info-soft: #e0f2fe;
-  /* fun minimal tag colours: soft fill, deep text, bright dot */
-  --tag-cobalt-bg: #e3e8ff; --tag-cobalt-fg: #2b3fe0; --tag-cobalt-dot: #2b3fe0;
-  --tag-sky-bg: #e0f2fe;    --tag-sky-fg: #0369a1;    --tag-sky-dot: #38bdf8;
-  --tag-mint-bg: #dcfce7;   --tag-mint-fg: #15803d;   --tag-mint-dot: #22c55e;
-  --tag-lemon-bg: #fef9c3;  --tag-lemon-fg: #a16207;  --tag-lemon-dot: #eab308;
-  --tag-coral-bg: #ffe4e6;  --tag-coral-fg: #be123c;  --tag-coral-dot: #fb7185;
-  --tag-lilac-bg: #ede9fe;  --tag-lilac-fg: #6d28d9;  --tag-lilac-dot: #a78bfa;
+  /* Electric tags: solid saturated chips, dark text (white on cobalt) */
+  --tag-cobalt-bg: #1e3fd8; --tag-cobalt-fg: #ffffff;
+  --tag-cyan-bg: #38bdf8;   --tag-cyan-fg: #05213a;
+  --tag-lime-bg: #bef264;   --tag-lime-fg: #1a2e05;
+  --tag-sun-bg: #fde047;    --tag-sun-fg: #3a2e00;
+  --tag-pink-bg: #f9a8d4;   --tag-pink-fg: #4a0d2b;
+  --tag-lilac-bg: #c4b5fd;  --tag-lilac-fg: #2e1065;
   --shadow-soft: 0 1px 2px rgb(11 21 51 / 0.04), 0 8px 24px -12px rgb(30 63 216 / 0.12);
   --shadow-pop: 0 18px 48px -12px rgb(11 21 51 / 0.28), 0 2px 6px rgb(11 21 51 / 0.06);
 }
@@ -323,12 +328,7 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
   --warning-soft: #2a2610;
   --danger-soft: #2e1022;
   --info-soft: #0c2545;
-  --tag-cobalt-bg: #18245e; --tag-cobalt-fg: #c4cbff; --tag-cobalt-dot: #8c9bff;
-  --tag-sky-bg: #0c2545;    --tag-sky-fg: #a5d8ff;    --tag-sky-dot: #38bdf8;
-  --tag-mint-bg: #0d2a26;   --tag-mint-fg: #86efac;   --tag-mint-dot: #22c55e;
-  --tag-lemon-bg: #2a2610;  --tag-lemon-fg: #fde68a;  --tag-lemon-dot: #eab308;
-  --tag-coral-bg: #2e1022;  --tag-coral-fg: #fda4af;  --tag-coral-dot: #fb7185;
-  --tag-lilac-bg: #1f1645;  --tag-lilac-fg: #c4b5fd;  --tag-lilac-dot: #a78bfa;
+  --tag-cobalt-bg: #8c9bff; --tag-cobalt-fg: #050b24; /* cobalt 300 on dark, per brand */
   --shadow-soft: 0 0 0 1px rgb(140 155 255 / 0.04);
   --shadow-pop: 0 18px 48px -8px rgb(0 0 0 / 0.65);
 }
@@ -357,12 +357,7 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
   --warning: #fde68a; --warning-soft: rgb(234 179 8 / 0.16);
   --destructive: #fda4af; --danger-soft: rgb(251 113 133 / 0.16);
   --secondary: rgb(255 255 255 / 0.08);
-  --tag-cobalt-bg: rgb(140 155 255 / 0.18); --tag-cobalt-fg: #dfe4ff;
-  --tag-sky-bg: rgb(56 189 248 / 0.16);     --tag-sky-fg: #bae6fd;
-  --tag-mint-bg: rgb(34 197 94 / 0.16);     --tag-mint-fg: #bbf7d0;
-  --tag-lemon-bg: rgb(234 179 8 / 0.16);    --tag-lemon-fg: #fef08a;
-  --tag-coral-bg: rgb(251 113 133 / 0.16);  --tag-coral-fg: #fecdd3;
-  --tag-lilac-bg: rgb(167 139 250 / 0.18);  --tag-lilac-fg: #ddd6fe;
+  --tag-cobalt-bg: #8c9bff; --tag-cobalt-fg: #050b24;
   color: var(--foreground);
 }
 ```
@@ -409,7 +404,7 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
 │ meshydemo.eth / access                         ← ENS breadcrumb (each label  │
 │ Access right now                                  is a link)                 │  ← PageHeader
 │ One agent can reach one thing…        [Invite agent] [Give access  G]        │
-│ (● 1 live grant) (⧗ next expiry in 58m) (⚡ revoke → dead 1.6 s)  ← candy tags│
+│ [● 1 live grant] [⧗ next expiry in 58m] [⚡ revoke → dead 1.6 s] ← solid chips │
 ╞══ cyan → ice → sky edge line (3 px) ═════════════════════════════════════════╡
 ├──────────────────────────────────────────────┬───────────────────────────────┤
 │ main content (cards)                         │ right rail (feed, setup)      │
@@ -426,11 +421,11 @@ The full, working token set is in [`mockups/_src/_theme.css`](mockups/_src/_them
   - the display title
   - a one-sentence lede
   - right-aligned actions
-  - an optional row of candy tags with live facts
+  - an optional row of Electric chips with live facts
   - the **header band** behind it (below)
 - **Header band** (`HeaderBand`, new). The nav and page header sit on the night sky.
   - A `GradientASCII` canvas with `shape="horizon"` runs behind it. On app pages it is a short band whose planet rises on the right (`cx≈0.8`), so the title and lede on the left stay on calm dark sky. A left-to-right night scrim keeps text contrast at least 10 : 1.
-  - A 3 px cyan → ice → sky line closes the band. Content then sits on the ice page.
+  - A 3 px cyan → ice → sky line closes the band. Content then sits on the white page.
   - The landing page runs the user's exact props at 600 px (`cellSize 18, density .8, glyphOpacity .85, glow .2, flicker .2, softness .5, flow .5, grain .08, mouseInteraction, scrambleRadius .1, clickEffect "wave", intro`).
   - The Approve page uses a centred band with the horizon below the headline.
 - **StatusBar** (new, fixed bottom, 36 px) takes over the sidebar footer and the header strip:
@@ -455,7 +450,7 @@ Install with `npx shadcn@latest add …` into `web/src/components/ui/`. Base: **
 | shadcn component | Where it's used |
 |---|---|
 | `button` (variants extended: `default` = cobalt pill, `ink`, `outline` (1 px hairline), `ghost`, `destructive`, `destructive-outline`; sizes `sm`/`default`/`lg`/`icon`) | Everywhere; replaces `ui.tsx` `Button` |
-| `badge` (variants: `live`, `warn`, `bad`, `info`, `muted`, `outline`) + a Meshy `Tag` (mono lowercase, soft fill, 6 px dot; `cobalt` · `sky` · `mint` · `lemon` · `coral` · `lilac`) | Grant state, World ID, roles, counts; tags in page headers and the Directory |
+| `badge` (variants: `live`, `warn`, `bad`, `info`, `muted`, `outline`) + a Meshy `Tag` chip (solid fill, bold sans; `cobalt` · `cyan` · `lime` · `sun` · `pink` · `lilac`) | Grant state, World ID, roles, counts; tags in page headers and the Directory |
 | `card` | Every section container |
 | `sheet` | **Give access** (right, 580 px); mobile nav (left); **Add device / Add network / Add service** (right, replacing the inline forms); Add admin |
 | `alert-dialog` | **Revoke confirm**, Remove agent, Remove admin, Submit fraud proof, Forget org key |
@@ -623,7 +618,7 @@ The mockup for each page is linked in its heading.
 - **Hero** ([mockup](mockups/index.html)): the full 600 px `GradientASCII` horizon with the user's exact props.
   - Headline: "Network access for agents, as ENS names." The last words are in a sky → ice gradient.
   - The org field is a pill input with "Open org".
-  - A glass "live grant" card sits on the horizon: countdown ring, `claude-1 → db1.prod`, +1h / Revoke, candy tags.
+  - A glass "live grant" card sits on the horizon: countdown ring, `claude-1 → db1.prod`, +1h / Revoke, Electric chips.
   - The canvas answers the mouse (scramble) and clicks (wave).
 - **"Three moves"**: name it → grant it → revoke it, each with a real mono example.
 - **The list of screens**: numbered rows, not a showcase grid.
@@ -845,7 +840,7 @@ Pages are in order of demo value.
 
 ### Decisions needed from the user
 - **D1. When to implement.** Before the 7 Nov 09:00 IST deadline (phases 0–3, and 6.1–6.3 if time allows), or after judging (everything)? *Recommendation:* Phase 0 now. It is the broken-link fix. Phases 1–3 and 6.1–6.3 only if they can be verified on Sepolia by about 06:00 IST.
-- **D2. Light by default?** *Recommendation:* palette A (ice and white) by default, with D (night mesh) as the dark theme one click away. The nav and the header band stay night in both. The alternative is to follow the system setting.
+- **D2. Light by default?** *Recommendation:* palette B (Electric, white) by default, with D (night mesh) as the dark theme one click away. The nav and the header band stay night in both. The alternative is to follow the system setting.
 - **D3. Top nav instead of the sidebar.** *Recommendation:* the top nav, as ethglobal does. All six destinations fit, and the mobile `Sheet` covers small screens.
 - **D4. Typeface.** Geist (free, the brand's choice) instead of ethglobal's commercial Roobert. *Recommendation:* Geist. No licence needed, and the wordmark is drawn in it.
 - **D5. Agent page and admin listing scope.** Both need new data code: a route plus `adminsOf()` event scanning. Include them in the first pass?
@@ -862,7 +857,7 @@ The `mockups/` folder:
 | File | Screen |
 |---|---|
 | `index.html` | Landing: the 600 px `GradientASCII` hero (the user's props), three moves, and a numbered list of screens |
-| `palette.html` | Palette study: directions A–D side by side, and the picked system (surfaces, blues, tags) |
+| `palette.html` | Palette study: directions A–D side by side, with B (Electric) picked, and its system (surfaces, blues, chips) |
 | `access.html` | Access home (`?theme=dark` for dark; `?palette=0x35e7` opens ⌘K) |
 | `give-access.html` | Give access sheet |
 | `revoke.html` | Revoke confirm, live timeline, stepper toasts |

@@ -3,9 +3,14 @@
   .opt { border-radius: 18px; overflow: hidden; border: 1px solid var(--border); background: var(--background); color: var(--foreground); box-shadow: var(--shadow-soft); }
   .sw { height: 46px; border-radius: 10px; border: 1px solid rgb(0 0 0 / .06); }
   .chosen { outline: 3px solid #38bdf8; outline-offset: 4px; }
-  /* B: Electric: solid, saturated chips */
-  .opt-b .tag { --bg: var(--b-bg); --fg: var(--b-fg); --dt: var(--b-fg); font-family: "Geist", sans-serif; font-weight: 600; }
-  .opt-b .tag::before { display: none; }
+  /* A and C keep the soft "candy" tags they were sampled with */
+  .candy .tag { --bg: var(--c-cobalt-bg, #e3e8ff); --fg: var(--c-cobalt-fg, #2b3fe0); --dt: var(--c-cobalt-dot, #2b3fe0); font-family: "Geist Mono", monospace; font-weight: 500; padding: 0 .6rem 0 .5rem; gap: .4rem; }
+  .candy .tag::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: var(--dt); }
+  .candy .tag-sky { --bg: var(--c-sky-bg, #e0f2fe); --fg: var(--c-sky-fg, #0369a1); --dt: var(--c-sky-dot, #38bdf8); }
+  .candy .tag-mint { --bg: var(--c-mint-bg, #dcfce7); --fg: var(--c-mint-fg, #15803d); --dt: var(--c-mint-dot, #22c55e); }
+  .candy .tag-lemon { --bg: var(--c-lemon-bg, #fef9c3); --fg: var(--c-lemon-fg, #a16207); --dt: var(--c-lemon-dot, #eab308); }
+  .candy .tag-coral { --bg: var(--c-coral-bg, #ffe4e6); --fg: var(--c-coral-fg, #be123c); --dt: var(--c-coral-dot, #fb7185); }
+  .candy .tag-lilac { --bg: var(--c-lilac-bg, #ede9fe); --fg: var(--c-lilac-fg, #6d28d9); --dt: var(--c-lilac-dot, #a78bfa); }
 </style>
 
 <section class="band on-dark" style="margin-top:0;padding-top:0" data-ascii-host>
@@ -17,7 +22,7 @@
   <div class="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8">
     <div class="eyebrow mb-3">ui revamp · palette study</div>
     <h1 class="display max-w-3xl">Which colours feel like Meshy?</h1>
-    <p class="lede mt-4 max-w-2xl">Four directions built from the logo's cobalt and white and the hero's gradient (<span class="mono text-foreground">#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8</span>). Each one shows the same pieces: page, card, a grant, buttons and tags.</p>
+    <p class="lede mt-4 max-w-2xl">Four directions, built from the logo's cobalt and white and the hero's gradient (<span class="mono text-foreground">#1e3fd8 · #f6f8ff · #a5d8ff · #38bdf8</span>). Each one shows the same pieces: page, card, a grant, buttons and tags.</p>
   </div>
 </section>
 <div class="band-edge"></div>
@@ -26,8 +31,8 @@
   <div class="grid gap-8 lg:grid-cols-2">
 
     <!-- A -->
-    <section class="opt chosen" style="">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">A</span><b>Cobalt horizon</b></div><span class="badge b-live"><i data-lucide="check"></i>Picked</span></div>
+    <section class="opt candy" style="--background:#f6f8ff;--primary:#2b3fe0">
+      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">A</span><b>Cobalt horizon</b></div><span class="badge b-muted">Soft</span></div>
       <div class="p-5">
         <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#f6f8ff"></div><div class="sw" style="background:#ffffff"></div><div class="sw" style="background:#0b1533"></div><div class="sw" style="background:#2b3fe0"></div><div class="sw" style="background:#a5d8ff"></div><div class="sw" style="background:#38bdf8"></div></div>
         <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>ice</span><span>white</span><span>navy ink</span><span>cobalt</span><span>sky</span><span>cyan</span></div>
@@ -36,27 +41,27 @@
           <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-mint">live</span><span class="tag tag-sky">home</span><span class="tag">prod</span><span class="tag tag-lemon">expiring</span><span class="tag tag-coral">refused</span><span class="tag tag-lilac">world id</span></div>
           <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
         </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground"><b class="text-foreground">Why it wins:</b> it is the logo, literally. Cobalt for action, white and ice for calm, and the hero's sky and cyan for light. Tags are small candy dots on soft fills, in mono lowercase, so they read like little network labels. They add play without competing with cobalt.</p>
+        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">Closest to the logo and the calmest of the fun options: candy dots on soft fills, in mono lowercase. Quieter than B, but also less memorable.</p>
       </div>
     </section>
 
     <!-- B -->
-    <section class="opt opt-b" style="--background:#ffffff;--card:#ffffff;--foreground:#0a0f2c;--primary:#1e3fd8;--border:#e6e9f5">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">B</span><b>Electric</b></div><span class="badge b-muted">Bold</span></div>
+    <section class="opt chosen">
+      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">B</span><b>Electric</b></div><span class="badge b-live"><i data-lucide="check"></i>Picked</span></div>
       <div class="p-5">
         <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#ffffff"></div><div class="sw" style="background:#1e3fd8"></div><div class="sw" style="background:#38bdf8"></div><div class="sw" style="background:#bef264"></div><div class="sw" style="background:#fde047"></div><div class="sw" style="background:#f9a8d4"></div></div>
         <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>white</span><span>cobalt</span><span>cyan</span><span>lime</span><span>sun</span><span>pink</span></div>
         <div class="card mt-5 p-4">
           <div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-full" style="background:#1e3fd8;color:#fff"><i data-lucide="sparkle" class="h-4 w-4"></i></span><div class="flex-1"><div class="ens font-semibold">claude-1 → db1.prod</div><div class="text-xs text-muted-foreground">Folders · sealed policy</div></div><span class="mono text-sm font-semibold">58m 38s</span></div>
-          <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag" style="--b-bg:#bef264;--b-fg:#1a2e05">live</span><span class="tag" style="--b-bg:#38bdf8;--b-fg:#05213a">home</span><span class="tag" style="--b-bg:#1e3fd8;--b-fg:#fff">prod</span><span class="tag" style="--b-bg:#fde047;--b-fg:#3a2e00">expiring</span><span class="tag" style="--b-bg:#f9a8d4;--b-fg:#4a0d2b">refused</span><span class="tag" style="--b-bg:#c4b5fd;--b-fg:#2e1065">world id</span></div>
+          <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-lime">live</span><span class="tag tag-cyan">home</span><span class="tag">prod</span><span class="tag tag-sun">expiring</span><span class="tag tag-pink">refused</span><span class="tag tag-lilac">world id</span></div>
           <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
         </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">Loud and fun. The solid chips win every glance, though, so on a busy Activity table the tags outshout the data and the cobalt. Better for a marketing page than for a security console.</p>
+        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground"><b class="text-foreground">Picked.</b> Loud, fun and unmistakably Meshy: electric cobalt and cyan from the hero, with solid lime, sun, pink and lilac chips. To keep tables readable, a row carries at most one chip: its state. Everything else stays as plain text.</p>
       </div>
     </section>
 
     <!-- C -->
-    <section class="opt" style="--tag-mint-bg:#dbeafe;--tag-mint-fg:#1d4ed8;--tag-mint-dot:#3b82f6;--tag-coral-bg:#eef2ff;--tag-coral-fg:#4338ca;--tag-coral-dot:#6366f1;--tag-lilac-bg:#e0e7ff;--tag-lilac-fg:#3730a3;--tag-lilac-dot:#818cf8;--tag-lemon-bg:#cffafe;--tag-lemon-fg:#0e7490;--tag-lemon-dot:#22d3ee">
+    <section class="opt candy" style="--background:#f6f8ff;--primary:#2b3fe0;--c-mint-bg:#dbeafe;--c-mint-fg:#1d4ed8;--c-mint-dot:#3b82f6;--c-coral-bg:#eef2ff;--c-coral-fg:#4338ca;--c-coral-dot:#6366f1;--c-lilac-bg:#e0e7ff;--c-lilac-fg:#3730a3;--c-lilac-dot:#818cf8;--c-lemon-bg:#cffafe;--c-lemon-fg:#0e7490;--c-lemon-dot:#22d3ee">
       <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">C</span><b>All blue</b></div><span class="badge b-muted">Calmest</span></div>
       <div class="p-5">
         <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#f6f8ff"></div><div class="sw" style="background:#dbeafe"></div><div class="sw" style="background:#a5d8ff"></div><div class="sw" style="background:#38bdf8"></div><div class="sw" style="background:#2b3fe0"></div><div class="sw" style="background:#141c5e"></div></div>
@@ -72,54 +77,54 @@
 
     <!-- D -->
     <section class="opt dark">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">D</span><b>Night mesh</b></div><span class="badge b-info">Dark theme of A</span></div>
+      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3"><div class="flex items-center gap-2"><span class="count">D</span><b>Night mesh</b></div><span class="badge b-info">Dark theme of B</span></div>
       <div class="p-5">
-        <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#050b24"></div><div class="sw" style="background:#0b1435"></div><div class="sw" style="background:#e8edff"></div><div class="sw" style="background:#8c9bff"></div><div class="sw" style="background:#a5d8ff"></div><div class="sw" style="background:#38bdf8"></div></div>
-        <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>night</span><span>card</span><span>ink</span><span>cobalt 300</span><span>sky</span><span>cyan</span></div>
+        <div class="grid grid-cols-6 gap-2"><div class="sw" style="background:#050b24"></div><div class="sw" style="background:#0b1435"></div><div class="sw" style="background:#e8edff"></div><div class="sw" style="background:#8c9bff"></div><div class="sw" style="background:#bef264"></div><div class="sw" style="background:#f9a8d4"></div></div>
+        <div class="mono mt-1.5 grid grid-cols-6 gap-2 text-[10px] text-muted-foreground"><span>night</span><span>card</span><span>ink</span><span>cobalt 300</span><span>lime</span><span>pink</span></div>
         <div class="card mt-5 p-4">
           <div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background"><i data-lucide="sparkle" class="h-4 w-4"></i></span><div class="flex-1"><div class="ens font-semibold">claude-1 → db1.prod</div><div class="text-xs text-muted-foreground">Folders · sealed policy</div></div><span class="mono text-sm font-semibold">58m 38s</span></div>
           <div class="mt-4 flex flex-wrap gap-1.5"><span class="tag tag-mint">live</span><span class="tag tag-sky">home</span><span class="tag">prod</span><span class="tag tag-lemon">expiring</span><span class="tag tag-coral">refused</span><span class="tag tag-lilac">world id</span></div>
           <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Give access</button><button class="btn btn-outline btn-sm">Invite</button><button class="btn btn-danger btn-sm">Revoke</button></div>
         </div>
-        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">The hero's night sky as a full theme. It ships as A's dark mode (the moon button on every page) rather than as the default, so the dashboard keeps the logo's white.</p>
+        <p class="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">The hero's night sky as a full theme, with B's electric chips (they glow on night). It ships as the dark mode, behind the moon button on every page, rather than as the default, so the dashboard keeps the logo's white.</p>
       </div>
     </section>
   </div>
 
   <!-- the chosen system -->
   <section class="mt-16">
-    <div class="eyebrow mb-2">picked · a, cobalt horizon</div>
+    <div class="eyebrow mb-2">picked · b, electric</div>
     <h2 class="text-3xl font-semibold tracking-tight">The system</h2>
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
       <div class="card card-b">
         <h3 class="h3">Surfaces</h3>
         <ul class="mt-3 space-y-2 text-[13.5px]">
           <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#050b24"></span>Night <span class="mono ml-auto text-xs text-muted-foreground">#050B24 · nav and hero band</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#f6f8ff"></span>Ice <span class="mono ml-auto text-xs text-muted-foreground">#F6F8FF · page</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#ffffff"></span>White <span class="mono ml-auto text-xs text-muted-foreground">#FFFFFF · cards</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#0b1533"></span>Navy ink <span class="mono ml-auto text-xs text-muted-foreground">#0B1533 · text</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#e3e8f6"></span>Hairline <span class="mono ml-auto text-xs text-muted-foreground">#E3E8F6 · borders</span></li>
+          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#ffffff"></span>White <span class="mono ml-auto text-xs text-muted-foreground">#FFFFFF · page and cards</span></li>
+          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#f3f5fc"></span>Mist <span class="mono ml-auto text-xs text-muted-foreground">#F3F5FC · fills, table header</span></li>
+          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#0a0f2c"></span>Navy ink <span class="mono ml-auto text-xs text-muted-foreground">#0A0F2C · text</span></li>
+          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md border border-border" style="background:#e6e9f5"></span>Hairline <span class="mono ml-auto text-xs text-muted-foreground">#E6E9F5 · borders</span></li>
         </ul>
       </div>
       <div class="card card-b">
         <h3 class="h3">Blues</h3>
         <ul class="mt-3 space-y-2 text-[13.5px]">
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#2b3fe0"></span>Cobalt <span class="mono ml-auto text-xs text-muted-foreground">#2B3FE0 · primary</span></li>
+          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#1e3fd8"></span>Electric cobalt <span class="mono ml-auto text-xs text-muted-foreground">#1E3FD8 · primary</span></li>
           <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#8c9bff"></span>Cobalt 300 <span class="mono ml-auto text-xs text-muted-foreground">#8C9BFF · primary on dark</span></li>
           <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#a5d8ff"></span>Sky <span class="mono ml-auto text-xs text-muted-foreground">#A5D8FF · glow, focus on dark</span></li>
-          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#38bdf8"></span>Cyan <span class="mono ml-auto text-xs text-muted-foreground">#38BDF8 · horizon edge, highlights</span></li>
+          <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#38bdf8"></span>Cyan <span class="mono ml-auto text-xs text-muted-foreground">#38BDF8 · horizon edge, network chip</span></li>
           <li class="flex items-center gap-3"><span class="h-6 w-10 rounded-md" style="background:#eaf0ff"></span>Accent <span class="mono ml-auto text-xs text-muted-foreground">#EAF0FF · hover, selected</span></li>
         </ul>
       </div>
       <div class="card card-b">
-        <h3 class="h3">Tags</h3>
-        <p class="mt-1 text-[13px] text-muted-foreground">Mint, lemon and coral are reserved for state. Networks get sky or cobalt, identity gets lilac. Colour is never decoration.</p>
+        <h3 class="h3">Chips</h3>
+        <p class="mt-1 text-[13px] text-muted-foreground">Solid and saturated, with dark text (white on cobalt). Lime, sun and pink mean state; cyan and cobalt mean networks; lilac means identity. At most one chip per table row.</p>
         <div class="mt-3 grid grid-cols-2 gap-2 text-[13px]">
-          <div class="flex items-center gap-2"><span class="tag tag-mint">live</span><span class="text-muted-foreground">open, healthy</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-lemon">expiring</span><span class="text-muted-foreground">soon, demo-only</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-coral">refused</span><span class="text-muted-foreground">revoked, blocked</span></div>
+          <div class="flex items-center gap-2"><span class="tag tag-lime">live</span><span class="text-muted-foreground">open, healthy</span></div>
+          <div class="flex items-center gap-2"><span class="tag tag-sun">expiring</span><span class="text-muted-foreground">soon, demo-only</span></div>
+          <div class="flex items-center gap-2"><span class="tag tag-pink">refused</span><span class="text-muted-foreground">revoked, blocked</span></div>
           <div class="flex items-center gap-2"><span class="tag tag-lilac">world id</span><span class="text-muted-foreground">identity, agents</span></div>
-          <div class="flex items-center gap-2"><span class="tag tag-sky">home</span><span class="text-muted-foreground">network label</span></div>
+          <div class="flex items-center gap-2"><span class="tag tag-cyan">home</span><span class="text-muted-foreground">network label</span></div>
           <div class="flex items-center gap-2"><span class="tag">prod</span><span class="text-muted-foreground">network, default</span></div>
         </div>
       </div>
