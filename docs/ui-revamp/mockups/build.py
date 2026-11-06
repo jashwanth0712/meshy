@@ -5,8 +5,7 @@ Each page body lives in _src/<page>.html and starts with a one-line JSON header:
     <!-- {"title": "Access", "active": "access", "shell": "app"} -->
 This script wraps it in the shared shell (top nav, ⌘K palette, status bar), inlines the
 theme, component CSS, JS and the real logo from brand/svg, and writes <page>.html next to
-this file and to web/public/ui-revamp/ (so the app serves them at /ui-revamp/). The
-outputs are self-contained: open them straight from disk.
+this file. The outputs are self-contained: open them straight from disk.
 
     python3 docs/ui-revamp/mockups/build.py
 """
@@ -192,9 +191,7 @@ def render(page: Path) -> str:
 
 def main():
     pages = sorted(p for p in SRC.glob("*.html") if not p.name.startswith("_"))
-    # docs copy, plus a copy the Next app serves at /ui-revamp/ (branch preview on Vercel)
-    outs = [HERE, HERE.parents[2] / "web" / "public" / "ui-revamp"]
-    outs[1].mkdir(parents=True, exist_ok=True)
+    outs = [HERE]
     for p in pages:
         html = render(p)
         for d in outs:

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Meshy — ENS-native mesh access for AI agents",
+  title: "Meshy",
   description: "Decentralized, agent-friendly network access. ENSv2 is the access-control plane; every file an agent touches is audited on Arkiv.",
 };
 

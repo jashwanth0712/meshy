@@ -1,22 +1,22 @@
 "use client";
-import { ShieldPlus, UserMinus } from "lucide-react";
 import { useState } from "react";
 import { type Address, isAddress } from "viem";
 import { type Step, Steps } from "@/components/Steps";
-import { Badge, Button, Card, Field, inputCls } from "@/components/ui";
+import { Badge, Button, Card, Field, Row, Sheet, inputCls } from "@/components/ui";
 import { ADMIN_ROLES, eacAbi, send, textKeySetter } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 /** Delegated network admins via ENSv2 Enhanced Access Control. */
 export function Admins() {
-  const { tree, wallet, client, account, toast } = useMeshy();
+  const { tree, wallet, client, account, toast, org } = useMeshy();
+  const [open, setOpen] = useState(false);
   const [net, setNet] = useState(tree?.networks[0]?.name ?? "");
   const [addr, setAddr] = useState("");
   const [status, setStatus] = useState<Record<string, boolean>>();
   const [steps, setSteps] = useState<Step[]>();
   if (!tree) return null;
   const isOwner = !!account && tree.owner.toLowerCase() === account.toLowerCase();
-  const network = tree.networks.find((n) => n.name === net);
+  const network = tree.networks.find((n) => n.name === net) ?? tree.networks[0];
   // Registries an admin of this network needs roles on: the network, each device, each service.
   const regs = network
     ? [
@@ -25,6 +25,7 @@ export function Admins() {
         ...network.resources.flatMap((r) => r.services.map((s) => ({ name: s.name, reg: s.registry }))),
       ]
     : [];
+  const busy = steps?.some((s) => s.state === "doing");
 
   async function check() {
     if (!isAddress(addr)) return;
@@ -35,8 +36,8 @@ export function Admins() {
 
   async function apply(revoke: boolean) {
     if (!wallet || !isAddress(addr)) return;
-    const list: Step[] = regs.map((r) => ({ label: `${revoke ? "Revoke" : "Grant"} REGISTRAR|UNREGISTER|RENEW on ${r.name}`, state: "todo" as const }));
-    if (!revoke) list.push({ label: "Grant setter role: may write ONLY meshy.policy on the org resolver", state: "todo" });
+    const list: Step[] = regs.map((r) => ({ label: `${revoke ? "Remove" : "Grant"} admin roles on ${r.name.replace(`.${org}`, "")}`, state: "todo" as const }));
+    if (!revoke) list.push({ label: "Allow writing grant policies (only meshy.policy)", state: "todo" });
     setSteps(list);
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
     try {
@@ -51,7 +52,7 @@ export function Admins() {
         await send(wallet, client, { address: tree!.resolver, abi: eacAbi, functionName: "grantSetterRoles", args: [textKeySetter("meshy.policy"), addr as Address] }, (h) => up(i, { tx: h }));
         up(i, { state: "done" });
       }
-      toast(revoke ? "Admin removed" : `Admin delegated for ${net}`, "ok");
+      toast(revoke ? "Admin removed" : `Admin added for ${network?.label}`, "ok");
       check();
     } catch (e) {
       const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
@@ -60,47 +61,73 @@ export function Admins() {
   }
 
   return (
-    <Card title={<span className="flex items-center gap-2"><ShieldPlus size={15} /> Delegated admins (ENSv2 Enhanced Access Control)</span>} className="lg:col-span-2">
-      <p className="mb-4 text-sm text-muted">
-        Give a teammate admin rights over one network without handing over the org: they can create, grant, revoke and renew names inside it (EAC root roles on that network&apos;s
-        registries), and write <b>only</b> the <span className="mono">meshy.policy</span> text record on the org resolver (a setter-scoped role) — they cannot touch{" "}
-        <span className="mono">meshy.orgkey</span>, the attestor list, or other networks.
-      </p>
-      <div className="grid gap-3 md:grid-cols-[200px_1fr_auto_auto_auto]">
-        <Field label="Network">
-          <select className={inputCls} value={net} onChange={(e) => (setNet(e.target.value), setStatus(undefined))}>
-            {tree.networks.map((n) => (
-              <option key={n.name}>{n.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Admin address">
-          <input className={inputCls} value={addr} onChange={(e) => (setAddr(e.target.value.trim()), setStatus(undefined))} placeholder="0x…" />
-        </Field>
-        <div className="flex items-end">
-          <Button disabled={!isAddress(addr)} onClick={check}>Check</Button>
-        </div>
-        <div className="flex items-end">
-          <Button kind="primary" disabled={!isOwner || !isAddress(addr)} onClick={() => apply(false)}>
-            <ShieldPlus size={14} /> Delegate ({regs.length + 1} tx)
-          </Button>
-        </div>
-        <div className="flex items-end">
-          <Button kind="danger" disabled={!isOwner || !isAddress(addr)} onClick={() => apply(true)}>
-            <UserMinus size={14} /> Remove
-          </Button>
-        </div>
-      </div>
-      {status && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {Object.entries(status).map(([n, ok]) => (
-            <Badge key={n} tone={ok ? "ok" : "muted"}>
-              {n}: {ok ? "admin" : "no roles"}
-            </Badge>
-          ))}
-        </div>
+    <>
+      <Card
+        title="Admins"
+        className="mt-10"
+        actions={
+          <button onClick={() => setOpen(true)} className="text-[13px] font-medium text-accent hover:underline">
+            Add or check an admin
+          </button>
+        }
+      >
+        <Row>
+          <span className="flex-1 text-muted">An admin can give and revoke access inside one network, without owning the org or touching the org key.</span>
+        </Row>
+      </Card>
+
+      {open && (
+        <Sheet
+          title="Network admin"
+          onClose={() => (setOpen(false), setSteps(undefined), setStatus(undefined))}
+          locked={busy}
+          footer={
+            steps && !busy ? (
+              <>
+                <span />
+                <Button kind="primary" onClick={() => (setOpen(false), setSteps(undefined))}>Done</Button>
+              </>
+            ) : (
+              <>
+                <Button kind="ghost" disabled={!isAddress(addr) || busy} onClick={check}>Check</Button>
+                <div className="flex gap-2">
+                  <Button kind="danger" disabled={!isOwner || !isAddress(addr) || busy} onClick={() => apply(true)}>Remove</Button>
+                  <Button kind="primary" disabled={!isOwner || !isAddress(addr) || busy} onClick={() => apply(false)}>
+                    Make admin · {regs.length + 1} tx
+                  </Button>
+                </div>
+              </>
+            )
+          }
+        >
+          {steps ? (
+            <Steps steps={steps} />
+          ) : (
+            <>
+              <Field label="Network">
+                <select className={inputCls} value={network?.name} onChange={(e) => (setNet(e.target.value), setStatus(undefined))}>
+                  {tree.networks.map((n) => (
+                    <option key={n.name} value={n.name}>{n.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Wallet address">
+                <input className={inputCls} value={addr} onChange={(e) => (setAddr(e.target.value.trim()), setStatus(undefined))} placeholder="0x…" />
+              </Field>
+              {status && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(status).map(([n, ok]) => (
+                    <Badge key={n} tone={ok ? "ok" : "muted"}>
+                      {n.replace(`.${org}`, "")}: {ok ? "admin" : "no roles"}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {!isOwner && <p className="text-[13px] text-muted">Only the org owner can add or remove admins.</p>}
+            </>
+          )}
+        </Sheet>
       )}
-      {steps && <div className="mt-4"><Steps steps={steps} /></div>}
-    </Card>
+    </>
   );
 }
