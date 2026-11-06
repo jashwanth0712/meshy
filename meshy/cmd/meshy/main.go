@@ -250,10 +250,14 @@ func cmdJoin(args []string) error {
 	if err != nil {
 		return fmt.Errorf("bad invite link: %w", err)
 	}
+	// People-page invites (https://meshy.live/join/…) are for people: same flow as join-org.
+	if strings.HasPrefix(u.Path, "/join/") {
+		return cmdJoinOrg(append([]string{fs.Arg(0)}, args[:len(args)-1]...))
+	}
 	q := u.Query()
 	org, agent := q.Get("org"), q.Get("agent")
 	if org == "" || agent == "" {
-		return errors.New("invite link must contain org= and agent=")
+		return errors.New("that isn't a Meshy invite link: use a meshy.live/join/… link (people) or an /approve?org=…&agent=… link (agents)")
 	}
 	id, err := createIdentity(agent, org)
 	if err != nil {
