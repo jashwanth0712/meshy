@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -131,7 +132,17 @@ func (o *opts) start(ctx context.Context, quiet bool) (*embed.Client, error) {
 	return c, nil
 }
 
+// version is set at release time: -ldflags "-X main.version=v0.3.2" (scripts/release.sh).
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Printf("meshy-mesh %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+			return
+		}
+	}
 	if len(os.Args) < 2 {
 		usage()
 	}

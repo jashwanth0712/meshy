@@ -16,6 +16,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -76,7 +77,17 @@ func (c *common) rootList() []string {
 	return out
 }
 
+// version is set at release time: -ldflags "-X main.version=v0.3.2" (scripts/release.sh).
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Printf("meshyd %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+			return
+		}
+	}
 	if len(os.Args) < 2 {
 		usage()
 	}

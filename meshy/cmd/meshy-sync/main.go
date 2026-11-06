@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -41,7 +42,17 @@ import (
 	"github.com/jashwanth0712/meshy/meshy/provider"
 )
 
+// version is set at release time: -ldflags "-X main.version=v0.3.2" (scripts/release.sh).
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Printf("meshy-sync %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+			return
+		}
+	}
 	fs := flag.NewFlagSet("meshy-sync", flag.ExitOnError)
 
 	listen := fs.String("listen", env("MESHY_LISTEN", ":8787"), "listen address")

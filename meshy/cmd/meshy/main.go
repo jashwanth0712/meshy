@@ -145,7 +145,17 @@ func ensClient(ctx context.Context) (*enskit.Client, error) {
 	return enskit.NewClient(c, common.HexToAddress(env("MESHY_ENS_HELPER", enskit.SepoliaUniversalHelper.Hex()))), nil
 }
 
+// version is set at release time: -ldflags "-X main.version=v0.3.2" (scripts/release.sh).
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Printf("meshy %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+			return
+		}
+	}
 	if len(os.Args) < 2 {
 		usage()
 	}
@@ -201,6 +211,7 @@ func usage() {
   meshy mesh-join --provider <url>      join the provider's WireGuard mesh as this agent's own peer
   meshy curl <service> [/path]          one HTTP request to a service
   meshy verify-siwe --sig 0x… < msg     check a Sign-In with Ethereum message, print the signer
+  meshy -v                              print the version
   meshy top [--org o.eth] [--demo]      live mission-control view of the org (JSON when piped)
 
 Errors are machine-readable: MESHY_BLOCKED, MESHY_REVOKED, MESHY_EXPIRED,
