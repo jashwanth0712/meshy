@@ -28,7 +28,7 @@ If you're an agent picking this up, read in this order: **STATUS â†’ LEARNINGS â
 | `meshnet/` | `meshy-mesh`: userspace WireGuard bridge (NetBird `client/embed`); a separate module because of a dependency conflict | [meshnet/README.md](../meshnet/README.md) |
 | `web/` | Next.js 16 dashboard: Access, Directory, Activity, Billing, Provider, Settings, Approve | [web/README.md](../web/README.md) |
 | `contracts/` | Foundry: `ProviderRegistry` (stake/slash with an ENS fraud proof), `MeshySubscription` (per-seat USDC); deployed on Sepolia | [contracts/README.md](../contracts/README.md) |
-| `menubar/` | macOS menu-bar app (Go systray) | [menubar/README.md](../menubar/README.md) |
+| `mac/` | macOS menu-bar app (Swift/AppKit) | [mac/README.md](../mac/README.md) |
 | `agent/claude-plugin/` | Claude Code plugin: zero-dependency MCP server + skill + `/meshy:join` | [agent/claude-plugin/README.md](../agent/claude-plugin/README.md) |
 | `deploy/` | meshyd Docker image, Linux sandbox test image, provider compose | [deploy/README.md](../deploy/README.md) |
 | `e2e/` | End-to-end scripts: Sepolia fork (`run-local.sh`, `services-local.sh`) and live demo (`live-demo.sh`) | [e2e/README.md](../e2e/README.md) |

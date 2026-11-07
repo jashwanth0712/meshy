@@ -116,7 +116,7 @@ Last updated Fri 6 Nov 2026, about 11:00 IST, after the provider mesh went live 
 - [x] **Write path verified with a real wallet:** add device, grant, revoke.
 - [x] Server-side RPC proxies keep keys off the client.
 
-### macOS menu bar (`menubar/`)
+### macOS menu bar (`mac/`)
 - [x] Shows agent identities on this Mac, live grants with countdowns, local meshyd sessions and Arkiv blocks/revocations (with notifications). Packaged as `Meshy.app` (LSUIElement).
 
 ### Mesh transport (`meshnet/`)

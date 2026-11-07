@@ -49,6 +49,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         NSApp.setActivationPolicy(.accessory)
         NSApp.mainMenu = editMenu() // so ⌘C / ⌘V / ⌘A work in dialogs
         if !isTest, Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
+        // One-time migration: copy settings from the old bundle ID domain (eth.meshydemo.mac)
+        // into the standard domain (live.meshy.mac) so existing users keep their orgs and prefs.
+        if !isTest && !UserDefaults.standard.bool(forKey: "migratedFromEthMeshydemo") {
+            if let old = UserDefaults(suiteName: "eth.meshydemo.mac") {
+                for (key, value) in old.dictionaryRepresentation() {
+                    if UserDefaults.standard.object(forKey: key) == nil {
+                        UserDefaults.standard.set(value, forKey: key)
+                    }
+                }
+            }
+            UserDefaults.standard.set(true, forKey: "migratedFromEthMeshydemo")
+        }
         status = StatusMenu()
 
         let args = CommandLine.arguments

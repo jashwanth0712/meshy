@@ -4,7 +4,7 @@
 <dict>
   <key>CFBundleName</key><string>Meshy</string>
   <key>CFBundleDisplayName</key><string>Meshy</string>
-  <key>CFBundleIdentifier</key><string>eth.meshydemo.mac</string>
+  <key>CFBundleIdentifier</key><string>live.meshy.mac</string>
   <key>CFBundleExecutable</key><string>Meshy</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>

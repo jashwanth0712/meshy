@@ -135,9 +135,11 @@ export default function Home() {
           </ul>
         </div>
       ) : (
-        <p className="mt-6 text-[14px] text-muted">
-          New here? <Link href={`/org/${DEMO_ORG}`} className="text-accent hover:underline">Look around the demo org</Link>, read-only.
-        </p>
+        <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/5 px-4 py-2 text-[13px]">
+          <span className="text-muted">Judging for ETHGlobal?</span>
+          <Link href={`/org/${DEMO_ORG}`} className="font-semibold text-accent hover:underline">Explore the live demo org</Link>
+          <span className="text-muted">— no wallet or setup needed, read-only.</span>
+        </div>
       )}
       <p className="mt-6 text-[14px] text-muted">
         <a href="/download" className="text-accent hover:underline">Get Meshy for Mac, the CLI and the daemon</a>

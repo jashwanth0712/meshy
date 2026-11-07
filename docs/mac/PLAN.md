@@ -237,7 +237,7 @@ It shows grants, local identities, daemon sessions and Arkiv events in a static 
 
 Not reused: the daemon status over the unix socket (`/tmp/meshyd-live.sock`), which only matters on a device and needs a socket client. It's follow-up F2.
 
-**Decision:** retire `menubar/` once this ships. Mark it deprecated in its README and stop building it in releases. Don't delete it in this change: another session owns that folder's history.
+**Decision:** `menubar/` has been retired and removed. The real Mac app is `mac/`.
 
 ## 9. Follow-ups
 - **F1:** Renew (+1h) in the dashboard (`renew(anyId, newExpiry)` is already in the ABI), so "Renew +1h…" lands on a one-click confirm.

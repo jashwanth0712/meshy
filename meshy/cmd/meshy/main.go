@@ -351,9 +351,13 @@ func macAppOrgs() []string {
 	if runtime.GOOS != "darwin" {
 		return nil
 	}
-	raw, err := exec.Command("/bin/sh", "-c", "defaults export eth.meshydemo.mac - | plutil -convert json -o - -").Output()
-	if err != nil {
-		return nil
+	// Try new bundle ID first; fall back to the old one so existing installs still work.
+	raw, err := exec.Command("/bin/sh", "-c", "defaults export live.meshy.mac - | plutil -convert json -o - -").Output()
+	if err != nil || len(raw) == 0 {
+		raw, err = exec.Command("/bin/sh", "-c", "defaults export eth.meshydemo.mac - | plutil -convert json -o - -").Output()
+		if err != nil {
+			return nil
+		}
 	}
 	var prefs map[string]any
 	if json.Unmarshal(raw, &prefs) != nil {

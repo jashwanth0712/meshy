@@ -20,7 +20,7 @@ cd meshnet && go build -o ~/.local/bin/meshy-mesh .
 cd web && pnpm install && pnpm dev
 ```
 ```bash
-cd menubar && ./build-app.sh && open dist/Meshy.app
+cd mac && ./build.sh && open dist/Meshy.app
 ```
 ```bash
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
