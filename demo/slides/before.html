@@ -1,0 +1,35 @@
+<section id="before" data-transition="fade" style="background:#121417;color:#F1F1EE;font-family:'Geist', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:112px;width:900px;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8C9BFF">Before Meshy</p>
+<h2 style="position:absolute;left:128px;top:148px;width:1664px;font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px;color:#F1F1EE">How we reached our own machines</h2>
+<p style="position:absolute;left:128px;top:236px;width:1664px;font-size:28px;line-height:1.3;color:#9AA1AB">Twingate gave humans a VPN switch. Our agents rode along with no scope, no expiry and no audit.</p>
+<img src="/_blob/e55f0d271f18d62ba61574308a3dc15e" alt="Twingate menu-bar app on macOS, signed in, showing All Resources: a flat list of 12 machines such as cpu-vm, gpu-4090, raspberrypi-1 and several rw-rtx GPU boxes" style="position:absolute;left:128px;top:324px;width:600px;height:472px;object-fit:contain;border:1px solid #2A2F37;border-radius:12px">
+<img src="/_blob/cc4365a1cd60f713ea9b4151d384caed" alt="Terminal output from an agent setting up access: four of five servers pass, .119 shows 100% ping loss, the setup replaced existing Twingate keys, and the agent cannot cancel safety timers because they need sudo, so it asks a human to run ssh commands" style="position:absolute;left:776px;top:324px;width:1016px;height:223px;object-fit:contain;border:1px solid #2A2F37;border-radius:12px">
+<div style="position:absolute;left:140px;top:490px;width:110px;height:24px;border:2px solid #F2A65A;border-radius:6px"></div>
+<div style="position:absolute;left:784px;top:330px;width:730px;height:18px;border:2px solid #F2A65A;border-radius:6px"></div>
+<div style="position:absolute;left:786px;top:462px;width:456px;height:24px;border:2px solid #F2A65A;border-radius:6px"></div>
+<div style="position:absolute;left:784px;top:496px;width:1000px;height:18px;border:2px solid #F2A65A;border-radius:6px"></div>
+<p style="position:absolute;left:262px;top:484px;width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">1</p>
+<p style="position:absolute;left:1526px;top:321px;width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">2</p>
+<p style="position:absolute;left:1254px;top:456px;width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">3</p>
+<p style="position:absolute;left:732px;top:487px;width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">4</p>
+<p style="position:absolute;left:128px;top:812px;width:600px;font-size:24px;line-height:34px;color:#6E7580">Our Twingate client: one switch, every resource.</p>
+<div style="position:absolute;left:776px;top:584px;width:1016px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">1</p>
+<p style="flex:1;font-size:24px;line-height:1.45;color:#C9CDD2"><b style="color:#F1F1EE">A flat list of 12 machines.</b> Switch the VPN on and you can reach all of them. No folders, no expiry, no identity per agent.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">2</p>
+<p style="flex:1;font-size:24px;line-height:1.45;color:#C9CDD2"><b style="color:#F1F1EE">Keys changed under us.</b> The setup replaced Twingate keys already on some servers, and nothing recorded who did it.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">3</p>
+<p style="flex:1;font-size:24px;line-height:1.45;color:#C9CDD2"><b style="color:#F1F1EE">“Online” isn’t reachable.</b> .119 shows online and SSH works, yet every packet to the NVRs is lost.</p>
+</div>
+<div style="display:flex;flex-direction:row;gap:20px;align-items:start">
+<p style="width:36px;height:36px;font-size:24px;font-weight:600;line-height:36px;text-align:center;background:#F2A65A;border-radius:18px;color:#121417">4</p>
+<p style="flex:1;font-size:24px;line-height:1.45;color:#C9CDD2"><b style="color:#F1F1EE">The agent can’t finish.</b> Stopping a timer needs sudo, so a human has to paste commands before 14:29.</p>
+</div>
+</div>
+<aside>This is how our own team reached its machines before Meshy, with Twingate. Left: the Twingate menu-bar app. Signing in gives you All Resources, a flat list of 12 machines: a CPU VM, a 4090, two Raspberry Pis, the office camera streams and a row of RTX GPU boxes. It's one switch. Once you're on, you can reach every resource on the list; there's no notion of a folder, a time limit, or which agent is doing what. Right: a real session where an AI agent was setting up that access across five servers. Four of five pass, but look at what went wrong. The setup replaced Twingate keys that were already on some servers, and nothing recorded who changed them or why. One server, .119, reports online and SSH works, yet it drops every packet to the NVRs, so the network view and reality disagree. And the agent couldn't finish the job: cancelling the safety timers needs sudo, so it had to hand a human three ssh commands to paste before the timers fired at 14:29. That's the gap: the VPN is built for humans, and an agent either borrows a human's access wholesale or gets stuck. Meshy makes the agent a first-class name with its own scoped, expiring grant, enforced on the machine and logged on Arkiv.</aside>
+</section>

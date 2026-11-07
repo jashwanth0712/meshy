@@ -1,0 +1,7 @@
+<section id="map-cibot" data-transition="fade" style="background:#0B0C0F;color:#F1F1EE;font-family:'Geist', Arial, sans-serif;padding:128px">
+<img src="/_blob/751ff41688c19450be97802513f71dfa" data-video="/_blob/04716981860f5d801decb124c2f6b37f" alt="analyst fades out and ci-bot.agents.acme.eth, a deploy agent, appears with one grant line into gpu-4090.chennai.acme.eth: only train.sh, for 15 minutes." style="position:absolute;left:0px;top:0px;width:1920px;height:1080px;object-fit:cover">
+<p style="position:absolute;left:128px;top:112px;width:900px;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8C9BFF">A deploy agent</p>
+<h2 style="position:absolute;left:128px;top:148px;width:1664px;font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px;color:#F1F1EE">ci-bot runs one command</h2>
+<p style="position:absolute;left:128px;top:236px;width:1664px;font-size:28px;line-height:1.3;color:#9AA1AB">Only train.sh on gpu-4090, for 15 minutes. Anything else is refused.</p>
+<aside>A deploy agent. ci-bot does not get a shell at all. Its policy carries a command allowlist with a single entry, train.sh, so meshyd runs that one command without a shell and refuses anything else. The grant lasts 15 minutes, long enough for one deploy.</aside>
+</section>

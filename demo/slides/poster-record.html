@@ -1,0 +1,21 @@
+<section id="poster-record" data-transition="fade" style="background:#0A0B0D;color:#F5F5F7;font-family:'Geist', Arial, sans-serif;padding:128px">
+<div style="position:absolute;left:0px;top:0px;width:1920px;height:1080px;background:radial-gradient(ellipse at 50% 64%, #1C2468 0%, #0E1128 30%, #0A0B0D 60%)"></div>
+<div style="position:absolute;left:640px;top:470px;width:640px;height:150px;background:#17191E;border:1px solid #2A2D34;border-radius:22px;opacity:0.45"></div>
+<p style="position:absolute;left:672px;top:473px;width:576px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;white-space:nowrap;color:#5A606A">meshy.session · start</p>
+<div style="position:absolute;left:600px;top:508px;width:720px;height:160px;background:#191B21;border:1px solid #2C2F36;border-radius:22px;opacity:0.7"></div>
+<p style="position:absolute;left:632px;top:511px;width:656px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;white-space:nowrap;color:#7A808C">meshy.audit-chunk · 42 ops, sealed</p>
+<div style="position:absolute;left:560px;top:548px;width:800px;height:170px;background:#1B1D23;border:1px solid #2E3139;border-radius:22px;opacity:0.9"></div>
+<p style="position:absolute;left:592px;top:552px;width:736px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;white-space:nowrap;color:#9AA1AB">meshy.session · revoked · <span style="color:#8C9BFF">216 ms</span></p>
+<div style="position:absolute;left:520px;top:592px;width:880px;height:196px;background:#1E2026;border:1px solid #34373F;border-radius:24px;box-shadow:0px 30px 70px rgba(0,0,0,0.55)"></div>
+<div style="position:absolute;left:552px;top:624px;width:56px;height:56px;background:#2A1F14;border-radius:14px"></div>
+<x-icon name="Warning" style="position:absolute;left:562px;top:634px;width:36px;height:36px;color:#F2A65A"></x-icon>
+<p style="position:absolute;left:632px;top:616px;width:600px;font-size:32px;font-weight:600;line-height:40px;white-space:nowrap;color:#F5F5F7">claude-1 tried /etc/shadow</p>
+<p style="position:absolute;left:1240px;top:620px;width:128px;font-size:24px;line-height:34px;text-align:right;color:#8A8F98">now</p>
+<p style="position:absolute;left:632px;top:662px;width:736px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;white-space:nowrap;color:#F2A65A">meshy.blocked · db1.prod.acme.eth</p>
+<p style="position:absolute;left:632px;top:716px;width:736px;font-size:24px;line-height:34px;white-space:nowrap;color:#8A8F98">Sealed to acme.eth · read-only · on Arkiv</p>
+<p style="position:absolute;left:128px;top:836px;width:1664px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;text-align:center;color:#5A606A">$ arkiv_query "arkiv.schema = 'meshy.blocked' AND org = 'acme.eth'"</p>
+<h1 style="position:absolute;left:128px;top:112px;width:1664px;font-size:112px;font-weight:600;line-height:1.05;letter-spacing:-4px;text-align:center;color:#F5F5F7">Every move, on the record.</h1>
+<p style="position:absolute;left:128px;top:262px;width:1664px;font-size:36px;line-height:1.3;text-align:center;color:#A1A1A6">Sealed to your org. Checkable by anyone. Deletable by no one.</p>
+<p style="position:absolute;left:128px;top:968px;width:1664px;font-size:40px;font-weight:600;line-height:1.1;letter-spacing:-1.4px;text-align:center;color:#F5F5F7">meshy</p>
+<aside>Every move, on the record. Each session start, file-op chunk, block and revocation is written to Arkiv by the device's own key, as a read-only entity sealed to the org key. Nobody, including the org's own admins, can edit or delete it, and anyone can run the same query the dashboard runs and see the same records, filtered to writers whose address matches the device's ENS record.</aside>
+</section>

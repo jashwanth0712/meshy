@@ -1,0 +1,66 @@
+<section id="architecture" data-transition="fade" style="background:#121417;color:#F1F1EE;font-family:'Geist', Arial, sans-serif;padding:128px">
+<svg aria-label="Hub diagram. ENSv2 sits at the centre and every component reads it (dashed spokes): the agent, World ID, the contracts, Arkiv, meshyd and the mesh. Traffic (solid) flows from the agent through the WireGuard mesh into meshyd and its sandbox; meshyd writes sealed audit to Arkiv." style="position:absolute;left:0px;top:0px" width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs>
+<marker id="hb" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8C9BFF" stroke="none"/></marker>
+<marker id="hg" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#9AA1AB" stroke="none"/></marker>
+</defs>
+<circle cx="960" cy="640" r="136" fill="none" stroke="#8C9BFF" stroke-width="2" stroke-dasharray="3 9" opacity="0.5"/>
+<line x1="856" y1="640" x2="452" y2="640" stroke="#4A505A" stroke-width="2" stroke-dasharray="6 8"/>
+<line x1="1064" y1="640" x2="1444" y2="640" stroke="#4A505A" stroke-width="2" stroke-dasharray="6 8"/>
+<line x1="960" y1="744" x2="960" y2="844" stroke="#4A505A" stroke-width="2" stroke-dasharray="6 8"/>
+<line x1="960" y1="536" x2="960" y2="442" stroke="#4A505A" stroke-width="2" stroke-dasharray="6 8"/>
+<line x1="869" y1="590" x2="583" y2="433" stroke="#4A505A" stroke-width="2" stroke-dasharray="6 8"/>
+<line x1="1051" y1="590" x2="1334" y2="434" stroke="#4A505A" stroke-width="2" stroke-dasharray="6 8"/>
+<path d="M420 674 Q420 888 908 888" fill="none" stroke="#8C9BFF" stroke-width="4" stroke-linecap="round" marker-end="url(#hb)"/>
+<path d="M1004 888 Q1500 888 1500 706" fill="none" stroke="#8C9BFF" stroke-width="4" stroke-linecap="round" marker-end="url(#hb)"/>
+<line x1="1500" y1="584" x2="1390" y2="451" stroke="#9AA1AB" stroke-width="3" stroke-linecap="round" marker-end="url(#hg)"/>
+<circle cx="960" cy="640" r="104" fill="#2B3FE0"/>
+<circle cx="1028" cy="522" r="5" fill="#8C9BFF"/>
+<circle cx="892" cy="522" r="5" fill="#8C9BFF"/>
+<circle cx="892" cy="758" r="5" fill="#8C9BFF"/>
+<circle cx="1028" cy="758" r="5" fill="#8C9BFF"/>
+<path d="M420 606 L426 634 L454 640 L426 646 L420 674 L414 646 L386 640 L414 634 Z" fill="#8C9BFF"/>
+<circle cx="560" cy="420" r="26" fill="none" stroke="#F1F1EE" stroke-width="3"/>
+<circle cx="560" cy="420" r="9" fill="#F1F1EE"/>
+<path d="M960 384 L986 410 L960 436 L934 410 Z" fill="none" stroke="#F1F1EE" stroke-width="3" stroke-linejoin="round"/>
+<rect x="1336" y="396" width="22" height="22" rx="4" fill="#9AA1AB"/>
+<rect x="1362" y="396" width="22" height="22" rx="4" fill="#9AA1AB" opacity="0.6"/>
+<rect x="1336" y="422" width="22" height="22" rx="4" fill="#9AA1AB" opacity="0.6"/>
+<rect x="1362" y="422" width="22" height="22" rx="4" fill="#9AA1AB" opacity="0.3"/>
+<rect x="1444" y="584" width="112" height="112" rx="16" fill="#171A1F" stroke="#5A606A" stroke-width="2"/>
+<rect x="1468" y="608" width="64" height="64" rx="10" fill="#1A1F2B" stroke="#8C9BFF" stroke-width="2" stroke-dasharray="6 6"/>
+<rect x="1488" y="628" width="24" height="24" rx="4" fill="#F1F1EE"/>
+<line x1="936" y1="892" x2="984" y2="892" stroke="#8C9BFF" stroke-width="2"/>
+<line x1="936" y1="892" x2="960" y2="852" stroke="#8C9BFF" stroke-width="2"/>
+<line x1="984" y1="892" x2="960" y2="852" stroke="#8C9BFF" stroke-width="2"/>
+<circle cx="936" cy="892" r="8" fill="#8C9BFF"/>
+<circle cx="984" cy="892" r="8" fill="#8C9BFF"/>
+<circle cx="960" cy="852" r="8" fill="#8C9BFF"/>
+</svg>
+<p style="position:absolute;left:128px;top:112px;width:900px;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8C9BFF">Technical architecture</p>
+<h2 style="position:absolute;left:128px;top:148px;width:1664px;font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px;color:#F1F1EE">One source of truth</h2>
+<p style="position:absolute;left:128px;top:236px;width:1664px;font-size:28px;line-height:1.3;color:#9AA1AB">ENS decides · the mesh carries · meshyd enforces · Arkiv remembers · Ethereum settles</p>
+<p style="position:absolute;left:856px;top:598px;width:208px;font-size:40px;font-weight:600;line-height:1.1;text-align:center;color:#F6F6F4">ENSv2</p>
+<p style="position:absolute;left:856px;top:648px;width:208px;font-size:24px;line-height:34px;text-align:center;color:#DDE2FF">control plane</p>
+<p style="position:absolute;left:128px;top:592px;width:256px;font-size:28px;font-weight:600;line-height:34px;text-align:right;color:#F1F1EE">Agent</p>
+<p style="position:absolute;left:128px;top:628px;width:256px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;text-align:right;color:#9AA1AB">meshy · MCP</p>
+<p style="position:absolute;left:128px;top:386px;width:396px;font-size:28px;font-weight:600;line-height:34px;text-align:right;color:#F1F1EE">World ID</p>
+<p style="position:absolute;left:128px;top:422px;width:396px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;text-align:right;color:#9AA1AB">writes meshy.worldid</p>
+<p style="position:absolute;left:1004px;top:372px;width:300px;font-size:28px;font-weight:600;line-height:34px;color:#F1F1EE">Contracts</p>
+<p style="position:absolute;left:1004px;top:408px;width:300px;font-size:24px;line-height:34px;color:#9AA1AB">stake · slash · seats</p>
+<p style="position:absolute;left:1404px;top:386px;width:388px;font-size:28px;font-weight:600;line-height:34px;color:#F1F1EE">Arkiv</p>
+<p style="position:absolute;left:1404px;top:422px;width:388px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#9AA1AB">$owner = device addr</p>
+<p style="position:absolute;left:1580px;top:588px;width:212px;font-size:28px;font-weight:600;line-height:34px;color:#F1F1EE">meshyd</p>
+<p style="position:absolute;left:1580px;top:624px;width:212px;font-size:24px;line-height:34px;color:#9AA1AB">3 gates · sandbox</p>
+<p style="position:absolute;left:1580px;top:658px;width:212px;font-size:24px;line-height:34px;color:#9AA1AB">fail-closed 45 s</p>
+<p style="position:absolute;left:504px;top:596px;width:300px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;text-align:center;color:#9AA1AB">meshy.ssh-host</p>
+<p style="position:absolute;left:1120px;top:596px;width:300px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;text-align:center;color:#9AA1AB">every block</p>
+<p style="position:absolute;left:976px;top:460px;width:200px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#9AA1AB">fraud proof</p>
+<p style="position:absolute;left:976px;top:790px;width:220px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#9AA1AB">ACLs</p>
+<p style="position:absolute;left:556px;top:792px;width:264px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;text-align:right;color:#8C9BFF">WireGuard</p>
+<p style="position:absolute;left:1100px;top:792px;width:264px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#8C9BFF">ssh · forward</p>
+<p style="position:absolute;left:1478px;top:496px;width:200px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#9AA1AB">audit</p>
+<p style="position:absolute;left:560px;top:912px;width:800px;font-size:24px;line-height:34px;text-align:center;color:#C9CDD2"><b style="color:#F1F1EE">Mesh</b>   WireGuard, run by staked providers</p>
+<p style="position:absolute;left:1480px;top:912px;width:312px;font-size:24px;line-height:34px;text-align:right;color:#6E7580">- - -  reads ENS</p>
+<aside>Everything orbits one source of truth. Centre: ENSv2 on Sepolia, the control plane. Every org, network, device, service, agent and grant is a name in its own UserRegistry; expiry is the grant lifetime, unregister() is revoke, roleBitmap 0 stops agents moving their grants, Enhanced Access Control gives delegated admins scoped roles, and every agent has its own PermissionedResolver. Dashed spokes: every component reads ENS. The agent CLI pins the device's host key from meshy.ssh-host, so there's no trust on first use. World ID: the provider runs the World ID Agent Pass device flow, validates the ID token server-side, and signs the attestation stored in meshy.worldid; meshyd refuses agents without it. Contracts: ProviderRegistry holds provider stake and anyone can slash with an EIP-712 attestation checked against ENS on-chain (ancestor dead, expired at issuance, re-registered); MeshySubscription charges USDC per seat into escrow, 95% to the provider. Arkiv: readers only trust audit entities whose $owner equals the device's addr record in ENS. meshyd: re-checks every live grant on every block and fails closed if the chain view is 45 s stale. The mesh: meshy-sync compiles NetBird groups, policies and DNS from ENS. Solid blue: traffic. The agent (meshy CLI or the Claude Code MCP plugin) reaches the device over a WireGuard mesh built on NetBird's client/embed in userspace and run by staked providers. meshyd authorizes in three steps (identity, device grant with sealed policy, service grant) and runs the session in the sandbox: bubblewrap plus GateFS on Linux, Seatbelt on macOS. Grey: meshyd writes sealed, read-only audit to Arkiv. Honest status: the NetBird mesh is built but hasn't run on a live provider yet (agents reach meshyd over TCP today), and the demo agent's World ID attestation is a dev signature.</aside>
+</section>
