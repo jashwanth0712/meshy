@@ -47,12 +47,26 @@ The latency figures come back from the `latencyMs` attribute of the revoke entit
 ## Use it
 **Admins** create an org at [meshy.live/new](https://meshy.live/new) (a free `acme.meshy.eth` in one transaction from your wallet), add networks and devices, invite people and agents from **People**, and give or revoke access from **Access**. Every write is signed by your wallet and enforced on-chain.
 
+![The Directory page in the dashboard, showing a laptop on the sample1 network of night-test.meshy.eth](docs/screenshots/dashboard-directory.png)
+
+*The dashboard's **Directory**: networks and agents on the left, one device on the right. `jashwanth-s-macbook-pro.sample1.night-test.meshy.eth` is a laptop. It has its `meshy ssh` command, the folders it shares (an edit waits on **Publish · 1 signature**), who can reach it (the agent `roshan`), its device key, and **Give access** and **Remove**.*
+
 **Share a device:**
 ```bash
 curl -fsSL https://get.meshy.live | MESHY_TOOLS="meshyd meshy-mesh" sh
 meshyd init --name db1.prod.acme.eth --roots /srv     # prints a join code; paste it in Directory › Add device
 ```
 On a Mac, **This Mac › Share this Mac…** in the menu-bar app does the same and installs the daemon.
+
+**Meshy for Mac** puts the org in the menu bar. The header shows the org, your address and role, and the latest Sepolia block. Below that are **Folders You Can Open** (shared folders, opened in Finder), **This Mac** (sharing and mesh status), **Manage** for owners and admins, and **Organizations**.
+
+![The Meshy menu-bar menu with the Organizations submenu open](docs/screenshots/mac-organizations.png)
+
+*Switching orgs: you can belong to several, with a different role in each (here owner of `night-test.meshy.eth` and `ethglobal.meshy.eth`, admin of `meshydemo.eth`). Your role is read from ENSv2, and **Check My Role Again** reads it again.*
+
+![The Meshy menu-bar menu with Manage › Access open, listing a live grant with its countdown](docs/screenshots/mac-access.png)
+
+*Live access in **Manage › Access**: the agent `roshan` can reach `jashwanth-s-macbook-pro.sample1` for another 23 minutes. Each grant opens to Renew or Revoke. **Give Access…**, **Add a Device…** and **Admin Console** are one click away.*
 
 **Agents and people:**
 ```bash
