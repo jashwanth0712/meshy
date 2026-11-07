@@ -166,7 +166,7 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Kind">
                   <select className={inputCls} value={devKind} onChange={(e) => setDevKind(e.target.value)}>
-                    {["server", "gpu-server", "raspberry-pi", "laptop", "nas", "camera-hub"].map((k) => (
+                    {["server", "gpu-server", "raspberry-pi", "laptop", "pc", "phone", "nas", "camera"].map((k) => (
                       <option key={k}>{k}</option>
                     ))}
                   </select>
