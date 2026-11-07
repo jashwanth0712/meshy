@@ -21,7 +21,7 @@ import (
 
 const (
 	DefaultAPI       = "https://api.meshy.live"
-	DefaultRPC       = "https://ethereum-sepolia-rpc.publicnode.com"
+	DefaultRPC       = "https://meshy.live/api/rpc" // Alchemy-backed proxy; key stays server-side
 	DefaultDashboard = "https://meshy.live"
 )
 

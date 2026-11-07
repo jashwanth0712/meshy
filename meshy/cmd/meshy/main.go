@@ -30,14 +30,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	gossh "golang.org/x/crypto/ssh"
 
 	"github.com/jashwanth0712/meshy/meshy/enskit"
 	"github.com/jashwanth0712/meshy/meshy/tui"
 )
 
-const defaultRPC = "https://ethereum-sepolia-rpc.publicnode.com"
 
 func env(k, def string) string {
 	if v := os.Getenv(k); v != "" {
@@ -164,7 +162,9 @@ func createIdentity(agent, org string) (*Identity, error) {
 }
 
 func ensClient(ctx context.Context) (*enskit.Client, error) {
-	c, err := ethclient.DialContext(ctx, env("MESHY_SEPOLIA", defaultRPC))
+	// $MESHY_SEPOLIA may list several endpoints (comma-separated); by default
+	// the Alchemy-backed meshy.live proxy first, then public nodes.
+	c, err := enskit.DialFailover(ctx, enskit.RPCList(os.Getenv("MESHY_SEPOLIA")))
 	if err != nil {
 		return nil, err
 	}
