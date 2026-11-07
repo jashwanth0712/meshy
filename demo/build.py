@@ -31,7 +31,7 @@ STEPS = [
   dict(eyebrow='From log to insight', title='The audit trail, read back', sub='The same Arkiv entities, queried by anyone: who did what, what was refused, how fast revokes land.',
        notes='The table becomes answers. Every chart here is a query over the same public, read-only entities, so an auditor, the org or a judge gets the same numbers without trusting Meshy’s servers. Actions by actor and outcomes come from the illustrative log on the previous slide. The revocation latency chart is real: the four values, 120, 192, 132 and 216 ms, are read back from the latencyMs attribute of meshy.session revoke entities written by the live daemons on Sepolia.')
 ]
-ORDER = ['cover', 'problem', 'before', 'solve-timeline', *range(15), 'network', 'solve', 'architecture', 'architecture-planes', 'stack', 'impact', 'usecases', 'ens', 'crypto', 'close', 'poster-name', 'poster-ssh', 'poster-revoke', 'poster-scope', 'poster-record']
+ORDER = ['cover', 'problem', 'before', 'solve-timeline', *range(15), 'solve', 'architecture', 'architecture-planes', 'stack', 'impact', 'usecases', 'ens', 'crypto', 'close', 'poster-name', 'poster-ssh', 'poster-revoke', 'poster-scope', 'poster-record']
 imgs = {'/_blob/e55f0d271f18d62ba61574308a3dc15e': os.path.join(HERE, 'assets/twingate-menu.png'), '/_blob/cc4365a1cd60f713ea9b4151d384caed': os.path.join(HERE, 'assets/twingate-terminal.png')}
 parts = []
 for sid in ORDER:
