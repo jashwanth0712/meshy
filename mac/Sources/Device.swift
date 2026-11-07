@@ -185,10 +185,23 @@ final class DeviceManager {
             return "Couldn't write \(path)."
         }
         _ = run("/bin/launchctl", ["bootout", "gui/\(uid)/\(label)"], timeout: 15)
-        guard let r = run("/bin/launchctl", ["bootstrap", "gui/\(uid)", path], timeout: 15), r.status == 0 else {
-            return "launchctl couldn't start \(label)."
+        // bootout returns before the old job is fully torn down; bootstrapping
+        // straight away then fails ("5: Input/output error") and the service is
+        // left unloaded. Wait for it to go, and retry the bootstrap a few times.
+        for _ in 0..<20 {
+            guard let p = run("/bin/launchctl", ["print", "gui/\(uid)/\(label)"], timeout: 5), p.status == 0 else { break }
+            Thread.sleep(forTimeInterval: 0.25)
         }
-        return nil
+        var last = ""
+        for attempt in 0..<5 {
+            if attempt > 0 { Thread.sleep(forTimeInterval: Double(attempt)) }
+            guard let r = run("/bin/launchctl", ["bootstrap", "gui/\(uid)", path], timeout: 15) else { continue }
+            if r.status == 0 { return nil }
+            // Already loaded counts as started.
+            if let p = run("/bin/launchctl", ["print", "gui/\(uid)/\(label)"], timeout: 5), p.status == 0 { return nil }
+            last = r.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return "launchctl couldn't start \(label)" + (last.isEmpty ? "." : ": \(last)")
     }
 
     private func removeAgent(_ label: String) {

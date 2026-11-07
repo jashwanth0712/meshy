@@ -45,6 +45,21 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
 
   const valid = svc ? !!ag : !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/" && !p.p.endsWith("/")) && !!res.encKey && !!tree?.orgKey;
 
+  /**
+   * The calls that make `agent` hold a grant in `registry` until `expiry`. Registering a label
+   * that is still live reverts (LabelAlreadyRegistered), so granting again to someone who
+   * already has access extends it with renew; renew can't shorten, so a shorter grant
+   * replaces the old one (unregister, then register).
+   */
+  async function grantCalls(registry: `0x${string}`, owner: string, expiry: bigint) {
+    const register = { address: registry, abi: registryAbi, functionName: "register", args: [agent, owner, zeroAddress, tree!.resolver, 0n, expiry] } as const;
+    const st = await client.readContract({ address: registry, abi: registryAbi, functionName: "getState", args: [labelId(agent)] });
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    if (st.status !== 2 || st.expiry <= now) return [register];
+    if (expiry > st.expiry) return [{ address: registry, abi: registryAbi, functionName: "renew", args: [st.tokenId, expiry] } as const];
+    return [{ address: registry, abi: registryAbi, functionName: "unregister", args: [st.tokenId] } as const, register];
+  }
+
   async function submit() {
     if (!wallet || !tree || !ag || !canManage) return;
     // A member's grant belongs to their wallet (the owner of <you>.people.<org>), so it keeps working
@@ -54,8 +69,14 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
     if (svc) {
       setSteps([{ label: `Register ${grantName}`, state: "doing", detail: `expires ${exp.toLocaleTimeString()}` }]);
       try {
-        const r = await send(wallet, client, { address: svc.registry, abi: registryAbi, functionName: "register", args: [agent, owner, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)] }, (h) => up(0, { tx: h }));
-        up(0, { state: "done", detail: `block ${r.blockNumber}` });
+        const calls = await grantCalls(svc.registry, owner, BigInt(Math.floor(Date.now() / 1000) + dur));
+        if (calls.length === 1) {
+          const r = await send(wallet, client, calls[0], (h) => up(0, { tx: h }));
+          up(0, { state: "done", detail: `block ${r.blockNumber}` });
+        } else {
+          await sendAll(wallet, client, calls, (h) => up(0, { tx: h }));
+          up(0, { state: "done", detail: "replaced the earlier grant" });
+        }
         toast(`Granted ${short(grantName)}`, "ok");
         refresh();
       } catch (e) {
@@ -81,7 +102,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
         wallet,
         client,
         [
-          { address: res.registry, abi: registryAbi, functionName: "register", args: [agent, owner, zeroAddress, tree.resolver, 0n, expiry] },
+          ...(await grantCalls(res.registry, owner, expiry)),
           { address: tree.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(grantName, { "meshy.policy": sealed })] },
         ],
         (h) => up(1, { tx: h }),

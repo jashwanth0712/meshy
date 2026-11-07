@@ -128,7 +128,7 @@ export default function ActivityPage() {
                     <td className="px-5 py-3">{ev.label}</td>
                     <td className="mono px-5 py-3">{r.agent || "—"}</td>
                     <td className="mono px-5 py-3">{r.resource.replace(`.${org}`, "")}</td>
-                    <td className={cx("mono hidden max-w-[260px] truncate px-5 py-3 text-[13px] text-muted lg:table-cell")} title={ev.detail}>{ev.detail}</td>
+                    <td className={cx("mono hidden max-w-[320px] whitespace-nowrap px-5 py-3 text-[13px] text-muted lg:table-cell")} title={ev.detail}>{tail(ev.detail)}</td>
                   </tr>
                 );
               })
@@ -158,4 +158,10 @@ export default function ActivityPage() {
       )}
     </>
   );
+}
+
+/** The end of a long detail (paths, commands): "…" then its last 10 words or path parts. */
+function tail(s: string, n = 10): string {
+  const parts = s.split(/(?<=[\s/])/); // keep each separator with the word before it
+  return parts.length > n ? "…" + parts.slice(-n).join("").trimStart() : s;
 }
