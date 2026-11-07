@@ -256,7 +256,7 @@ func cmdRun(args []string) error {
 	srv := &meshyd.Server{Resource: c.name, HostKey: keys.Host, Sandbox: sb, Audit: sinks, Log: log}
 	watcher := &enskit.Watcher{Heads: heads, Checker: ens, MaxHeadAge: *maxHeadAge, OnRevoke: srv.Revoke, Log: log}
 	srv.Watcher = watcher
-	authz := &meshyd.ENSAuthorizer{ENS: ens, Resource: resource, Key: keys.Policy}
+	authz := &meshyd.ENSAuthorizer{ENS: ens, Resource: resource, Key: keys.Policy, Roots: c.rootList()}
 	if *requireHuman {
 		authz.Human = &worldid.Verifier{Trusted: worldid.ENSTrusted(ens)}
 	} else {

@@ -616,7 +616,30 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         if let d = dev.device {
             m.addItem(label(d.name))
             if let s = dev.statusLine { m.addItem(label(s.components(separatedBy: " · ").dropFirst().joined(separator: " · "))) }
-            m.addItem(label("Folders: " + d.roots.map(tilde).joined(separator: ", ")))
+            m.addItem(.separator())
+            m.addItem(sectionHeader("Shared Folders"))
+            for (i, r) in d.roots.enumerated() {
+                let it = NSMenuItem(title: (r as NSString).lastPathComponent, action: nil, keyEquivalent: "")
+                it.subtitleText(tilde(r))
+                it.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+                let sm = NSMenu()
+                sm.autoenablesItems = false
+                let show = action("Show in Finder", #selector(openURL(_:)))
+                show.representedObject = URL(fileURLWithPath: r).absoluteString
+                sm.addItem(show)
+                if d.roots.count > 1 {
+                    let rm = action("Stop Sharing This Folder", #selector(removeRoot(_:)))
+                    rm.tag = i
+                    sm.addItem(rm)
+                }
+                it.submenu = sm
+                m.addItem(it)
+            }
+            m.addItem(action("Add Folders…", #selector(addRoots)))
+            if let pub = dev.publishedRoots, pub != d.roots {
+                m.addItem(label(manages ? "Changes not on ENS yet" : "Waiting for an admin to publish the change", color: .systemOrange))
+                if manages { m.addItem(open("Publish Folder Changes…", "/org/\(org)/directory?n=\(q(d.name))&roots=\(q(rootsJSON(d.roots)))")) }
+            }
             // Every file op, command and block is written to Arkiv by this device's key (needs Rabdi gas).
             let ak = copyItem("Copy Arkiv Writer Address", d.addr)
             ak.subtitleText("Fund it on the Arkiv faucet so activity shows on the dashboard")
@@ -853,6 +876,12 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
     @objc func joinPrompt() {
         guard let link = UI.prompt("Join with an invite link", info: "Paste the link an admin sent you. Meshy makes this Mac's agent keys, opens the approval page in your browser, and joins the mesh once you're approved.", placeholder: "\(Settings.base)/approve?org=…&agent=…") else { return }
+        join(link: link)
+    }
+
+    /// Join with an invite link (also from meshy://join?link=… on the approval page).
+    func join(link: String) {
+        guard dev.joinState == nil else { return UI.alert("Already joining", info: dev.joinState ?? "") }
         guard let c = URLComponents(string: link), c.scheme?.hasPrefix("http") == true,
               let org = c.queryItems?.first(where: { $0.name == "org" })?.value, !org.isEmpty,
               let agent = c.queryItems?.first(where: { $0.name == "agent" })?.value, !agent.isEmpty else {
@@ -927,6 +956,36 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         dev.forgetDevice()
     }
 
+    private func rootsJSON(_ r: [String]) -> String { (try? String(data: JSONSerialization.data(withJSONObject: r), encoding: .utf8)) ?? "[]" }
+
+    @objc func addRoots() {
+        guard let d = dev.device else { return }
+        guard let picked = UI.chooseFolders(message: "Choose more folders to share from this Mac. Admins then decide, folder by folder, who gets each one.") else { return }
+        guard !picked.contains(where: { $0 == "/" || $0 == Bins.home }) else { return UI.alert("Pick specific folders, not your whole disk or home folder.") }
+        publishRoots(dev.setRoots(d.roots + picked))
+    }
+
+    @objc func removeRoot(_ s: NSMenuItem) {
+        guard let d = dev.device, d.roots.indices.contains(s.tag) else { return }
+        let r = d.roots[s.tag]
+        guard UI.confirm("Stop sharing \((r as NSString).lastPathComponent)?", info: "Nobody can open \(tilde(r)) from this Mac any more, even with a grant. Live sessions there end.", ok: "Stop Sharing") else { return }
+        publishRoots(dev.setRoots(d.roots.filter { $0 != r }))
+    }
+
+    /// The folder list is live on this Mac already; put it on ENS so others see it.
+    private func publishRoots(_ roots: [String]) {
+        guard let d = dev.device, !roots.isEmpty else { return }
+        if manages { return openDashboard("/org/\(org)/directory?n=\(q(d.name))&roots=\(q(rootsJSON(roots)))") }
+        access.sendRequest(["roots", d.name, "--roots", roots.joined(separator: ",")]) { [weak self] r in
+            guard let self else { return }
+            if case .success = r {
+                self.store.notify(title: "Folders updated", body: "Shared here now. Admins see the change in Meshy and publish it with one signature.")
+            } else {
+                self.later { UI.alert("Folders updated on this Mac", info: "Others see the new list once an admin publishes it. Link This Mac so Meshy can ask them directly.") }
+            }
+        }
+    }
+
     @objc func installTools() { UI.alert("Command-line tools", info: dev.installTools()) }
 
     /// Request Access: a link that opens the Give access sheet, prefilled, for an admin to sign.
@@ -940,7 +999,9 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         let agents = ([me].compactMap { $0 } + store.agentsHere.map(\.agent)).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
         var fields: [Field] = [.text("For", value: agents.first ?? "", placeholder: "you or an agent, e.g. claude-1", options: agents)]
         if let d {
-            fields.append(.text("Folder", value: d.rootList.first ?? "", placeholder: "a folder \(d.name) shares", options: d.rootList))
+            // Folder names, not raw paths; or leave the choice to the admin.
+            let names = d.rootList.map { "\(($0 as NSString).lastPathComponent)  (\(tilde($0)))" }
+            fields.append(.popup("Folder", options: (d.rootList.count > 1 ? ["Any of its folders (an admin picks)"] : []) + names, selected: 0))
             fields.append(.popup("Access", options: ["Read", "Read and write"], selected: 0))
         }
         let durs: [(String, Int)] = [("15 minutes", 900), ("1 hour", 3600), ("4 hours", 14400), ("1 day", 86400)]
@@ -955,17 +1016,23 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         let seconds = durs[min(max(0, Int(v.last!) ?? 1), durs.count - 1)].1
         var path = "/org/\(org)?give=\(q(agent))&target=\(q(target))&dur=\(seconds)"
         var p: String?, m: String?
-        if d != nil {
-            p = v[1]
-            guard let folder = p, folder.hasPrefix("/"), folder != "/" else { return UI.alert("Pick a folder the device shares.") }
+        if let d {
+            guard !d.rootList.isEmpty else { return UI.alert("\(short(target)) doesn't share any folders yet.") }
+            let i = Int(v[1]) ?? 0, offset = d.rootList.count > 1 ? 1 : 0
             m = v[2] == "1" ? "rw" : "ro"
-            path += "&path=\(q(folder))&mode=\(m!)"
+            if i >= offset, d.rootList.indices.contains(i - offset) {
+                p = d.rootList[i - offset]
+                path += "&path=\(q(p!))&mode=\(m!)"
+            } else {
+                path += "&mode=\(m!)" // any folder: the admin picks in the sheet
+            }
         }
         let link = Settings.base + path
         let req = AccessRequest(agent: agent, target: target, path: p, mode: m, dur: seconds, at: Date().timeIntervalSince1970, link: link)
         if manages { return openDashboard(path) } // you can sign it yourself
         var args = ["access", target, "--for", agent, "--dur", String(seconds)]
-        if let p, let m { args += ["--path", p, "--mode", m] }
+        if let p { args += ["--path", p] }
+        if let m { args += ["--mode", m] }
         access.sendRequest(args) { [weak self] r in
             guard let self else { return }
             self.store.addRequest(req)

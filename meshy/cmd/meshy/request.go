@@ -22,6 +22,7 @@ import (
 //
 //	meshy request access <device|service> [--path /folder] [--mode ro|rw] [--dur 3600] [--for claude-1]
 //	meshy request device <device>.<network>.<org> --join-code meshy-join:…
+//	meshy request roots <device> --roots /Users/me/a,/Users/me/b
 //	meshy request list <org>
 //	meshy request withdraw <id> --org <org>
 func cmdRequest(args []string) error {
@@ -35,6 +36,7 @@ func cmdRequest(args []string) error {
 	dur := fs.Int("dur", 3600, "seconds")
 	forLabel := fs.String("for", "", "who gets the grant (default: you)")
 	join := fs.String("join-code", "", "meshyd join code (device)")
+	roots := fs.String("roots", "", "comma-separated folders the device shares from now on (roots)")
 	org := fs.String("org", "", "org (withdraw)")
 	api := fs.String("provider", env("MESHY_PROVIDER", "https://api.meshy.live"), "meshy-sync URL")
 	target := rest[0]
@@ -64,7 +66,7 @@ func cmdRequest(args []string) error {
 			return err
 		}
 		return postJSON(base+"/v1/requests/withdraw", map[string]any{"id": target, "from": id.Name(), "at": at, "sig": sig}, nil)
-	case "access", "device":
+	case "access", "device", "roots":
 	default:
 		return fmt.Errorf("unknown request kind %q", kind)
 	}
@@ -79,8 +81,12 @@ func cmdRequest(args []string) error {
 		if r.For == "" {
 			r.For = id.Agent
 		}
-		if r.Path == "" {
-			r.Mode = ""
+		// No --path: "any of its folders", the admin picks; the mode is still what was asked.
+	} else if kind == "roots" {
+		for _, p := range strings.Split(*roots, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				r.Roots = append(r.Roots, p)
+			}
 		}
 	} else {
 		r.JoinCode = *join

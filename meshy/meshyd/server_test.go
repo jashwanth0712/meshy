@@ -317,3 +317,11 @@ func TestRevokeCutsLiveForward(t *testing.T) {
 		t.Fatal("forward revoke not audited")
 	}
 }
+
+func TestClipToRoots(t *testing.T) {
+	in := []policy.PathRule{{Path: "/Users/j/oct26", Mode: policy.ReadWrite}, {Path: "/Users/j/oct26/sub", Mode: policy.ReadOnly}, {Path: "/Users/j/.ssh", Mode: policy.ReadOnly}, {Path: "/Users/j/oct2", Mode: policy.ReadOnly}}
+	got := ClipToRoots(in, []string{"/Users/j/oct26/"})
+	if len(got) != 2 || got[0].Path != "/Users/j/oct26" || got[1].Path != "/Users/j/oct26/sub" {
+		t.Fatalf("got %+v", got)
+	}
+}

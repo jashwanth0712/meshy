@@ -151,12 +151,15 @@ struct OrgRequest: Codable {
     let mode: String?
     let dur: Int?
     let joinCode: String?
+    let roots: [String]?
     let at: Double
+    var rootsJSON: String { (try? String(data: JSONSerialization.data(withJSONObject: roots ?? []), encoding: .utf8)) ?? "[]" }
     var who: String { `for` ?? from.components(separatedBy: ".").first ?? from }
     var fromLabel: String { from.components(separatedBy: ".").first ?? from }
     /// The dashboard page where an admin reviews and signs it.
     var reviewPath: String {
         if kind == "device" { return "/org/\(org)/directory?add=\(q(joinCode ?? ""))" }
+        if kind == "roots" { return "/org/\(org)/directory?n=\(q(target))&roots=\(q(rootsJSON))" }
         var p = "/org/\(org)?give=\(q(who))&target=\(q(target))&dur=\(dur ?? 3600)"
         if let path { p += "&path=\(q(path))&mode=\(mode ?? "ro")" }
         return p + "&sign=1" // the sheet starts signing right away: approve in one click + your wallet
@@ -484,11 +487,13 @@ final class MeshyStore {
                 let open = list.filter { r in
                     if dismissed.contains(r.id) { return false }
                     if r.kind == "device" { return !devices.contains(r.target) }
+                    if r.kind == "roots" { return self.map?.devices.first { $0.fullName == r.target }?.rootList != r.roots }
                     return !live.contains { $0.agentLabel == r.who && $0.target == r.target && $0.expiry > r.at }
                 }
                 if self.primedRequests && self.notificationsOn {
                     for r in open where !self.seenRequests.contains(r.id) {
-                        let what = r.kind == "device" ? "wants to add \(r.target.components(separatedBy: ".").first ?? r.target) as a device"
+                        let what = r.kind == "roots" ? "wants \(r.target.components(separatedBy: ".").first ?? r.target) to share \((r.roots ?? []).map { ($0 as NSString).lastPathComponent }.joined(separator: ", "))"
+                            : r.kind == "device" ? "wants to add \(r.target.components(separatedBy: ".").first ?? r.target) as a device"
                             : "asks for \(r.mode == "rw" ? "read-write" : "read") access to \(r.target.components(separatedBy: ".").first ?? r.target)\(r.path.map { " · " + ($0 as NSString).lastPathComponent } ?? "")"
                         self.notify(title: "Request from \(r.fromLabel)", body: what + ". Click to approve.", id: "req-" + r.id, open: r.reviewPath)
                     }

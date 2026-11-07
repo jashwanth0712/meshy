@@ -6,7 +6,7 @@ import { type Step, Steps } from "@/components/Steps";
 import { Button, Modal, Seg, Sheet, cx, inputCls } from "@/components/ui";
 import { revokesFor } from "@/lib/arkiv";
 import { type PathRule, sealPolicy } from "@/lib/envelope";
-import { type GrantNode, getState, labelId, recordCalls, registryAbi, resolverAbi, send } from "@/lib/ens";
+import { type GrantNode, labelId, recordCalls, registryAbi, resolverAbi, send, sendAll } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 const DURATIONS = [
@@ -28,7 +28,11 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
   const res = resources.find((r) => r.name === resName);
   const svc = services.find((x) => x.name === resName);
   const [paths, setPaths] = useState<PathRule[]>(() =>
-    preset?.path?.startsWith("/") ? [{ p: preset.path, m: preset.mode ?? "ro" }] : res?.roots[0] ? [{ p: res.roots[0], m: preset?.mode ?? "ro" }] : [],
+    preset?.path?.startsWith("/")
+      ? [{ p: preset.path, m: preset.mode ?? "ro" }]
+      : preset?.agent && preset?.resource
+        ? [] // a request for "any of its folders": the admin picks
+        : res?.roots[0] ? [{ p: res.roots[0], m: preset?.mode ?? "ro" }] : [],
   );
   const [dur, setDur] = useState(DURATIONS.some((d) => d.v === preset?.dur) ? preset!.dur! : 3600);
   const [steps, setSteps] = useState<Step[]>();
@@ -39,7 +43,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
   const ag = tree?.agents.find((a) => a.label === agent);
   const short = (n: string) => n.replace(`.${org}`, "");
 
-  const valid = svc ? !!ag : !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/") && !!res.encKey && !!tree?.orgKey;
+  const valid = svc ? !!ag : !!res && !!ag && paths.length > 0 && paths.every((p) => p.p.startsWith("/") && p.p !== "/" && !p.p.endsWith("/")) && !!res.encKey && !!tree?.orgKey;
 
   async function submit() {
     if (!wallet || !tree || !ag || !canManage) return;
@@ -62,34 +66,27 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
       return;
     }
     if (!res) return;
+    // One confirmation: the policy is sealed here first and bound to the grant's exact expiry,
+    // so registering the grant and writing its policy can go in a single batch.
+    const expiry = BigInt(Math.floor(Date.now() / 1000) + dur);
     setSteps([
-      { label: `Register ${short(grantName)}`, state: "doing", detail: `expires ${exp.toLocaleTimeString()}` },
-      { label: "Read the grant's token id", state: "todo" },
-      { label: "Seal the folder policy in your browser", state: "todo" },
-      { label: "Write the policy on ENS", state: "todo" },
+      { label: "Seal the folder policy in your browser", state: "doing" },
+      { label: `Register ${short(grantName)} and write its policy`, state: "todo", detail: `expires ${exp.toLocaleTimeString()}` },
     ]);
     try {
-      const r1 = await send(wallet, client, {
-        address: res.registry,
-        abi: registryAbi,
-        functionName: "register",
-        args: [agent, owner, zeroAddress, tree.resolver, 0n, BigInt(Math.floor(Date.now() / 1000) + dur)],
-      }, (h) => up(0, { tx: h }));
-      up(0, { state: "done", detail: `block ${r1.blockNumber}` });
+      const sealed = sealPolicy({ v: 1, grant: grantName, grantTokenId: "", grantExpiry: Number(expiry), paths }, [res.encKey, tree.orgKey]);
+      up(0, { state: "done", detail: `readable only by ${res.label} and the org` });
       up(1, { state: "doing" });
-      const st = await getState(client, res.registry, agent);
-      up(1, { state: "done" });
-      up(2, { state: "doing" });
-      const sealed = sealPolicy({ v: 1, grant: grantName, grantTokenId: st.tokenId.toString(), paths }, [res.encKey, tree.orgKey]);
-      up(2, { state: "done", detail: `readable only by ${res.label} and the org` });
-      up(3, { state: "doing" });
-      const r3 = await send(wallet, client, {
-        address: tree.resolver,
-        abi: resolverAbi,
-        functionName: "multicall",
-        args: [recordCalls(grantName, { "meshy.policy": sealed })],
-      }, (h) => up(3, { tx: h }));
-      up(3, { state: "done", detail: `block ${r3.blockNumber}` });
+      const { batched } = await sendAll(
+        wallet,
+        client,
+        [
+          { address: res.registry, abi: registryAbi, functionName: "register", args: [agent, owner, zeroAddress, tree.resolver, 0n, expiry] },
+          { address: tree.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(grantName, { "meshy.policy": sealed })] },
+        ],
+        (h) => up(1, { tx: h }),
+      );
+      up(1, { state: "done", detail: batched ? "one signature" : "2 signatures (your wallet can't batch)" });
       toast(`Granted ${short(grantName)}`, "ok");
       refresh();
     } catch (e) {
@@ -125,7 +122,7 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
           </>
         ) : (
           <>
-            <span className="text-[13px] text-muted">{svc ? "1 transaction" : "2 transactions"}</span>
+            <span className="text-[13px] text-muted">1 signature</span>
             <Button kind="primary" disabled={account ? !valid || busy || !canManage : false} onClick={account ? submit : connect} title={account && !canManage ? "Only the owner or an admin can give access" : undefined}>
               {!account ? "Connect a wallet" : canManage ? "Give access" : "Owners and admins only"}
             </Button>
@@ -175,26 +172,57 @@ export function GrantDrawer({ onClose, preset }: { onClose: () => void; preset?:
             </select>
           </label>
 
-          {!svc && (
+          {!svc && res && (
             <div>
               <span className="text-[13px] font-semibold">Folders</span>
-              <div className="mt-2 space-y-2">
-                {paths.map((p, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex gap-2">
-                      <input className={inputCls} value={p.p} onChange={(e) => setPaths(paths.map((x, j) => (j === i ? { ...x, p: e.target.value } : x)))} />
-                      {paths.length > 1 && (
-                        <button onClick={() => setPaths(paths.filter((_, j) => j !== i))} className="px-2 text-muted hover:text-fg" aria-label="Remove folder">
-                          <Trash2 size={15} />
-                        </button>
+              <p className="mt-0.5 text-[12px] text-muted">What {res.label} shares. Pick one or more, and how much.</p>
+              <div className="mt-2 divide-y divide-line overflow-hidden rounded-xl border border-line">
+                {res.roots.length === 0 && <div className="px-3 py-3 text-[13px] text-muted">{res.label} doesn&apos;t share any folders yet.</div>}
+                {res.roots.map((root) => {
+                  const i = paths.findIndex((x) => x.p === root || x.p.startsWith(root + "/"));
+                  const on = i >= 0;
+                  const name = root.split("/").filter(Boolean).pop() ?? root;
+                  const set = (p: Partial<PathRule>) => setPaths(paths.map((x, j) => (j === i ? { ...x, ...p } : x)));
+                  return (
+                    <div key={root} className={cx("px-3 py-2.5", on && "bg-panel-2")}>
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <input type="checkbox" checked={on} onChange={(e) => setPaths(e.target.checked ? [...paths, { p: root, m: preset?.mode ?? "ro" }] : paths.filter((_, j) => j !== i))} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[14px] font-medium">{name}</span>
+                          <span className="mono block truncate text-[11px] text-muted">{root.replace(/^\/(Users|home)\/[^/]+/, "~")}</span>
+                        </span>
+                        {on && (
+                          <span onClick={(e) => e.preventDefault()}>
+                            <Seg value={paths[i].m} onChange={(m) => set({ m })} options={[{ v: "ro", label: "Read" }, { v: "rw", label: "Read and write" }]} />
+                          </span>
+                        )}
+                      </label>
+                      {on && (
+                        <div className="mt-2 pl-7">
+                          {paths[i].p === root ? (
+                            <button className="text-[12px] text-accent hover:underline" onClick={() => set({ p: root + "/" })}>
+                              Only a subfolder…
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1 text-[12px]">
+                              <span className="mono text-muted">{name}/</span>
+                              <input
+                                autoFocus
+                                className={cx(inputCls, "h-7 py-0 text-[12px]")}
+                                placeholder="reports/2026"
+                                value={paths[i].p.slice(root.length + 1)}
+                                onChange={(e) => set({ p: `${root}/${e.target.value.replace(/^\/+/, "").replace(/\.\.+/g, "")}` })}
+                              />
+                              <button className="px-1 text-muted hover:text-fg" aria-label="Whole folder" onClick={() => set({ p: root })}>
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <Seg value={p.m} onChange={(m) => setPaths(paths.map((x, j) => (j === i ? { ...x, m } : x)))} options={[{ v: "ro", label: "Read" }, { v: "rw", label: "Read and write" }]} />
-                  </div>
-                ))}
-                <button onClick={() => setPaths([...paths, { p: res?.roots[0] ?? "", m: "ro" }])} className="text-[13px] font-medium text-accent hover:underline">
-                  Add another folder
-                </button>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -4,7 +4,7 @@ import { GrantDrawer } from "@/components/Access";
 import { InviteSheet } from "@/components/Agents";
 import { AddSheet } from "@/components/Devices";
 import { Badge, Button, Card, Name, OnChain, PageHeader, Row, Short, cx, useNow } from "@/components/ui";
-import { type AgentNode, type GrantNode, type ResourceNode, type ServiceNode, labelId, registryAbi, send } from "@/lib/ens";
+import { type AgentNode, type GrantNode, type ResourceNode, type ServiceNode, labelId, recordCalls, registryAbi, resolverAbi, send } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 type Sel = { kind: "device"; d: ResourceNode } | { kind: "service"; s: ServiceNode } | { kind: "agent"; a: AgentNode };
@@ -12,7 +12,7 @@ type Sel = { kind: "device"; d: ResourceNode } | { kind: "service"; s: ServiceNo
 const tilde = (p: string) => p.replace(/^\/Users\/[^/]+/, "~").replace(/^\/home\/[^/]+/, "~");
 
 export default function DirectoryPage() {
-  const { tree, org, account, wallet, client, refresh, toast, canManage } = useMeshy();
+  const { tree, org, wallet, client, refresh, toast, canManage } = useMeshy();
   const [removingDev, setRemovingDev] = useState(false);
   async function removeDevice(d: ResourceNode) {
     if (!wallet) return;
@@ -36,6 +36,15 @@ export default function DirectoryPage() {
   const [adding, setAdding] = useState(!!addCode);
   const [inviting, setInviting] = useState(false);
   const [giving, setGiving] = useState<{ resource?: string; agent?: string } | null>(null);
+  // ?roots=<json> (from the Mac app: the folders that device shares now) opens the folder editor, prefilled
+  const [rootsLink] = useState<string[] | undefined>(() => {
+    try {
+      const r = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("roots");
+      return r ? (JSON.parse(r) as string[]).filter((x) => typeof x === "string" && x.startsWith("/")) : undefined;
+    } catch {
+      return undefined;
+    }
+  });
   if (!tree) return <p className="pt-14 text-[14px] text-muted">Reading the org from ENS…</p>;
 
   const devices = tree.networks.flatMap((n) => n.resources);
@@ -71,10 +80,12 @@ export default function DirectoryPage() {
         sub="Your devices, services and agents."
         action={
           <div className="flex gap-2">
-            <Button onClick={() => setInviting(true)}>Invite agent</Button>
-            <Button kind="primary" onClick={() => setAdding(true)} disabled={!account} title={account ? undefined : "Connect a wallet first"}>
-              Add device
-            </Button>
+            {canManage && <Button onClick={() => setInviting(true)}>Invite agent</Button>}
+            {canManage && (
+              <Button kind="primary" onClick={() => setAdding(true)}>
+                Add device
+              </Button>
+            )}
           </div>
         }
       />
@@ -114,7 +125,9 @@ export default function DirectoryPage() {
               />
               <Command text={`meshy ssh ${cur.d.name}`} />
               <Card>
-                <Fact k="Shared folder">{cur.d.roots.map(tilde).join(", ") || "—"}</Fact>
+                <Fact k="Shared folders">
+                  <FolderEditor key={cur.d.name} d={cur.d} canManage={canManage} proposed={sel === cur.d.name ? rootsLink : undefined} />
+                </Fact>
                 <Fact k="Who can reach it">
                   {liveOn(cur.d.grants).length ? liveOn(cur.d.grants).map((g) => <span key={g.name} className="mono mr-2">{g.agent}</span>) : <span className="font-sans text-muted">Nobody right now</span>}
                 </Fact>
@@ -211,5 +224,80 @@ function Fact({ k, children }: { k: string; children: React.ReactNode }) {
       <span className="w-36 shrink-0 text-muted">{k}</span>
       <span className="mono min-w-0 flex-1 break-all">{children}</span>
     </Row>
+  );
+}
+
+/** A device's shared folders (meshy.roots). Admins publish changes with one signature; the Mac sharing
+ *  the device is the source (This Mac › Shared Folders), and its "Publish" link prefills this. */
+function FolderEditor({ d, canManage, proposed }: { d: ResourceNode; canManage: boolean; proposed?: string[] }) {
+  const { wallet, client, tree, refresh, toast, connect, account } = useMeshy();
+  const [editing, setEditing] = useState(!!proposed);
+  const [list, setList] = useState<string[]>(proposed ?? d.roots);
+  const [add, setAdd] = useState("");
+  const [busy, setBusy] = useState(false);
+  const changed = JSON.stringify(list) !== JSON.stringify(d.roots);
+  const name = (p: string) => p.split("/").filter(Boolean).pop() ?? p;
+  async function publish() {
+    if (!wallet) return connect();
+    setBusy(true);
+    try {
+      await send(wallet, client, { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(d.name, { "meshy.roots": JSON.stringify(list) })] });
+      toast(`${d.label} shares ${list.length} folder${list.length === 1 ? "" : "s"}`, "ok");
+      setEditing(false);
+      refresh();
+    } catch (e) {
+      toast(e instanceof Error ? e.message.split("\n")[0] : String(e), "err");
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!editing)
+    return (
+      <span className="font-sans">
+        {d.roots.length === 0 ? <span className="text-muted">None yet</span> : d.roots.map((r) => (
+          <span key={r} className="mr-3 inline-flex items-baseline gap-1" title={tilde(r)}>
+            <b className="font-medium">{name(r)}</b> <span className="mono text-[12px] text-muted">{tilde(r)}</span>
+          </span>
+        ))}
+        {canManage && (
+          <button className="text-[13px] text-accent hover:underline" onClick={() => setEditing(true)}>
+            Edit
+          </button>
+        )}
+      </span>
+    );
+  return (
+    <div className="w-full space-y-2 font-sans">
+      {proposed && <p className="text-[12px] text-muted">{d.label} changed the folders it shares. Publish so everyone sees the new list.</p>}
+      {list.map((r) => (
+        <div key={r} className="flex items-center gap-2 text-[13px]">
+          <b className="font-medium">{name(r)}</b>
+          <span className="mono flex-1 truncate text-[12px] text-muted">{tilde(r)}</span>
+          {!d.roots.includes(r) && <span className="text-[11px] text-ok">new</span>}
+          <button className="text-[12px] text-muted hover:text-bad" onClick={() => setList(list.filter((x) => x !== r))}>
+            Remove
+          </button>
+        </div>
+      ))}
+      {d.roots.filter((r) => !list.includes(r)).map((r) => (
+        <div key={r} className="flex items-center gap-2 text-[13px] text-muted line-through">
+          {name(r)} <span className="mono text-[12px]">{tilde(r)}</span>
+        </div>
+      ))}
+      <div className="flex gap-2">
+        <input className={cx("h-8 flex-1 rounded-lg border border-line bg-panel px-2 text-[13px]")} placeholder="/Users/you/Projects (a folder on that device)" value={add} onChange={(e) => setAdd(e.target.value.trim())} />
+        <Button className="h-8 px-3" disabled={!add.startsWith("/") || add === "/" || list.includes(add)} onClick={() => (setList([...list, add.replace(/\/+$/, "")]), setAdd(""))}>
+          Add
+        </Button>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <Button kind="primary" className="h-8 px-3.5" disabled={!changed || list.length === 0 || busy || (!!account && !canManage)} onClick={publish}>
+          {busy ? "Publishing…" : "Publish · 1 signature"}
+        </Button>
+        <Button kind="ghost" className="h-8 px-3" onClick={() => (setList(d.roots), setEditing(false))}>
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }

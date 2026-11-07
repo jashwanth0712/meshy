@@ -172,6 +172,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 a.informativeText = "\(e.message)\n\nChoose Sign In with Ethereum… in the Meshy menu to try again."
                 a.runModal()
             }
+        case "join":
+            // The approval page, opened without keys: make them here, then reopen it with them.
+            if let link = URLComponents(url: u, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "link" })?.value { status.join(link: link) }
         case "org":
             if let o = u.pathComponents.dropFirst().first { status.addOrg(named: o) }
         default:

@@ -447,6 +447,66 @@ export async function send(
   return receipt;
 }
 
+export type Call = { address: Address; abi: readonly unknown[]; functionName: string; args: readonly unknown[] };
+
+const isRejection = (e: unknown) => /reject|denied|cancel/i.test(e instanceof Error ? e.message : String(e)) || (e as { code?: number })?.code === 4001;
+
+/**
+ * Sends several calls with ONE wallet confirmation when the wallet can batch them atomically
+ * (EIP-5792 wallet_sendCalls; MetaMask on Sepolia). Otherwise falls back to one signature per call.
+ * Returns how it went, so callers can skip steps (like reading a token id) that only matter when
+ * the calls land in separate transactions.
+ */
+export async function sendAll(w: WalletClient, c: PublicClient, calls: Call[], onSent?: (hash: Hex) => void): Promise<{ batched: boolean }> {
+  const [account] = await w.getAddresses();
+  if (calls.length > 1) {
+    let atomic = false;
+    try {
+      const caps = (await w.getCapabilities({ account, chainId: sepolia.id })) as { atomic?: { status?: string } };
+      atomic = caps?.atomic?.status === "supported" || caps?.atomic?.status === "ready";
+    } catch {}
+    if (atomic) {
+      let id: string | undefined;
+      try {
+        ({ id } = await w.sendCalls({ account, chain: sepolia, forceAtomic: true, calls: calls.map((x) => ({ to: x.address, abi: x.abi, functionName: x.functionName, args: x.args })) } as never));
+      } catch (e) {
+        if (isRejection(e)) throw e; // the user said no: don't ask again one by one
+      }
+      if (id) {
+        const r = await w.waitForCallsStatus({ id, pollingInterval: 1000, timeout: 240_000 });
+        const h = r.receipts?.[0]?.transactionHash;
+        if (h) onSent?.(h);
+        if (r.status !== "success") throw new Error("the batch reverted");
+        return { batched: true };
+      }
+    }
+  }
+  for (const x of calls) await send(w, c, x, onSent);
+  return { batched: false };
+}
+
+/** The address deployProxy will create for this caller and salt (CREATE2), without deploying. */
+export async function predictProxy(c: PublicClient, from: Address, impl: Address, salt: bigint, init: Hex): Promise<Address> {
+  const { result } = await c.simulateContract({ account: from, address: ENS.factory, abi: factoryAbi, functionName: "deployProxy", args: [impl, salt, init] });
+  return getAddress(result as Address);
+}
+
+/** A registry deployment as a call, plus the address it will have (for batching with what uses it). */
+export async function registryDeployCall(c: PublicClient, admin: Address): Promise<{ call: Call; address: Address }> {
+  const init = encodeFunctionData({ abi: registryAbi, functionName: "initialize", args: [[{ account: admin, roleBitmap: ALL_ROLES }]] });
+  const salt = randomSalt();
+  const address = await predictProxy(c, admin, ENS.userRegistryImpl, salt, init);
+  return { address, call: { address: ENS.factory, abi: factoryAbi, functionName: "deployProxy", args: [ENS.userRegistryImpl, salt, init] } };
+}
+
+/** A resolver deployment (with its first records) as a call, plus the address it will have. */
+export async function resolverDeployCall(c: PublicClient, admin: Address, calls: Hex[] = []): Promise<{ call: Call; address: Address }> {
+  const init = encodeFunctionData({ abi: resolverAbi, functionName: "initialize", args: [[{ account: admin, roleBitmap: ALL_ROLES }], calls] });
+  const salt = randomSalt();
+  const address = await predictProxy(c, admin, ENS.resolverImpl, salt, init);
+  return { address, call: { address: ENS.factory, abi: factoryAbi, functionName: "deployProxy", args: [ENS.resolverImpl, salt, init] } };
+}
+
 export function recordCalls(name: string, texts: Record<string, string>, addr?: Address): Hex[] {
   const dns = dnsEncode(name);
   const calls: Hex[] = [];

@@ -83,7 +83,7 @@ for role in owner member; do
 done
 
 echo "flows"
-OUT=$(MESHY_TEST_INPUT='[["claude-1","/srv","1","2"],0]' M --fixture Tests/map.json --click "Request Access › rig1…")
+OUT=$(MESHY_TEST_INPUT='[["claude-1","0","1","2"],0]' M --fixture Tests/map.json --click "Request Access › rig1…")
 check  "request access makes a prefilled link" "COPY: https://meshy.live/org/meshydemo.eth?give=claude-1&target=rig1.home.meshydemo.eth&dur=14400&path=%2Fsrv&mode=rw"
 OUT=$(M --fixture Tests/map.json --dump-menu)
 check  "request shows as pending"            "claude-1 → rig1.home  — requested"
@@ -92,6 +92,8 @@ OUT=$(MESHY_TEST_INPUT="[[\"$MESHY_HOME/shared\"],[\"test-mac\",\"0\"]]" MESHY_S
 check  "share runs meshyd init, link for admin" "COPY: https://meshy.live/org/meshydemo.eth/directory?add=meshy-join:"
 OUT=$(M --fixture Tests/map.json --dump-menu)
 check  "shared device waits for ENS"         "test-mac.prod · waiting for an admin to add it"
+check  "shared folders listed by name"       "shared  — "
+check  "add more folders"                    "Add Folders…"
 # a device added from the dashboard whose keys are on this Mac is adopted, not made again
 KEYADDR=$(build/Meshy.app/Contents/Resources/bin/meshyd whoami --state "$MESHY_HOME/meshyd" | sed -n 's/.*"addr":"\(0x[0-9a-fA-F]*\)".*/\1/p')
 ADOPT=$(mktemp); node -e 'const m=require("./Tests/map.json"); m.networks[0].resources[0].addr=process.argv[1]; console.log(JSON.stringify(m))' "$KEYADDR" > "$ADOPT"

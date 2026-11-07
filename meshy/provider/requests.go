@@ -50,14 +50,20 @@ type Request struct {
 	Mode     string `json:"mode,omitempty"`
 	Dur      int    `json:"dur,omitempty"`
 	JoinCode string `json:"joinCode,omitempty"`
+	// kind "roots": the folders the device wants to share from now on (meshy.roots).
+	Roots []string `json:"roots,omitempty"`
 	At       int64  `json:"at"`
 	Sig      string `json:"sig,omitempty"`
 }
 
 // RequestMessage is what the requester signs (EIP-191 personal_sign).
 func RequestMessage(r Request) string {
-	return strings.Join([]string{"meshy-request", r.Org, r.From, r.Kind, r.For, r.Target, r.Path, r.Mode,
-		strconv.Itoa(r.Dur), r.JoinCode, strconv.FormatInt(r.At, 10)}, "\n")
+	parts := []string{"meshy-request", r.Org, r.From, r.Kind, r.For, r.Target, r.Path, r.Mode,
+		strconv.Itoa(r.Dur), r.JoinCode, strconv.FormatInt(r.At, 10)}
+	if len(r.Roots) > 0 { // only "roots" requests carry it, so older signers keep working
+		parts = append(parts, strings.Join(r.Roots, ","))
+	}
+	return strings.Join(parts, "\n")
 }
 
 // WithdrawMessage is what the requester signs to take a request back.
@@ -133,8 +139,20 @@ func (r *Request) Validate(now time.Time) error {
 		if !strings.HasPrefix(r.JoinCode, "meshy-join:") || len(r.JoinCode) > 4096 {
 			return errors.New("joinCode must be a meshyd join code")
 		}
+	case "roots":
+		if enskit.Name(r.Target).Depth() != 2 {
+			return errors.New("a device is <device>.<network>.<org>")
+		}
+		if len(r.Roots) == 0 || len(r.Roots) > 32 {
+			return errors.New("roots: 1 to 32 folders")
+		}
+		for _, p := range r.Roots {
+			if !strings.HasPrefix(p, "/") || p == "/" || strings.Contains(p, ",") {
+				return errors.New("roots must be absolute folders")
+			}
+		}
 	default:
-		return errors.New("kind must be access or device")
+		return errors.New("kind must be access, device or roots")
 	}
 	return nil
 }

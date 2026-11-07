@@ -10,7 +10,7 @@ import { PROVIDER_API } from "@/lib/config";
 import { useMeshy } from "@/lib/store";
 
 /** A member's ask, sent from Meshy for Mac or `meshy request` (provider /v1/requests). */
-type OrgRequest = { id: string; from: string; kind: "access" | "device"; for?: string; target: string; path?: string; mode?: "ro" | "rw"; dur?: number; joinCode?: string; at: number };
+type OrgRequest = { id: string; from: string; kind: "access" | "device" | "roots"; for?: string; target: string; path?: string; mode?: "ro" | "rw"; dur?: number; joinCode?: string; roots?: string[]; at: number };
 
 type Target = ResourceNode | ServiceNode;
 type Line = { g: GrantNode; t: Target; kind: "port" | "folders" };
@@ -124,6 +124,7 @@ export default function AccessPage() {
     const devices = new Set(tree?.networks.flatMap((n) => n.resources.map((r) => r.name)) ?? []);
     return requests.filter((r) => {
       if (r.kind === "device") return !devices.has(r.target);
+      if (r.kind === "roots") return JSON.stringify(tree?.networks.flatMap((n) => n.resources).find((d) => d.name === r.target)?.roots) !== JSON.stringify(r.roots);
       const who = r.for ?? r.from.split(".")[0];
       return !lines.some((l) => l.g.agent === who && l.t.name === r.target && l.g.status === "live" && l.g.expiry > r.at);
     });
@@ -190,7 +191,11 @@ export default function AccessPage() {
               <Row key={r.id}>
                 <div className="min-w-0 flex-1">
                   <div className="mono truncate text-[15px] font-semibold">
-                    {r.kind === "device" ? (
+                    {r.kind === "roots" ? (
+                      <>
+                        {short(r.target, org)} <span className="font-normal text-muted">wants to share</span> {(r.roots ?? []).map((x) => x.split("/").filter(Boolean).pop()).join(", ")}
+                      </>
+                    ) : r.kind === "device" ? (
                       <>
                         {r.from.split(".")[0]} <span className="font-normal text-muted">wants to add</span> {short(r.target, org)}
                       </>
@@ -201,14 +206,20 @@ export default function AccessPage() {
                     )}
                   </div>
                   <div className="mt-0.5 text-[13px] text-muted">
-                    {r.kind === "device"
+                    {r.kind === "roots"
+                      ? "Folder change, from Meshy for Mac"
+                      : r.kind === "device"
                       ? "New device, from Meshy for Mac"
                       : [folder && `${folder} · ${r.mode === "rw" ? "read and write" : "read"}`, r.dur && `${Math.round(r.dur / 360) / 10} h`, who !== r.from.split(".")[0] && `asked by ${r.from.split(".")[0]}`].filter(Boolean).join(" · ")}
                     {" · "}
                     {ago(r.at * 1000, now)}
                   </div>
                 </div>
-                {r.kind === "device" ? (
+                {r.kind === "roots" ? (
+                  <Link href={`/org/${org}/directory?n=${encodeURIComponent(r.target)}&roots=${encodeURIComponent(JSON.stringify(r.roots ?? []))}`} className="text-[13px] font-medium text-accent hover:underline">
+                    Review folders
+                  </Link>
+                ) : r.kind === "device" ? (
                   <Link href={`/org/${org}/directory?add=${encodeURIComponent(r.joinCode ?? "")}`} className="text-[13px] font-medium text-accent hover:underline">
                     Add device
                   </Link>

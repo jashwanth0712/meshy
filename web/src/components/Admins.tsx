@@ -3,7 +3,7 @@ import { useState } from "react";
 import { type Address, isAddress } from "viem";
 import { type Step, Steps } from "@/components/Steps";
 import { Badge, Button, Card, Field, Row, Sheet, inputCls } from "@/components/ui";
-import { ADMIN_ROLES, eacAbi, send, textKeySetter } from "@/lib/ens";
+import { ADMIN_ROLES, eacAbi, textKeySetter, sendAll, type Call } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 /** Delegated network admins via ENSv2 Enhanced Access Control. */
@@ -41,17 +41,17 @@ export function Admins() {
     setSteps(list);
     const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
     try {
-      for (let i = 0; i < regs.length; i++) {
-        up(i, { state: "doing" });
-        await send(wallet, client, { address: regs[i].reg, abi: eacAbi, functionName: revoke ? "revokeRootRoles" : "grantRootRoles", args: [ADMIN_ROLES, addr as Address] }, (h) => up(i, { tx: h }));
-        up(i, { state: "done" });
-      }
-      if (!revoke) {
-        const i = regs.length;
-        up(i, { state: "doing" });
-        await send(wallet, client, { address: tree!.resolver, abi: eacAbi, functionName: "grantSetterRoles", args: [textKeySetter("meshy.policy"), addr as Address] }, (h) => up(i, { tx: h }));
-        up(i, { state: "done" });
-      }
+      // Every role in one confirmation where the wallet can batch (else one per registry).
+      const calls: Call[] = regs.map((r) => ({ address: r.reg, abi: eacAbi, functionName: revoke ? "revokeRootRoles" : "grantRootRoles", args: [ADMIN_ROLES, addr as Address] }));
+      if (!revoke) calls.push({ address: tree!.resolver, abi: eacAbi, functionName: "grantSetterRoles", args: [textKeySetter("meshy.policy"), addr as Address] });
+      let i = 0;
+      up(0, { state: "doing" });
+      const { batched } = await sendAll(wallet, client, calls, (h) => {
+        up(i, { state: "done", tx: h });
+        i++;
+        if (i < calls.length) up(i, { state: "doing" });
+      });
+      setSteps((s) => s!.map((x, j) => ({ ...x, state: "done", detail: j === 0 && batched ? `one signature for all ${calls.length}` : x.detail })));
       toast(revoke ? "Admin removed" : `Admin added for ${network?.label}`, "ok");
       check();
     } catch (e) {

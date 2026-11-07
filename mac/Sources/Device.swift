@@ -32,7 +32,7 @@ enum Bins {
 struct SharedDevice: Codable {
     let name: String // db2.prod.acme.eth
     let org: String
-    let roots: [String]
+    var roots: [String]
     let addr: String
     let joinCode: String
     var running: Bool
@@ -243,6 +243,27 @@ final class DeviceManager {
         let mesh = status.meshRunning ? "on the mesh" : status.meshJoined ? "mesh reconnecting" : "joining the mesh"
         let health = status.healthy ? "healthy" : "chain not live yet"
         return "\(short) · \(health) · \(mesh)" + (status.sessions > 0 ? " · \(plural(status.sessions, "session"))" : "")
+    }
+
+    // MARK: Shared folders
+
+    /// Changes which folders this Mac shares: right away here (meshyd restarts with them), and on ENS
+    /// (meshy.roots) once an admin signs, so others see the change. Returns the new list.
+    @discardableResult
+    func setRoots(_ roots: [String]) -> [String] {
+        guard var d = device else { return [] }
+        var seen = Set<String>()
+        d.roots = roots.map { ($0 as NSString).standardizingPath }.filter { seen.insert($0).inserted }
+        device = d
+        if d.running { startDaemonsAsync() }
+        onChange?()
+        return d.roots
+    }
+
+    /// The device's folders as published on ENS (what others see), if it differs from this Mac.
+    var publishedRoots: [String]? {
+        guard let d = device, let m = MeshyStore.shared.map?.devices.first(where: { $0.fullName == d.name }) else { return nil }
+        return m.rootList
     }
 
     // MARK: Adopt a device that is already on ENS

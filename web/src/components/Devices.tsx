@@ -3,7 +3,7 @@ import { useState } from "react";
 import { type Address, getAddress } from "viem";
 import { type Step, Steps } from "@/components/Steps";
 import { Button, Field, Seg, Sheet, cx, inputCls } from "@/components/ui";
-import { deployRegistry, recordCalls, registryAbi, resolverAbi, send, yearFromNow } from "@/lib/ens";
+import { type Call, recordCalls, registryAbi, registryDeployCall, resolverAbi, sendAll, yearFromNow } from "@/lib/ens";
 import { useMeshy } from "@/lib/store";
 
 type Join = { name: string; addr: string; "meshy.enckey": string; "meshy.ssh-host": string; "meshy.roots": string[]; "meshy.endpoint"?: string };
@@ -23,9 +23,9 @@ function joinName(code: string): string | undefined {
 
 export type AddMode = "resource" | "service" | "network";
 
-/** Add a device (join code), a service on a device, or a network. Same transactions as before. */
+/** Add a device (join code), a service on a device, or a network: one wallet confirmation each. */
 export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { onClose: () => void; initial?: AddMode; initialCode?: string }) {
-  const { tree, wallet, client, account, refresh, toast, org } = useMeshy();
+  const { tree, wallet, client, account, refresh, toast, org, connect, canManage } = useMeshy();
   const [mode, setMode] = useState<AddMode>(initial);
   const [svcForm, setSvcForm] = useState({ device: tree?.networks[0]?.resources[0]?.name ?? "", name: "", target: "", proto: "http", desc: "" });
   const [netLabel, setNetLabel] = useState("");
@@ -36,6 +36,28 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
   const busy = steps?.some((s) => s.state === "doing");
   if (!tree) return null;
   const up = (i: number, p: Partial<Step>) => setSteps((s) => s!.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  /** One action = one wallet confirmation where the wallet can batch (else one per step). */
+  async function run(labels: string[], build: (reg: Address) => Call[], done: string) {
+    if (!wallet || !account) return;
+    setSteps(labels.map((label, i) => ({ label, state: i === 0 ? "doing" : "todo" })));
+    try {
+      const { call, address: reg } = await registryDeployCall(client, account);
+      let i = 0;
+      const { batched } = await sendAll(wallet, client, [call, ...build(reg)], (h) => {
+        up(i, { state: "done", tx: h });
+        i++;
+        if (i < labels.length) up(i, { state: "doing" });
+      });
+      const code = await client.getCode({ address: reg });
+      if (!code || code === "0x") throw new Error(`the registry isn't at ${reg}: try again`);
+      setSteps(labels.map((label, j) => ({ label, state: "done", detail: j === 0 && batched ? "one signature for all steps" : undefined })));
+      toast(done, "ok");
+      refresh();
+    } catch (e) {
+      fail(e);
+    }
+  }
+
   const fail = (e: unknown) => {
     const msg = e instanceof Error ? e.message.split("\n")[0] : String(e);
     setSteps((s) => s?.map((x) => (x.state === "doing" ? { ...x, state: "fail", detail: msg } : x)));
@@ -43,49 +65,26 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
   };
 
   async function addNetwork() {
-    if (!wallet || !account) return;
-    setSteps([
-      { label: "Deploy the network's registry", state: "doing" },
-      { label: `Register ${netLabel}.${org}`, state: "todo" },
-    ]);
-    try {
-      const reg = await deployRegistry(wallet, client, account);
-      up(0, { state: "done", detail: reg });
-      up(1, { state: "doing" });
-      await send(wallet, client, { address: tree!.orgRegistry, abi: registryAbi, functionName: "register", args: [netLabel, account, reg, tree!.resolver, 0n, yearFromNow()] });
-      up(1, { state: "done" });
-      toast(`Network ${netLabel} created`, "ok");
-      refresh();
-    } catch (e) {
-      fail(e);
-    }
+    await run(
+      ["Deploy the network's registry", `Register ${netLabel}.${org}`],
+      (reg) => [{ address: tree!.orgRegistry, abi: registryAbi, functionName: "register", args: [netLabel, account, reg, tree!.resolver, 0n, yearFromNow()] }],
+      `Network ${netLabel} created`,
+    );
   }
 
   async function addService() {
-    if (!wallet || !account) return;
     const dev = tree!.networks.flatMap((n) => n.resources).find((r) => r.name === svcForm.device);
     if (!dev) return toast("Pick a device", "err");
     const name = `${svcForm.name}.${dev.name}`;
-    setSteps([
-      { label: `Deploy ${svcForm.name}'s grants registry`, state: "doing" },
-      { label: `Register ${name.replace(`.${org}`, "")}`, state: "todo" },
-      { label: `Publish ${svcForm.proto}://${svcForm.target}`, state: "todo" },
-    ]);
-    try {
-      const reg = await deployRegistry(wallet, client, account);
-      up(0, { state: "done", detail: reg });
-      up(1, { state: "doing" });
-      await send(wallet, client, { address: dev.registry, abi: registryAbi, functionName: "register", args: [svcForm.name, account, reg, tree!.resolver, 0n, yearFromNow()] });
-      up(1, { state: "done" });
-      up(2, { state: "doing" });
-      const texts: Record<string, string> = { "meshy.service": JSON.stringify({ proto: svcForm.proto, target: svcForm.target, desc: svcForm.desc }) };
-      await send(wallet, client, { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(name, texts)] });
-      up(2, { state: "done" });
-      toast(`Service ${svcForm.name} published`, "ok");
-      refresh();
-    } catch (e) {
-      fail(e);
-    }
+    const texts: Record<string, string> = { "meshy.service": JSON.stringify({ proto: svcForm.proto, target: svcForm.target, desc: svcForm.desc }) };
+    await run(
+      [`Deploy ${svcForm.name}'s grants registry`, `Register ${name.replace(`.${org}`, "")}`, `Publish ${svcForm.proto}://${svcForm.target}`],
+      (reg) => [
+        { address: dev.registry, abi: registryAbi, functionName: "register", args: [svcForm.name, account, reg, tree!.resolver, 0n, yearFromNow()] },
+        { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(name, texts)] },
+      ],
+      `Service ${svcForm.name} published`,
+    );
   }
 
   async function addResource() {
@@ -104,30 +103,19 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
       return;
     }
     const label = j.name.split(".")[0];
-    setSteps([
-      { label: `Deploy ${label}'s grants registry`, state: "doing" },
-      { label: `Register ${j.name.replace(`.${org}`, "")}`, state: "todo" },
-      { label: "Publish the device's keys and folders", state: "todo" },
-    ]);
-    try {
-      const reg = await deployRegistry(wallet, client, account);
-      up(0, { state: "done", detail: reg });
-      up(1, { state: "doing" });
-      await send(wallet, client, { address: net.registry, abi: registryAbi, functionName: "register", args: [label, account, reg, tree!.resolver, 0n, yearFromNow()] });
-      up(1, { state: "done" });
-      up(2, { state: "doing" });
-      const texts: Record<string, string> = { "meshy.enckey": j["meshy.enckey"], "meshy.ssh-host": j["meshy.ssh-host"], "meshy.roots": JSON.stringify(j["meshy.roots"]) };
-      if (j["meshy.endpoint"]) texts["meshy.endpoint"] = j["meshy.endpoint"];
-      if (devKind) texts["meshy.kind"] = devKind;
-      const meta = Object.fromEntries(Object.entries(devMeta).filter(([, v]) => v.trim()));
-      if (Object.keys(meta).length) texts["meshy.meta"] = JSON.stringify(meta);
-      await send(wallet, client, { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(j.name, texts, getAddress(j.addr) as Address)] });
-      up(2, { state: "done" });
-      toast(`${label} added`, "ok");
-      refresh();
-    } catch (e) {
-      fail(e);
-    }
+    const texts: Record<string, string> = { "meshy.enckey": j["meshy.enckey"], "meshy.ssh-host": j["meshy.ssh-host"], "meshy.roots": JSON.stringify(j["meshy.roots"]) };
+    if (j["meshy.endpoint"]) texts["meshy.endpoint"] = j["meshy.endpoint"];
+    if (devKind) texts["meshy.kind"] = devKind;
+    const meta = Object.fromEntries(Object.entries(devMeta).filter(([, v]) => v.trim()));
+    if (Object.keys(meta).length) texts["meshy.meta"] = JSON.stringify(meta);
+    await run(
+      [`Deploy ${label}'s grants registry`, `Register ${j.name.replace(`.${org}`, "")}`, "Publish the device's keys and folders"],
+      (reg) => [
+        { address: net.registry, abi: registryAbi, functionName: "register", args: [label, account, reg, tree!.resolver, 0n, yearFromNow()] },
+        { address: tree!.resolver, abi: resolverAbi, functionName: "multicall", args: [recordCalls(j.name, texts, getAddress(j.addr) as Address)] },
+      ],
+      `${label} added`,
+    );
   }
 
   const go = mode === "resource" ? addResource : mode === "service" ? addService : addNetwork;
@@ -147,9 +135,9 @@ export function AddSheet({ onClose, initial = "resource", initialCode = "" }: { 
           </>
         ) : (
           <>
-            <span className="text-[13px] text-muted">{txs} transactions</span>
-            <Button kind="primary" disabled={!ready || busy || !account} onClick={go}>
-              {account ? "Add" : "Connect a wallet"}
+            <span className="text-[13px] text-muted">1 signature ({txs} if your wallet can&apos;t batch)</span>
+            <Button kind="primary" disabled={account ? !ready || busy || !canManage : false} onClick={account ? go : connect}>
+              {!account ? "Connect a wallet" : canManage ? "Add" : "Owners and admins only"}
             </Button>
           </>
         )

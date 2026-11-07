@@ -39,8 +39,13 @@ type Policy struct {
 	// GrantTokenID is the ENSv2 token id of the grant at issue time. Daemons
 	// reject the policy if the live token id differs (the label was
 	// unregistered and re-registered, and stale resolver records resurfaced).
-	GrantTokenID string     `json:"grantTokenId"`
-	Paths        []PathRule `json:"paths"`
+	GrantTokenID string `json:"grantTokenId"`
+	// GrantExpiry (unix seconds) is the grant's exact expiry, chosen before the
+	// grant is registered, so register + policy can be one batched transaction.
+	// Daemons reject the policy if the live grant's expiry differs (a
+	// re-registered label never reuses a stale policy). 0: not checked.
+	GrantExpiry uint64     `json:"grantExpiry,omitempty"`
+	Paths       []PathRule `json:"paths"`
 	// Cmds optionally restricts which executables may be started (basename
 	// match). Empty means any command, still confined to Paths.
 	Cmds []string `json:"cmds,omitempty"`

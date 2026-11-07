@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -109,6 +110,10 @@ type ENSAuthorizer struct {
 	Resource enskit.Name
 	Key      *ecdh.PrivateKey // daemon policy key
 	Human    HumanVerifier    // nil disables the World ID check (dev only)
+	// Roots are the folders this device shares (meshyd run --roots). A grant's
+	// folders outside them are dropped, so a policy can never open more than the
+	// device owner chose to share. Empty: no limit (tests).
+	Roots []string
 	Now      func() time.Time
 }
 
@@ -237,6 +242,15 @@ func (a *ENSAuthorizer) AuthorizeSession(ctx context.Context, id *Identity) (*Au
 	if pol.GrantTokenID != "" && pol.GrantTokenID != g.State.TokenID.String() {
 		return nil, deny("MESHY_STALE_POLICY", "grant=%s was re-issued; ask an admin to re-grant", grantName)
 	}
+	if pol.GrantExpiry != 0 && pol.GrantExpiry != g.State.Expiry {
+		return nil, deny("MESHY_STALE_POLICY", "grant=%s was re-issued (expiry changed); ask an admin to re-grant", grantName)
+	}
+	if len(a.Roots) > 0 {
+		pol.Paths = ClipToRoots(pol.Paths, a.Roots)
+		if len(pol.Paths) == 0 {
+			return nil, deny("MESHY_NOT_SHARED", "grant=%s: none of its folders are shared by %s any more", grantName, a.Resource)
+		}
+	}
 	return &Authz{
 		Agent: id.Agent, AgentName: id.AgentName,
 		Grant:  enskit.Grant{Name: grantName, Owner: owner, TokenID: g.State.TokenID},
@@ -316,4 +330,20 @@ func (s StaticAuthorizer) AuthorizeService(_ context.Context, id *Identity, serv
 		return nil, deny("MESHY_NO_GRANT", "grant=%s.%s", id.Agent, service)
 	}
 	return &ServiceAuthz{Service: service, Grant: enskit.Grant{Name: enskit.Name(id.Agent + "." + string(service))}, Expiry: az.Expiry, Spec: Service{Proto: "tcp", Target: t}}, nil
+}
+
+// ClipToRoots keeps the policy folders that are a shared root or inside one.
+func ClipToRoots(paths []policy.PathRule, roots []string) []policy.PathRule {
+	var out []policy.PathRule
+	for _, p := range paths {
+		c := filepath.Clean(p.Path)
+		for _, r := range roots {
+			r = filepath.Clean(r)
+			if c == r || strings.HasPrefix(c, r+"/") {
+				out = append(out, p)
+				break
+			}
+		}
+	}
+	return out
 }

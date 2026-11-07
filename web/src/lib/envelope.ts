@@ -103,10 +103,12 @@ export function openBytes(record: string, aad: string, privB64: string): Uint8Ar
 }
 
 export type PathRule = { p: string; m: "ro" | "rw" };
-export type Policy = { v: 1; grant: string; grantTokenId: string; paths: PathRule[]; cmds?: string[] };
+/** grantExpiry: the grant's exact expiry (unix s), so register + policy fit in one batch (see meshyd). */
+export type Policy = { v: 1; grant: string; grantTokenId: string; grantExpiry?: number; paths: PathRule[]; cmds?: string[] };
 
 export function sealPolicy(p: Policy, recipientsB64: string[]): string {
   const body: Policy = { v: 1, grant: p.grant, grantTokenId: p.grantTokenId, paths: p.paths };
+  if (p.grantExpiry) body.grantExpiry = p.grantExpiry;
   if (p.cmds && p.cmds.length) body.cmds = p.cmds;
   return sealBytes(enc.encode(JSON.stringify(body)), p.grant, recipientsB64);
 }
