@@ -223,6 +223,14 @@ func (a *ENSAuthorizer) AuthorizeSession(ctx context.Context, id *Identity) (*Au
 	}
 	g, expiry, owner, err := a.liveGrant(ctx, grantName, id.owners())
 	if err != nil {
+		// No grant: the org owner and this network's admins still see every shared folder,
+		// read-only, without asking. (They could give themselves a grant anyway.)
+		var d *DenyError
+		if errors.As(err, &d) && d.Code == "MESHY_NO_GRANT" {
+			if az := a.overseer(ctx, id); az != nil {
+				return az, nil
+			}
+		}
 		return nil, err
 	}
 	if g.Resolver == (common.Address{}) {
@@ -330,6 +338,35 @@ func (s StaticAuthorizer) AuthorizeService(_ context.Context, id *Identity, serv
 		return nil, deny("MESHY_NO_GRANT", "grant=%s.%s", id.Agent, service)
 	}
 	return &ServiceAuthz{Service: service, Grant: enskit.Grant{Name: enskit.Name(id.Agent + "." + string(service))}, Expiry: az.Expiry, Spec: Service{Proto: "tcp", Target: t}}, nil
+}
+
+// OverseerSession is how long an owner/admin session may run before it is
+// re-authorized (the watcher also ends it if their member name changes hands).
+const OverseerSession = 8 * time.Hour
+
+// overseer returns read-only access to every shared folder for a member whose
+// wallet owns the org or administers this device's network; nil otherwise.
+func (a *ENSAuthorizer) overseer(ctx context.Context, id *Identity) *Authz {
+	if id.Wallet == (common.Address{}) || len(a.Roots) == 0 {
+		return nil
+	}
+	ok, err := a.ENS.Manages(ctx, id.Wallet, a.Resource)
+	if err != nil || !ok {
+		return nil
+	}
+	pol := &policy.Policy{V: 1, Grant: string(id.AgentName)}
+	for _, r := range a.Roots {
+		pol.Paths = append(pol.Paths, policy.PathRule{Path: r, Mode: policy.ReadOnly})
+	}
+	if pol.Validate() != nil {
+		return nil
+	}
+	return &Authz{
+		Agent: id.Agent, AgentName: id.AgentName,
+		// Watched like a grant: the session dies if their member name is removed or changes hands.
+		Grant:  enskit.Grant{Name: id.AgentName, Owner: id.Wallet},
+		Expiry: a.now().Add(OverseerSession), Policy: pol,
+	}
 }
 
 // ClipToRoots keeps the policy folders that are a shared root or inside one.

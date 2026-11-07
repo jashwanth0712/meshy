@@ -61,6 +61,7 @@ check  "share this mac offered"              "Share this Mac…"
 absent "members don't manage: no revoke"     "?revoke="
 absent "members don't manage: no give"       "?give="
 absent "no admin console for members"        "Admin Console"
+absent "members don't browse others' folders" "Browse Folders"
 absent "no device addresses for members"     "Copy Device Address"
 
 echo "owner menu (fixture)"
@@ -71,6 +72,8 @@ check  "ssh command for a device"            "⟶ meshy ssh pi.home.meshydemo.et
 check  "connect command for a service"       "⟶ meshy connect camera.pi.home.meshydemo.eth"
 check  "revoke a live grant"                 "Revoke…  ⟶ /org/meshydemo.eth?revoke=claude-1.db1.prod.meshydemo.eth"
 check  "admin console for the picked org"    "Admin Console  ⟶ /org/meshydemo.eth"
+check  "owners browse every shared folder"   "Browse Folders  ›"
+check  "browse opens in Finder (no request)" "Open in Finder  ⟶ db1.prod.meshydemo.eth"
 
 echo "every menu item, clicked"
 for role in owner member; do

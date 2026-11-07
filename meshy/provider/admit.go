@@ -492,7 +492,9 @@ func (s *Server) RunReconciler(ctx context.Context, every time.Duration) {
 			cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			m, err := s.mapBuilder.Build(cctx, org)
 			if err == nil {
-				err = s.rec.Sync(cctx, m.Snapshot())
+				snap := m.Snapshot()
+				snap.Grants = append(snap.Grants, s.overseerGrants(cctx, m)...)
+				err = s.rec.Sync(cctx, snap)
 			}
 			cancel()
 			if err != nil {
@@ -505,4 +507,26 @@ func (s *Server) RunReconciler(ctx context.Context, every time.Duration) {
 		case <-time.After(every):
 		}
 	}
+}
+
+// overseerGrants opens the mesh from each member whose wallet owns the org or
+// administers a device's network to that device, the way a live grant would.
+// meshyd then gives them read-only access to the shared folders (no request).
+func (s *Server) overseerGrants(ctx context.Context, m *OrgMap) []netbird.GrantSnap {
+	ens := s.mapBuilder.ENS
+	var out []netbird.GrantSnap
+	for _, member := range m.Members {
+		wallet, err := ens.ExactOwner(ctx, enskit.Name(member), nil)
+		if err != nil || wallet == (common.Address{}) {
+			continue
+		}
+		for _, n := range m.Networks {
+			for _, d := range n.Resources {
+				if ok, _ := ens.Manages(ctx, wallet, enskit.Name(d.FullName)); ok {
+					out = append(out, netbird.GrantSnap{Name: "oversee:" + member + "@" + d.FullName, Agent: member, Resource: d.FullName})
+				}
+			}
+		}
+	}
+	return out
 }

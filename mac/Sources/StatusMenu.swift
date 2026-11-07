@@ -148,6 +148,11 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             mine.badgeText(myLive.count + store.requests.count)
             root.addItem(mine)
         }
+        if manages, !overseen.isEmpty {
+            let b = submenu("Browse Folders", browseMenu())
+            b.badgeText(overseen.count)
+            root.addItem(b)
+        }
         let devGrants = myLive.filter { !$0.isService && $0.target != nil }
         if !devGrants.isEmpty || !access.mounts.isEmpty {
             let shared = submenu("Shared With Me", sharedWithMeMenu())
@@ -499,6 +504,41 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             let x = action("Withdraw", #selector(withdraw(_:)))
             x.tag = i
             sm.addItem(x)
+            it.submenu = sm
+            m.addItem(it)
+        }
+        return m
+    }
+
+    // MARK: Browse Folders (owner / admin): every device you oversee, read-only, no request
+
+    /// Devices whose folders you oversee: all of them as the owner, your networks as an admin.
+    private var overseen: [MapResource] {
+        guard let m = store.map, let o = store.org, let r = store.role(o), r.canSign else { return [] }
+        let mine = dev.device?.name
+        return m.allNetworks.filter { r.role == "owner" || r.adminOf.contains($0.fullName) }
+            .flatMap { $0.resources ?? [] }
+            .filter { $0.fullName != mine && !$0.rootList.isEmpty }
+    }
+
+    private func browseMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
+        m.addItem(label("Read-only. As \(store.org.flatMap { store.role($0)?.role } ?? "an admin"), you see every shared folder."))
+        m.addItem(.separator())
+        for d in overseen {
+            let it = NSMenuItem(title: short(d.fullName), action: nil, keyEquivalent: "")
+            let st = access.mounts[d.fullName]
+            it.subtitleText(st?.state == .mounted ? "in Finder" : st?.state == .mounting ? "opening…" : d.rootList.map { ($0 as NSString).lastPathComponent }.joined(separator: ", "))
+            let sm = NSMenu()
+            sm.autoenablesItems = false
+            for r in d.rootList {
+                let f = label("\(( r as NSString).lastPathComponent)  \(tilde(r))")
+                f.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+                sm.addItem(f)
+            }
+            sm.addItem(.separator())
+            addFinderItems(sm, device: d.fullName)
             it.submenu = sm
             m.addItem(it)
         }

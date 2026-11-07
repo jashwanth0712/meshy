@@ -117,8 +117,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             let clicks = all("--click")
             for c in clicks { print(self.status.click(c) ? "CLICKED: \(c)" : "NOT FOUND: \(c)") }
             if args.contains("--click-all") {
+                // Quit ends the run; Link This Mac turns into a status line once any Open in Finder starts linking.
                 let skip = ["Quit Meshy"]
-                let paths = self.status.actionPaths().map(\.path).filter { p in !skip.contains { p.hasSuffix($0) } }
+                let paths = self.status.actionPaths().map(\.path).filter { p in !skip.contains { p.hasSuffix($0) } && !p.contains("Link This Mac") }
                 var n = 0
                 for p in paths where self.status.click(p) { print("CLICKED: \(p)"); n += 1 }
                 print("clicked \(n) of \(paths.count)")

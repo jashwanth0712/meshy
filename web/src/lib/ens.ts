@@ -463,7 +463,9 @@ export async function sendAll(w: WalletClient, c: PublicClient, calls: Call[], o
     let atomic = false;
     try {
       const caps = (await w.getCapabilities({ account, chainId: sepolia.id })) as { atomic?: { status?: string } };
-      atomic = caps?.atomic?.status === "supported" || caps?.atomic?.status === "ready";
+      // Only wallets that already batch ("supported"). "ready" means the wallet would first ask to
+      // upgrade the account to a smart account (EIP-7702): we never ask for that.
+      atomic = caps?.atomic?.status === "supported";
     } catch {}
     if (atomic) {
       let id: string | undefined;
