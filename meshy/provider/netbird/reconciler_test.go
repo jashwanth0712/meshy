@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jashwanth0712/meshy/meshy/provider/netbird"
 )
@@ -226,5 +227,27 @@ func TestGroupRefsDecodeBothShapes(t *testing.T) {
 	}
 	if p.Rules[0].Sources[0] != "g1" || p.Rules[0].Destinations[0] != "g2" {
 		t.Fatalf("%+v", p.Rules[0])
+	}
+}
+
+// A device that re-joined the mesh leaves a stale twin with the same name: the
+// grant must point at the live one, and the twin is removed.
+func TestSyncPrefersLiveTwinAndRemovesStale(t *testing.T) {
+	f, r := setup(t)
+	f.mu.Lock()
+	old := f.peers["p1"]
+	old.Connected, old.LastSeen = false, time.Now().Add(-2*time.Hour)
+	f.peers["p1"] = old
+	f.peers["p9"] = netbird.Peer{ID: "p9", Name: old.Name, IP: "100.64.0.9", Connected: true, LastSeen: time.Now(), DNSLabel: old.Name + "-1"}
+	f.mu.Unlock()
+	if err := r.Sync(context.Background(), snap(g1)); err != nil {
+		t.Fatal(err)
+	}
+	g, _ := f.groupByName(netbird.ResGroup("db1.prod.acme.eth"))
+	if len(g.Peers) != 1 || g.Peers[0].ID != "p9" {
+		t.Fatalf("device group should hold the live twin p9: %+v", g.Peers)
+	}
+	if _, ok := f.peers["p1"]; ok {
+		t.Fatal("stale twin p1 should be removed")
 	}
 }

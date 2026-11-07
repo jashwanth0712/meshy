@@ -199,6 +199,21 @@ type Peer struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	IP   string `json:"ip"`
+	// A device that re-joins the mesh (new install, new keys) becomes a second
+	// peer with the same name; NetBird renames its DNS label (…-1). These tell
+	// the live one from the stale one.
+	Connected bool      `json:"connected"`
+	LastSeen  time.Time `json:"last_seen"`
+	DNSLabel  string    `json:"dns_label"`
+}
+
+// fresher reports whether p should win over q for the same name: a connected
+// peer beats a disconnected one, then the most recently seen wins.
+func (p Peer) fresher(q Peer) bool {
+	if p.Connected != q.Connected {
+		return p.Connected
+	}
+	return p.LastSeen.After(q.LastSeen)
 }
 
 func (c *Client) ListPeers(ctx context.Context) ([]Peer, error) {

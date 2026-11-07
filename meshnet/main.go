@@ -301,11 +301,17 @@ func resolvePeer(ctx context.Context, c *embed.Client, host string) (string, err
 	deadline := time.Now().Add(20 * time.Second)
 	for {
 		if st, err := c.Status(); err == nil {
+			// A device that re-joined the mesh gets a renamed DNS label (want-1, want-2…);
+			// the newest (highest suffix) is the live one.
+			best, bestN := "", -1
 			for _, p := range st.Peers {
 				label, _, _ := strings.Cut(p.FQDN, ".")
-				if label == want {
-					return p.IP, nil
+				if n, ok := twinIndex(label, want); ok && n > bestN {
+					best, bestN = p.IP, n
 				}
+			}
+			if best != "" {
+				return best, nil
 			}
 		}
 		if time.Now().After(deadline) {
@@ -343,4 +349,23 @@ func pipe(a, b io.ReadWriteCloser) {
 	go func() { io.Copy(a, b); done <- struct{}{} }()
 	go func() { io.Copy(b, a); done <- struct{}{} }()
 	<-done
+}
+
+// twinIndex reports whether label is want (0) or a renamed twin want-N (N).
+func twinIndex(label, want string) (int, bool) {
+	if label == want {
+		return 0, true
+	}
+	rest, ok := strings.CutPrefix(label, want+"-")
+	if !ok || rest == "" {
+		return 0, false
+	}
+	n := 0
+	for _, c := range rest {
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n, true
 }

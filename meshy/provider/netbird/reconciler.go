@@ -106,9 +106,12 @@ func (r *Reconciler) Sync(ctx context.Context, snap OrgSnapshot) (err error) {
 	}
 
 	orgSuffix := PeerName(snap.Org) // "acme-eth"
+	// One peer per name: the live one when a device re-joined and left a stale twin.
 	peerByName := map[string]Peer{}
 	for _, p := range peers {
-		peerByName[p.Name] = p
+		if cur, ok := peerByName[p.Name]; !ok || p.fresher(cur) {
+			peerByName[p.Name] = p
+		}
 	}
 
 	// 1. Desired groups and their single member.
@@ -226,6 +229,20 @@ func (r *Reconciler) Sync(ctx context.Context, snap OrgSnapshot) (err error) {
 	}
 	if r.missing == nil {
 		r.missing = map[string]int{}
+	}
+	// 4a. A stale twin of a live device (it re-joined with new keys) is removed,
+	// so the name has one peer again and nobody routes to the dead one.
+	for _, p := range peers {
+		best, ok := peerByName[p.Name]
+		if !ok || best.ID == p.ID || !strings.HasSuffix(p.Name, "-"+orgSuffix) || p.Connected || !best.Connected {
+			continue
+		}
+		if err := r.Client.DeletePeer(ctx, p.ID); err != nil {
+			r.log().Warn("reconciler: remove stale twin", "peer", p.Name, "err", err)
+			continue
+		}
+		st.PeersEvicted++
+		r.log().Info("reconciler: stale twin removed (device re-joined)", "peer", p.Name, "id", p.ID)
 	}
 	for _, p := range peers {
 		if !strings.HasSuffix(p.Name, "-"+orgSuffix) || live[p.Name] {
