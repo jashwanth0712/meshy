@@ -27,7 +27,7 @@ export const PROVIDER_API = process.env.NEXT_PUBLIC_MESHY_SYNC ?? "https://api.m
 export const DEMO_ORG = process.env.NEXT_PUBLIC_DEMO_ORG ?? "meshydemo.eth";
 
 /** The org drawn live on the landing page's network map. */
-export const HERO_ORG = process.env.NEXT_PUBLIC_HERO_ORG ?? DEMO_ORG;
+export const HERO_ORG = process.env.NEXT_PUBLIC_HERO_ORG ?? "night-test.meshy.eth";
 
 /** ENS org names: lowercase labels ending in .eth. */
 export const isOrgName = (s: string) => /^([a-z0-9-]+\.)+eth$/.test(s);
