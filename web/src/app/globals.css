@@ -110,3 +110,52 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Landing: live network map (components/LiveNetwork.tsx). Always on the night sky. */
+.ln-head { fill: #5b6787; font: 600 11px var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; }
+.ln-label { fill: #e8edff; font: 500 13px var(--font-mono); }
+.ln-kind { fill: #38bdf8; font: 500 11px var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.ln-sub { fill: #5b6787; font: 400 11px var(--font-mono); }
+.ln-tag { fill: #93a0c8; font: 500 11px var(--font-mono); }
+.ln-tag-bad { fill: #fb7185; font: 500 11px var(--font-mono); }
+.ln-check { stroke: #26346a; stroke-width: 1; stroke-dasharray: 3 5; }
+.ln-prov { stroke: #26346a; stroke-width: 6; stroke-dasharray: 8 6; }
+.ln-wire { fill: none; stroke: #3b5bff; stroke-opacity: 0.6; stroke-width: 1.3; }
+.ln-wire-hot { fill: none; stroke: #38bdf8; stroke-opacity: 0.8; stroke-width: 1.6; }
+.ln-wire-ghost { fill: none; stroke: #26346a; stroke-width: 1; stroke-dasharray: 2 6; }
+.ln-node { fill: #0b1435; stroke: #26346a; stroke-width: 1.2; }
+.ln-node-hot { fill: #0b1435; stroke: #38bdf8; stroke-width: 1.4; }
+.ln-hex { fill: #0b1435; stroke: #38bdf8; stroke-width: 1.6; }
+.ln-fade { transition: opacity 0.2s ease; }
+
+.comet { fill: none; stroke-linecap: round; stroke-dasharray: 9 91; stroke-dashoffset: 100; animation: comet 3s linear infinite; }
+.ln-comet-hot { stroke: #e0f4ff; filter: drop-shadow(0 0 4px #38bdf8) drop-shadow(0 0 8px #38bdf8); }
+.ln-comet-bad { stroke: #fecdd3; filter: drop-shadow(0 0 4px #fb7185); }
+@keyframes comet {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 9; }
+}
+
+/* the red puff when a packet hits the grant check without a live grant */
+.ln-burst { opacity: 0; transform-box: fill-box; transform-origin: center; animation: burst 2.8s linear infinite; }
+@keyframes burst {
+  0%, 90% { opacity: 0; transform: scale(0.4); }
+  97% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+
+/* a device that just joined */
+.ln-ring { fill: none; stroke: #bef264; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: ring 1.2s ease-out 4; }
+@keyframes ring {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.9); }
+}
+.ln-join { animation: fade-up 0.4s ease-out both; }
+
+.night-grid {
+  background-color: #050b24;
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgb(30 63 216 / 0.35), transparent 70%),
+    radial-gradient(circle at 1px 1px, rgb(140 155 255 / 0.12) 1px, transparent 0);
+  background-size: 100% 100%, 28px 28px;
+}
