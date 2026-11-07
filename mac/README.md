@@ -23,6 +23,8 @@ A menu-bar app (no Dock icon). Install `Meshy.dmg`, drag Meshy to Applications, 
      - Daemon and mesh status.
    - Everyone also gets **This Mac**, **Organizations** and **More**.
 
+**Menu layout (v0.3.8):** the header shows the org, you, your role and a green or orange status line. **Folders You Can Open** lists every device you can open in Finder: your grants (with time left), and for owners and admins every device they oversee. **Requests** waiting for an admin appear inline with **Approve…**. **This Mac** covers sharing (folders, Add Folders…, Stop or Start Sharing) and Link This Mac, with rarely used items under **Advanced**. Owners and admins get **Manage** (Networks, Access, Recent, Admin Console). **Organizations** and **More** come last.
+
 The menu never rebuilds while it's open, because rebuilding it while open can crash or freeze AppKit. New data shows the next time you open it, and only the countdowns tick live. Dialogs that answer slow work wait until the menu has closed.
 
 Every write is signed in the browser by an owner or admin and enforced on-chain. The app never holds a wallet key.

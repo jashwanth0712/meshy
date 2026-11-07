@@ -19,6 +19,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     let root = NSMenu()
 
     private var countdowns: [(NSMenuItem, MapGrant)] = []
+    private var rowTicks: [(NSMenuItem, MapGrant, String)] = [] // folder rows: the countdown is in the subtitle
     private var tick: Timer?
     private var networksMenu: NSMenu?
     private var query = ""
@@ -95,6 +96,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
     private func updateCountdowns() {
         for (mi, g) in countdowns { mi.title = grantTitle(g) }
+        for (mi, g, state) in rowTicks { mi.subtitleText([state, left(g.expiry)].filter { !$0.isEmpty }.joined(separator: " · ")) }
     }
 
     // MARK: building
@@ -104,6 +106,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
     func rebuild() {
         countdowns = []
+        rowTicks = []
         networksMenu = nil
         root.removeAllItems()
         root.addItem(headerItem())
@@ -126,46 +129,130 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             return
         }
 
-        let m = store.map
-        root.addItem(label(store.statusLine, color: store.mapError != nil ? .systemOrange : .secondaryLabelColor))
+        // 1. Folders you can open: granted to you, or (owners/admins) every device you oversee.
+        let rows = folderRows()
         root.addItem(.separator())
-        root.addItem(submenu("Organizations", orgsMenu()))
-        if manages {
-            let net = submenu("Networks", networksMenuBuilt())
-            net.badgeText((m?.devices.count ?? 0) + (m?.services.count ?? 0))
-            root.addItem(net)
-            let acc = submenu("Access", accessMenu())
-            acc.badgeText(m?.liveGrants.count ?? 0)
-            root.addItem(acc)
-            if !store.orgRequests.isEmpty {
-                let r = submenu("Requests", requestsMenu())
-                r.badgeText(store.orgRequests.count)
-                root.addItem(r)
-            }
-        } else {
-            root.addItem(submenu("Request Access", requestMenu()))
+        root.addItem(sectionHeader("Folders You Can Open"))
+        if rows.isEmpty {
+            root.addItem(label(manages ? "No other device shares folders yet" : "Nothing shared with you yet"))
+        }
+        for r in rows.prefix(8) { root.addItem(r) }
+        if rows.count > 8 {
+            let more = NSMenu()
+            for r in rows.dropFirst(8) { more.addItem(r) }
+            root.addItem(submenu("\(rows.count - 8) More", more))
+        }
+        if !manages {
+            root.addItem(withIcon(submenu("Request Access", requestMenu()), "plus.circle"))
             let mine = submenu("My Access", myAccessMenu())
-            mine.badgeText(myLive.count + store.requests.count)
-            root.addItem(mine)
+            mine.badgeText(store.requests.count)
+            root.addItem(withIcon(mine, "clock"))
         }
-        if manages, !overseen.isEmpty {
-            let b = submenu("Browse Folders", browseMenu())
-            b.badgeText(overseen.count)
-            root.addItem(b)
+
+        // 2. Requests waiting for you (owners/admins), right here.
+        if manages, !store.orgRequests.isEmpty {
+            root.addItem(.separator())
+            root.addItem(sectionHeader("Requests"))
+            for r in store.orgRequests.prefix(5) { root.addItem(requestRow(r)) }
+            if store.orgRequests.count > 5 { root.addItem(open("All \(store.orgRequests.count) Requests…", "/org/\(org)")) }
         }
-        let devGrants = myLive.filter { !$0.isService && $0.target != nil }
-        if !devGrants.isEmpty || !access.mounts.isEmpty {
-            let shared = submenu("Shared With Me", sharedWithMeMenu())
-            shared.badgeText(devGrants.count)
-            root.addItem(shared)
-        }
-        let mac = submenu("This Mac", thisMacMenu())
-        if let s = dev.statusLine { mac.subtitleText(s) }
-        root.addItem(mac)
-        if manages, !store.events.isEmpty { root.addItem(submenu("Recent", recentMenu())) }
+
+        // 3. This Mac, and the admin tools.
         root.addItem(.separator())
-        if manages { root.addItem(open("Admin Console", "/org/\(org)", key: "0")) }
+        let mac = withIcon(submenu("This Mac", thisMacMenu()), "laptopcomputer")
+        mac.subtitleText(dev.statusLine.map { $0.components(separatedBy: " · ").dropFirst().joined(separator: " · ") } ?? (dev.device == nil ? "Not sharing" : ""))
+        root.addItem(mac)
+        if manages { root.addItem(withIcon(submenu("Manage", manageMenu()), "slider.horizontal.3")) }
+        root.addItem(.separator())
+        root.addItem(withIcon(submenu("Organizations", orgsMenu()), "building.2"))
         finish()
+    }
+
+    // MARK: top-level rows
+
+    /// One row per device you can open: your grants first (with their countdown), then devices you oversee.
+    private func folderRows() -> [NSMenuItem] {
+        var out: [NSMenuItem] = []
+        var seen = Set<String>()
+        for g in myLive where !g.isService {
+            guard let t = g.target, seen.insert(t).inserted else { continue }
+            let it = deviceRow(t, extra: left(g.expiry))
+            rowTicks.append((it, g, rowState(t)))
+            out.append(it)
+        }
+        if manages {
+            for d in overseen where seen.insert(d.fullName).inserted { out.append(deviceRow(d.fullName, extra: "you oversee")) }
+        }
+        return out
+    }
+
+    private func deviceRow(_ t: String, extra: String) -> NSMenuItem {
+        let d = store.map?.devices.first { $0.fullName == t }
+        let st = access.mounts[t]
+        let it = NSMenuItem(title: d?.name ?? short(t), action: nil, keyEquivalent: "")
+        it.image = NSImage(systemSymbolName: st?.state == .mounted ? "externaldrive.fill.badge.checkmark" : "externaldrive", accessibilityDescription: nil)
+        it.subtitleText([rowState(t), extra].filter { !$0.isEmpty }.joined(separator: " · "))
+        let sm = NSMenu()
+        sm.autoenablesItems = false
+        for r in d?.rootList ?? [] {
+            let f = label("\((r as NSString).lastPathComponent)   \(tilde(r))")
+            f.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+            sm.addItem(f)
+        }
+        if !(d?.rootList.isEmpty ?? true) { sm.addItem(.separator()) }
+        addFinderItems(sm, device: t)
+        it.submenu = sm
+        return it
+    }
+
+    private func rowState(_ t: String) -> String {
+        switch access.mounts[t]?.state {
+        case .mounted: return "In Finder"
+        case .mounting: return "Opening…"
+        case .failed: return "Couldn't open"
+        default: return store.map?.devices.first { $0.fullName == t }?.rootList.map { ($0 as NSString).lastPathComponent }.joined(separator: ", ") ?? ""
+        }
+    }
+
+    private func requestRow(_ r: OrgRequest) -> NSMenuItem {
+        let what = r.kind == "device" ? "add \(short(r.target))" : r.kind == "roots" ? "\(short(r.target)) folders" : "\(r.who) → \(short(r.target))"
+        let it = NSMenuItem(title: r.kind == "access" ? what : "\(r.fromLabel): \(what)", action: nil, keyEquivalent: "")
+        it.image = NSImage(systemSymbolName: r.kind == "access" ? "person.badge.key" : r.kind == "device" ? "plus.rectangle.on.rectangle" : "folder.badge.gearshape", accessibilityDescription: nil)
+        var sub = [ago(Date(timeIntervalSince1970: r.at))]
+        if let p = r.path { sub.insert(((p as NSString).lastPathComponent) + (r.mode == "rw" ? " · read-write" : " · read"), at: 0) }
+        it.subtitleText(sub.joined(separator: " · "))
+        let sm = NSMenu()
+        sm.autoenablesItems = false
+        sm.addItem(open(r.kind == "device" ? "Add Device…" : r.kind == "roots" ? "Review Folders…" : "Approve…", r.reviewPath))
+        let x = action("Dismiss", #selector(dismissRequest(_:)))
+        x.representedObject = r.id
+        sm.addItem(x)
+        it.submenu = sm
+        return it
+    }
+
+    /// Owner / admin tools, out of the way of everyday use.
+    private func manageMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
+        let map = store.map
+        let net = withIcon(submenu("Networks", networksMenuBuilt()), "network")
+        net.badgeText((map?.devices.count ?? 0) + (map?.services.count ?? 0))
+        m.addItem(net)
+        let acc = withIcon(submenu("Access", accessMenu()), "key")
+        acc.badgeText(map?.liveGrants.count ?? 0)
+        m.addItem(acc)
+        if !store.events.isEmpty { m.addItem(withIcon(submenu("Recent", recentMenu()), "clock.arrow.circlepath")) }
+        m.addItem(.separator())
+        m.addItem(open("Give Access…", "/org/\(org)?give="))
+        m.addItem(open("Add a Device…", dirPath()))
+        m.addItem(withIcon(open("Admin Console", "/org/\(org)", key: "0"), "safari"))
+        return m
+    }
+
+    private func withIcon(_ it: NSMenuItem, _ symbol: String) -> NSMenuItem {
+        it.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        return it
     }
 
     private func finish() {
@@ -185,9 +272,11 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
     private func headerItem() -> NSMenuItem {
         let mi = NSMenuItem()
-        let v = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 52))
+        let hasStatus = store.org != nil
+        let v = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: hasStatus ? 68 : 52))
+        let lift: CGFloat = hasStatus ? 16 : 0
         let title = store.org ?? "Meshy"
-        let tile = NSView(frame: NSRect(x: 14, y: 11, width: 30, height: 30))
+        let tile = NSView(frame: NSRect(x: 14, y: 11 + lift, width: 30, height: 30))
         tile.wantsLayer = true
         tile.layer?.backgroundColor = (store.org == nil ? NSColor.tertiaryLabelColor : NSColor(red: 0x1e / 255, green: 0x3f / 255, blue: 0xd8 / 255, alpha: 1)).cgColor
         tile.layer?.cornerRadius = 8
@@ -201,7 +290,7 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
 
         let name = NSTextField(labelWithString: title)
         name.font = .systemFont(ofSize: 13, weight: .semibold)
-        name.frame = NSRect(x: 54, y: 27, width: 190, height: 17)
+        name.frame = NSRect(x: 54, y: 27 + lift, width: 190, height: 17)
         name.lineBreakMode = .byTruncatingTail
         v.addSubview(name)
 
@@ -214,11 +303,26 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
         sub.font = .systemFont(ofSize: 11)
         sub.textColor = .secondaryLabelColor
         sub.lineBreakMode = .byTruncatingTail
-        sub.frame = NSRect(x: 54, y: 10, width: 190, height: 15)
+        sub.frame = NSRect(x: 54, y: 10 + lift, width: 190, height: 15)
         v.addSubview(sub)
+        if hasStatus {
+            // One glance: is everything fine? (green: live data; orange: offline or a problem)
+            let bad = store.mapError != nil || dev.status.meshError != nil
+            let dot = NSTextField(labelWithString: "●")
+            dot.font = .systemFont(ofSize: 9)
+            dot.textColor = bad ? .systemOrange : .systemGreen
+            dot.frame = NSRect(x: 14, y: 8, width: 12, height: 13)
+            v.addSubview(dot)
+            let line = NSTextField(labelWithString: dev.status.meshError.map { _ in "Mesh refused: see This Mac" } ?? store.statusLine)
+            line.font = .systemFont(ofSize: 11)
+            line.textColor = .secondaryLabelColor
+            line.lineBreakMode = .byTruncatingTail
+            line.frame = NSRect(x: 28, y: 7, width: 260, height: 14)
+            v.addSubview(line)
+        }
 
         if store.org != nil {
-            let sw = NSSwitch(frame: NSRect(x: 248, y: 14, width: 40, height: 24))
+            let sw = NSSwitch(frame: NSRect(x: 248, y: 14 + lift, width: 40, height: 24))
             sw.controlSize = .small
             sw.state = store.live ? .on : .off
             sw.target = self
@@ -652,12 +756,10 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
     private func thisMacMenu() -> NSMenu {
         let m = NSMenu()
         m.autoenablesItems = false
-        m.addItem(sectionHeader("Shared as a device"))
+        // Sharing: what this Mac offers, and the one switch that matters.
         if let d = dev.device {
-            m.addItem(label(d.name))
+            m.addItem(sectionHeader("Sharing as \(short(d.name))"))
             if let s = dev.statusLine { m.addItem(label(s.components(separatedBy: " · ").dropFirst().joined(separator: " · "))) }
-            m.addItem(.separator())
-            m.addItem(sectionHeader("Shared Folders"))
             for (i, r) in d.roots.enumerated() {
                 let it = NSMenuItem(title: (r as NSString).lastPathComponent, action: nil, keyEquivalent: "")
                 it.subtitleText(tilde(r))
@@ -675,28 +777,23 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
                 it.submenu = sm
                 m.addItem(it)
             }
-            m.addItem(action("Add Folders…", #selector(addRoots)))
+            m.addItem(withIcon(action("Add Folders…", #selector(addRoots)), "folder.badge.plus"))
             if let pub = dev.publishedRoots, pub != d.roots {
-                m.addItem(label(manages ? "Changes not on ENS yet" : "Waiting for an admin to publish the change", color: .systemOrange))
+                m.addItem(label(manages ? "Folder changes aren't published yet" : "Waiting for an admin to publish the change", color: .systemOrange))
                 if manages { m.addItem(open("Publish Folder Changes…", "/org/\(org)/directory?n=\(q(d.name))&roots=\(q(rootsJSON(d.roots)))")) }
             }
-            // Every file op, command and block is written to Arkiv by this device's key (needs Rabdi gas).
-            let ak = copyItem("Copy Arkiv Writer Address", d.addr)
-            ak.subtitleText("Fund it on the Arkiv faucet so activity shows on the dashboard")
-            m.addItem(ak)
             if !d.running && !dev.registered, let l = dev.addDeviceLink {
                 m.addItem(open("Finish Adding in the Dashboard…", l))
-                m.addItem(copyItem("Copy Link for an Admin", Settings.base + l))
             }
             if d.running {
-                m.addItem(action("Stop Sharing", #selector(stopSharing)))
+                m.addItem(withIcon(action("Stop Sharing", #selector(stopSharing)), "pause.circle"))
             } else if dev.registered {
-                m.addItem(action("Start Sharing", #selector(startSharing)))
+                m.addItem(withIcon(action("Start Sharing", #selector(startSharing)), "play.circle"))
             }
-            m.addItem(action("Forget This Device…", #selector(forgetDevice)))
         } else if store.org != nil {
-            m.addItem(action("Share this Mac…", #selector(shareThisMac)))
-            m.addItem(label("Let agents reach folders you choose"))
+            m.addItem(sectionHeader("Sharing"))
+            m.addItem(withIcon(action("Share this Mac…", #selector(shareThisMac)), "square.and.arrow.up"))
+            m.addItem(label("Offer folders you choose; admins decide who gets each"))
         } else {
             m.addItem(label("Add an org to share this Mac"))
         }
@@ -704,15 +801,38 @@ final class StatusMenu: NSObject, NSMenuDelegate, NSSearchFieldDelegate {
             m.addItem(label("The provider refused the mesh: \(e.contains("SEATS") ? "the org needs more seats" : "no subscription")", color: .systemOrange))
             if manages { m.addItem(open("Add Seats in Billing…", "/org/\(org)/billing")) } else { m.addItem(label("Ask an owner to add seats (Billing)")) }
         }
-        m.addItem(.separator())
-        m.addItem(sectionHeader("You on this Mac"))
-        if let p = People.inOrg(store.org) {
-            m.addItem(label("Linked as \(short(p.name))"))
-        } else if store.org != nil {
-            m.addItem(linkItem())
-            m.addItem(label("Lets you open shared folders in Finder"))
+
+        // You: whether devices know this Mac is you.
+        if store.org != nil {
+            m.addItem(.separator())
+            if let p = People.inOrg(store.org) {
+                m.addItem(withIcon(label("Linked as \(short(p.name))"), "person.crop.circle.badge.checkmark"))
+            } else {
+                m.addItem(withIcon(linkItem(), "person.crop.circle.badge.plus"))
+                m.addItem(label("Needed once to open shared folders"))
+            }
         }
+
+        // Everything else, out of the way.
         m.addItem(.separator())
+        m.addItem(withIcon(submenu("Advanced", advancedMacMenu()), "gearshape"))
+        return m
+    }
+
+    private func advancedMacMenu() -> NSMenu {
+        let m = NSMenu()
+        m.autoenablesItems = false
+        if let d = dev.device {
+            m.addItem(sectionHeader("This device"))
+            m.addItem(copyItem("Copy Device Name", d.name))
+            // Every file op, command and block is written to Arkiv by this device's key (needs Rabdi gas).
+            let ak = copyItem("Copy Arkiv Writer Address", d.addr)
+            ak.subtitleText("Fund it on the Arkiv faucet so activity shows on the dashboard")
+            m.addItem(ak)
+            if !d.running && !dev.registered, let l = dev.addDeviceLink { m.addItem(copyItem("Copy Link for an Admin", Settings.base + l)) }
+            m.addItem(action("Forget This Device…", #selector(forgetDevice)))
+            m.addItem(.separator())
+        }
         m.addItem(sectionHeader("Agents on this Mac"))
         let here = store.org == nil ? store.localAgents : store.agentsHere
         if here.isEmpty { m.addItem(label("None yet")) }

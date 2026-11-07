@@ -51,6 +51,7 @@ type FS struct {
 	names []string
 	meta  webdav.FileSystem // Finder metadata, in memory
 	mu    sync.Mutex
+	cache statCache
 }
 
 // New returns a share of roots (absolute paths on the device). Roots that
@@ -142,6 +143,7 @@ func (f *FS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
 	if root || isTop(name) {
 		return os.ErrPermission // the share's folders are the device's roots
 	}
+	f.cache.drop(p)
 	return f.r.Mkdir(p)
 }
 
@@ -163,21 +165,24 @@ func (f *FS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMo
 	}
 	writing := flag&(os.O_WRONLY|os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_APPEND) != 0
 	if !writing {
-		fi, err := f.r.Stat(p)
+		fi, err := f.remoteStat(p)
 		if err != nil {
 			return nil, err
 		}
 		if fi.IsDir() {
 			return &remoteDir{f: f, p: p, fi: renamed(fi, path.Base(name))}, nil
 		}
+		// Nothing goes over SFTP until Finder actually reads (listings open every file).
+		return &lazyFile{f: f, p: p, name: path.Base(name), fi: fi}, nil
 	} else if isTop(name) {
 		return nil, os.ErrPermission
 	}
+	f.cache.drop(p)
 	h, err := f.r.OpenFile(p, flag)
 	if err != nil {
 		return nil, err
 	}
-	return &remoteFile{File: h, name: path.Base(name)}, nil
+	return &remoteFile{File: h, name: path.Base(name), f: f, p: p}, nil
 }
 
 func (f *FS) RemoveAll(ctx context.Context, name string) error {
@@ -191,6 +196,7 @@ func (f *FS) RemoveAll(ctx context.Context, name string) error {
 	if root || isTop(name) {
 		return os.ErrPermission
 	}
+	f.cache.drop(p)
 	return f.r.RemoveAll(p)
 }
 
@@ -213,6 +219,8 @@ func (f *FS) Rename(ctx context.Context, oldName, newName string) error {
 	if oroot || nroot || isTop(oldName) || isTop(newName) {
 		return os.ErrPermission
 	}
+	f.cache.drop(op)
+	f.cache.drop(np)
 	if err := f.r.PosixRename(op, np); err != nil {
 		return f.r.Rename(op, np)
 	}
@@ -230,7 +238,7 @@ func (f *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 	if root {
 		return dirInfo("/"), nil
 	}
-	fi, err := f.r.Stat(p)
+	fi, err := f.remoteStat(p)
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +250,15 @@ func (f *FS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 type remoteFile struct {
 	*sftp.File
 	name string
+	f    *FS
+	p    string
+}
+
+// Close forgets the file's cached stat: its size and time just changed.
+func (r *remoteFile) Close() error {
+	err := r.File.Close()
+	r.f.cache.drop(r.p)
+	return err
 }
 
 func (r *remoteFile) Readdir(int) ([]fs.FileInfo, error) { return nil, os.ErrInvalid }
@@ -269,7 +286,7 @@ func (d *remoteDir) Seek(int64, int) (int64, error) { return 0, nil }
 func (d *remoteDir) Stat() (fs.FileInfo, error)     { return d.fi, nil }
 func (d *remoteDir) Readdir(count int) ([]fs.FileInfo, error) {
 	if !d.read {
-		l, err := d.f.r.ReadDir(d.p)
+		l, err := d.f.remoteList(d.p)
 		if err != nil {
 			return nil, err
 		}
@@ -296,7 +313,7 @@ func (d *rootDir) Stat() (fs.FileInfo, error)     { return dirInfo("/"), nil }
 func (d *rootDir) Readdir(count int) ([]fs.FileInfo, error) {
 	var l []fs.FileInfo
 	for _, n := range d.f.names {
-		if fi, err := d.f.r.Stat(d.f.roots[n]); err == nil {
+		if fi, err := d.f.remoteStat(d.f.roots[n]); err == nil {
 			l = append(l, renamed(fi, n))
 		} else {
 			l = append(l, dirInfo(n))
@@ -320,19 +337,8 @@ func page(l []fs.FileInfo, pos *int, count int) ([]fs.FileInfo, error) {
 	return out, nil
 }
 
-type named struct {
-	os.FileInfo
-	name string
-}
-
-func (n named) Name() string { return n.name }
-
-func renamed(fi os.FileInfo, name string) os.FileInfo {
-	if fi.Name() == name {
-		return fi
-	}
-	return named{fi, name}
-}
+// renamed gives fi the share's name and a content type (so WebDAV never sniffs).
+func renamed(fi os.FileInfo, name string) os.FileInfo { return typed{fi, name} }
 
 type dirInfo string
 

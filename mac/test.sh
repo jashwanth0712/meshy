@@ -61,7 +61,7 @@ check  "share this mac offered"              "Share this Mac…"
 absent "members don't manage: no revoke"     "?revoke="
 absent "members don't manage: no give"       "?give="
 absent "no admin console for members"        "Admin Console"
-absent "members don't browse others' folders" "Browse Folders"
+absent "members don't see others' folders"   "you oversee"
 absent "no device addresses for members"     "Copy Device Address"
 
 echo "owner menu (fixture)"
@@ -72,7 +72,7 @@ check  "ssh command for a device"            "⟶ meshy ssh pi.home.meshydemo.et
 check  "connect command for a service"       "⟶ meshy connect camera.pi.home.meshydemo.eth"
 check  "revoke a live grant"                 "Revoke…  ⟶ /org/meshydemo.eth?revoke=claude-1.db1.prod.meshydemo.eth"
 check  "admin console for the picked org"    "Admin Console  ⟶ /org/meshydemo.eth"
-check  "owners browse every shared folder"   "Browse Folders  ›"
+check  "owners see every shared folder"      "srv · you oversee"
 check  "browse opens in Finder (no request)" "Open in Finder  ⟶ db1.prod.meshydemo.eth"
 
 echo "every menu item, clicked"
@@ -94,31 +94,31 @@ mkdir -p "$MESHY_HOME/shared"
 OUT=$(MESHY_TEST_INPUT="[[\"$MESHY_HOME/shared\"],[\"test-mac\",\"0\"]]" MESHY_STATE="$MESHY_HOME/meshyd" M --fixture Tests/map.json --click "This Mac › Share this Mac…")
 check  "share runs meshyd init, link for admin" "COPY: https://meshy.live/org/meshydemo.eth/directory?add=meshy-join:"
 OUT=$(M --fixture Tests/map.json --dump-menu)
-check  "shared device waits for ENS"         "test-mac.prod · waiting for an admin to add it"
+check  "shared device waits for ENS"         "waiting for an admin to add it"
 check  "shared folders listed by name"       "shared  — "
 check  "add more folders"                    "Add Folders…"
 # a device added from the dashboard whose keys are on this Mac is adopted, not made again
 KEYADDR=$(build/Meshy.app/Contents/Resources/bin/meshyd whoami --state "$MESHY_HOME/meshyd" | sed -n 's/.*"addr":"\(0x[0-9a-fA-F]*\)".*/\1/p')
 ADOPT=$(mktemp); node -e 'const m=require("./Tests/map.json"); m.networks[0].resources[0].addr=process.argv[1]; console.log(JSON.stringify(m))' "$KEYADDR" > "$ADOPT"
 DB1=$(node -e 'console.log(require("./Tests/map.json").networks[0].resources[0].fullName)')
-OUT=$(MESHY_TEST_INPUT='[true]' MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Forget This Device…")
+OUT=$(MESHY_TEST_INPUT='[true]' MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Advanced › Forget This Device…")
 check  "a dashboard-added device is adopted" "ADOPTED: $DB1"
-OUT=$(MESHY_TEST_INPUT='[true]' MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Forget This Device…")
+OUT=$(MESHY_TEST_INPUT='[true]' MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Advanced › Forget This Device…")
 absent "forget stays forgotten"              "ADOPTED:"
 OUT=$(MESHY_STATE="$MESHY_HOME/meshyd" M --fixture "$ADOPT" --click "This Mac › Share this Mac…")
 check  "share adopts it again, no new device" "This Mac is already"
 # a grant you hold (owned by your wallet): folders open in Finder, no terminal
 MINE=$(mktemp); node -e 'const m=require("./Tests/map.json"); m.grants.push({name:"you",fullName:"you.db1.prod.meshydemo.eth",owner:process.argv[1],expiry:4102444800,status:"live",kind:"device",agent:"you.people.meshydemo.eth",target:"db1.prod.meshydemo.eth",device:"db1.prod.meshydemo.eth"}); console.log(JSON.stringify(m))' "$ADDR" > "$MINE"
 OUT=$(M --fixture "$MINE" --dump-menu)
-check  "shared with me lists your grant"     "Shared With Me  ›"
+check  "your folders are in the menu"         "Folders You Can Open"
 check  "open your folders in Finder"         "Open in Finder"
 check  "link this Mac offered"               "Link This Mac to meshydemo.eth…"
 absent "stop sharing never auto-restarts"    "test-mac.prod · starting…"
-OUT=$(MESHY_TEST_INPUT='["https://meshy.live/approve?org=meshydemo.eth&agent=mac-test-bot"]' M --fixture Tests/map.json --click "This Mac › Join with an Invite Link…" --wait 12)
+OUT=$(MESHY_TEST_INPUT='["https://meshy.live/approve?org=meshydemo.eth&agent=mac-test-bot"]' M --fixture Tests/map.json --click "This Mac › Advanced › Join with an Invite Link…" --wait 12)
 check  "join runs meshy join (times out unapproved)" "MESHY_JOIN_TIMEOUT mac-test-bot.agents.meshydemo.eth"
 OUT=$(MESHY_TEST_INPUT='["not an org"]' M --click "Organizations › Add Organization…")
 check  "bad org name is refused"             "isn't an ENS name"
-OUT=$(MESHY_TOOLS_DIR="$MESHY_HOME/bin" M --click "This Mac › Install Command-Line Tools")
+OUT=$(MESHY_TOOLS_DIR="$MESHY_HOME/bin" M --click "This Mac › Advanced › Install Command-Line Tools")
 check  "tools install as symlinks"           "Installed meshy, meshyd, meshy-mesh"
 [ "$(readlink "$MESHY_HOME/bin/meshyd")" = "$PWD/build/Meshy.app/Contents/Resources/bin/meshyd" ] && { echo "  ✓ symlink points into Meshy.app"; pass=$((pass+1)); } || { echo "  ✗ symlink wrong"; fail=$((fail+1)); }
 
