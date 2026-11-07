@@ -217,10 +217,11 @@ function drawIndiaLayer(g, c, o) {
 
 // ---------- clips ----------
 const CLIPS = [
-  { len: 2.8 }, { len: 3.4 }, { len: 4.8 }, { len: 4.4 }, { len: 3.6 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 4.0 }, { len: 3.8 }, { len: 4.4 }, { len: 8.4 }, { len: 3.4 },
+  { len: 2.8 }, { len: 3.4 }, { len: 4.8 }, { len: 4.4 }, { len: 3.6 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 4.0 }, { len: 3.8 }, { len: 4.4 }, { len: 8.4 }, { len: 3.4 }, { len: 3.4 }, { len: 4.6 }, { len: 4.8 }, { len: 4.4 }, { len: 3.9 }, { len: 3.6 }, { len: 2.0 },
 ];
 function draw(g, clip, t) {
   g.fillStyle = BG; g.fillRect(0, 0, W, H);
+  if (clip >= 15) return drawStory(g, clip, t);
   const SELMODE = Object.fromEntries(DEV.map(d => [d.id, d.sel ? 'sel' : 'off']));
   const glowAll = [{ lon: 72.88, lat: 19.08, r: 9, w: 0.55 }, { lon: 80.27, lat: 13.08, r: 9, w: 0.55 }, { lon: 55.27, lat: 25.2, r: 8, w: 0.5 }, { lon: -122.42, lat: 37.77, r: 10, w: 0.5 }];
 
@@ -713,6 +714,301 @@ function drawInsights(g, t, ia) {
     text(g, `${v} ms`, cxb, base4 - h - 12, { a: a4 * ramp(t, 2.5, 2.8), size: 20, color: INK, font: 'Geist Mono' });
     text(g, `revoke ${i + 1}`, cxb, base4 + 32, { a: a4, size: 20, color: MUTED, font: 'Geist Mono' });
   });
+}
+
+// ---------- ENSv2 chapter (clips 15-21): hierarchy, sealing, enforcement, revoke ----------
+const STORY_PREV = { 15: 12, 16: 15, 17: 16, 18: 17, 19: 18, 20: 19, 21: 20 };
+const endCache = {};
+function canvasLike(g) { const c = document.createElement('canvas'); c.width = g.canvas.width; c.height = g.canvas.height; return c; }
+function endFrame(g, clip) {
+  const key = clip + ':' + g.canvas.width;
+  if (!endCache[key]) { const c = canvasLike(g), cg = c.getContext('2d'); cg.setTransform(g.getTransform()); draw(cg, clip, CLIPS[clip].len); endCache[key] = c; }
+  return endCache[key];
+}
+let scratch = null;
+function offscreen(g, fn) {
+  if (!scratch || scratch.width !== g.canvas.width) scratch = canvasLike(g);
+  const cg = scratch.getContext('2d'); cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, scratch.width, scratch.height);
+  cg.setTransform(g.getTransform()); cg.fillStyle = BG; cg.fillRect(0, 0, W, H); fn(cg); return scratch;
+}
+// zoom transition: the previous end frame scales away about `focus`, the new content scales in.
+function zoomFrom(g, clip, t, mode, focus, target, content, dur = 0.9) {
+  const e = ease(clamp(t / dur));
+  if (e >= 1) { content(g); return; }
+  const k = g.canvas.width / W;
+  const old = endFrame(g, STORY_PREV[clip]);
+  const neu = offscreen(g, content);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+  const put = (img, s, fx, fy, tx, ty, a) => { g.globalAlpha = a; g.drawImage(img, (tx - fx * s) * k, (ty - fy * s) * k, img.width * s, img.height * s); };
+  if (mode === 'in') {
+    put(neu, lerp(0.55, 1, e), target[0], target[1], target[0], target[1], e);
+    put(old, lerp(1, 3.4, e), focus[0], focus[1], focus[0], focus[1], 1 - e);
+  } else {
+    put(neu, lerp(1.9, 1, e), target[0], target[1], target[0], target[1], e);
+    const s2 = lerp(1, 0.16, e);
+    put(old, s2, focus[0], focus[1], lerp(focus[0], target[0], e), lerp(focus[1], target[1], e), 1 - e);
+  }
+  g.restore();
+}
+function drawStory(g, clip, t) {
+  if (clip === 15) zoomFrom(g, 15, t, 'in', [960, 610], [960, 610], cg => sceneTree(cg, t));
+  if (clip === 16) zoomFrom(g, 16, t, 'in', TREE_GRANT_AT, [960, 600], cg => sceneSeal(cg, t));
+  if (clip === 17) zoomFrom(g, 17, t, 'in', [960, 895], [760, 620], cg => sceneLaptop(cg, t, false));
+  if (clip === 18) zoomFrom(g, 18, t, 'out', [760, 620], MESH['mbp-m3'], cg => sceneDevices(cg, t, false));
+  if (clip === 19) sceneDevices(g, 99, true, t);
+  if (clip === 20) zoomFrom(g, 20, t, 'in', MESH['mbp-m3'], [760, 620], cg => sceneLaptop(cg, t, true));
+  if (clip === 21) zoomFrom(g, 21, t, 'out', [760, 620], [330, 880], cg => draw(cg, 12, CLIPS[12].len), 1.6);
+}
+// --- 15: the name tree ---
+const TREE = [
+  [0, 'acme.eth', 'org'],
+  [1, 'mumbai.acme.eth', 'network'],
+  [2, 'mbp-m3.mumbai.acme.eth', 'device · laptop'],
+  [3, 'claude-1.mbp-m3.mumbai.acme.eth', 'grant · sealed route', true],
+  [2, 'office-streams.mumbai.acme.eth', 'device · service'],
+  [1, 'chennai.acme.eth', 'network'],
+  [2, 'gpu-4090.chennai.acme.eth', 'device · server'],
+  [3, 'ci-bot.gpu-4090.chennai.acme.eth', 'grant'],
+  [1, 'people.acme.eth', 'people'],
+  [2, 'alice.people.acme.eth  ·  bob.people.acme.eth', 'members'],
+  [1, 'teams.acme.eth', 'team · roadmap'],
+  [2, 'ml-team.teams.acme.eth', 'team'],
+  [1, 'agents.acme.eth', 'agents'],
+  [2, 'claude-1  ·  lens-bot  ·  analyst  ·  ci-bot', 'agent identities'],
+];
+const TREE_X = 160, TREE_Y = 352, TREE_DY = 40, TREE_IND = 46;
+const TREE_GRANT_AT = [TREE_X + 3 * TREE_IND + 220, TREE_Y + 3 * TREE_DY - 7];
+function sceneTree(g, t) {
+  g.save(); g.strokeStyle = '#2E3442'; g.lineWidth = 2;
+  TREE.forEach(([d], i) => {
+    if (d === 0) return;
+    const a = ramp(t, 0.6 + i * 0.11, 0.9 + i * 0.11); if (a <= 0) return;
+    let pi = i - 1; while (TREE[pi][0] >= d) pi--;
+    const x = TREE_X + (d - 1) * TREE_IND + 12, y0 = TREE_Y + pi * TREE_DY + 4, y = TREE_Y + i * TREE_DY - 7;
+    g.globalAlpha = a; g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y); g.lineTo(x + TREE_IND - 20, y); g.stroke();
+  });
+  g.restore();
+  TREE.forEach(([d, name, tag, hi], i) => {
+    const a = ramp(t, 0.6 + i * 0.11, 0.9 + i * 0.11); if (a <= 0) return;
+    const x = TREE_X + d * TREE_IND, y = TREE_Y + i * TREE_DY;
+    if (hi) { const ha = ramp(t, 2.4, 2.9); g.save(); g.globalAlpha = a * ha * 0.9; g.fillStyle = 'rgba(43,63,224,0.22)'; g.strokeStyle = COB; g.lineWidth = 2; rr(g, x - 12, y - 30, 520, 38, 10); g.fill(); g.stroke(); g.restore(); }
+    text(g, name, x, y, { a, size: 22, color: hi ? INK : (d === 0 ? INK : '#C9CDD2'), font: 'Geist Mono', weight: d <= 1 || hi ? 600 : 400, align: 'left' });
+    text(g, tag, 1060, y, { a: a * 0.95, size: 20, color: hi ? COB3 : DIM, align: 'right' });
+  });
+  // naming convention panel
+  const pa = ramp(t, 1.8, 2.5);
+  g.save(); g.globalAlpha = pa; g.fillStyle = '#11131A'; g.strokeStyle = '#22262C'; g.lineWidth = 1.5; rr(g, 1180, 330, 612, 590, 18); g.fill(); g.stroke(); g.restore();
+  text(g, 'How a grant is named', 1212, 380, { a: pa, size: 24, color: INK, weight: 600, align: 'left' });
+  const parts = [['claude-1', 'agent', COB3], ['mbp-m3', 'device', INK], ['mumbai', 'network', INK], ['acme', 'org', INK], ['eth', 'root', MUTED]];
+  parts.forEach(([p, role, col], i) => {
+    const y = 438 + i * 48, a2 = pa * ramp(t, 2.0 + i * 0.08, 2.3 + i * 0.08);
+    g.save(); g.globalAlpha = a2; g.fillStyle = '#171B26'; g.strokeStyle = i === 0 ? COB : '#2A2F37'; g.lineWidth = 1.5; rr(g, 1212, y - 28, 220, 38, 10); g.fill(); g.stroke(); g.restore();
+    text(g, (i ? '.' : '') + p, 1226, y - 2, { a: a2, size: 22, color: col, font: 'Geist Mono', weight: 600, align: 'left' });
+    text(g, role, 1452, y - 2, { a: a2, size: 20, color: MUTED, align: 'left' });
+  });
+  const rules = ['Every level is its own registry', 'Expiry is the grant’s lifetime', 'unregister() is revoke', 'meshy.policy holds the sealed route'];
+  rules.forEach((r, i) => {
+    const a2 = pa * ramp(t, 2.4 + i * 0.1, 2.7 + i * 0.1), y = 718 + i * 44;
+    g.save(); g.globalAlpha = a2; g.fillStyle = COB3; g.beginPath(); g.arc(1220, y - 7, 4, 0, 6.2832); g.fill(); g.restore();
+    text(g, r, 1236, y, { a: a2, size: 20, color: '#C9CDD2', align: 'left' });
+  });
+}
+// --- 16: sealing the route ---
+const PLAIN = ['{', '  "grant": "claude-1.mbp-m3.mumbai…",', '  "tokenId": "8841…4417",', '  "paths": [["~/code/site", "rw"],', '            ["~/notes", "ro"]],', '  "cmds": ["npm test"]', '}'];
+const PLAIN_W = Math.max(...PLAIN.map(l => l.length));
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function scramble(line, li, q) {
+  let out = '';
+  for (let i = 0; i < line.length; i++) {
+    const thr = ((i * 37 + li * 101) % 97) / 97;
+    out += (line[i] === ' ' && q < 1) ? (thr < q ? B64[(i * 13 + li * 7) % 64] : ' ') : (thr < q ? B64[(i * 29 + li * 11 + 5) % 64] : line[i]);
+  }
+  return out;
+}
+function keyGlyph(g, x, y, s, col, a) {
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a; g.strokeStyle = col; g.lineWidth = 3 * s; g.lineCap = 'round';
+  g.beginPath(); g.arc(x - 12 * s, y, 9 * s, 0, 6.2832); g.stroke();
+  g.beginPath(); g.moveTo(x - 3 * s, y); g.lineTo(x + 20 * s, y); g.moveTo(x + 13 * s, y); g.lineTo(x + 13 * s, y + 8 * s); g.moveTo(x + 20 * s, y); g.lineTo(x + 20 * s, y + 8 * s); g.stroke();
+  g.restore();
+}
+function lockGlyph(g, x, y, s, col, a) {
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 3 * s;
+  rr(g, x - 13 * s, y - 4 * s, 26 * s, 20 * s, 4 * s); g.fill();
+  g.beginPath(); g.arc(x, y - 4 * s, 8 * s, Math.PI, 0); g.stroke(); g.restore();
+}
+function card(g, x, y, w, h, a, stroke = '#22262C') { g.save(); g.globalAlpha = a; g.fillStyle = '#11131A'; g.strokeStyle = stroke; g.lineWidth = 1.5; rr(g, x, y, w, h, 16); g.fill(); g.stroke(); g.restore(); }
+function sceneSeal(g, t) {
+  const a0 = ramp(t, 0.5, 1.0);
+  text(g, 'claude-1.mbp-m3.mumbai.acme.eth', 960, 356, { a: a0, size: 30, color: INK, font: 'Geist Mono', weight: 600 });
+  text(g, 'owner: claude-1’s address · expires 14:57 · roleBitmap 0, so it can’t be moved', 960, 392, { a: a0, size: 20, color: MUTED });
+  // left: policy card, plaintext -> ciphertext
+  const q = ramp(t, 1.6, 2.8);
+  card(g, 128, 430, 600, 340, a0, q > 0.5 ? '#3A4AB8' : '#22262C');
+  text(g, q < 0.5 ? 'meshy.policy · plaintext' : 'meshy.policy · ciphertext', 156, 472, { a: a0, size: 22, color: q < 0.5 ? INK : COB3, weight: 600, align: 'left' });
+  if (q > 0.5) text(g, 'XChaCha20-Poly1305', 700, 472, { a: a0, size: 20, color: MUTED, font: 'Geist Mono', align: 'right' });
+  PLAIN.forEach((ln, i) => text(g, scramble(ln.padEnd(PLAIN_W), i, q), 156, 516 + i * 34, { a: a0, size: 20, color: q > 0.9 ? '#7E8AC9' : q > 0.05 ? '#C9CDD2' : '#E6E8EE', font: 'Geist Mono', align: 'left' }));
+  // centre: the content key
+  const ka = ramp(t, 1.0, 1.4);
+  const split = ramp(t, 2.9, 3.7);
+  const K0 = [960, 560];
+  const R1 = [1235, 495], R2 = [1235, 655];
+  if (split < 1) keyGlyph(g, K0[0], K0[1], 1.6, COB3, ka * (1 - split));
+  text(g, 'content key', 960, 612, { a: ka * (1 - split), size: 20, color: INK, weight: 600 });
+  text(g, '32 random bytes', 960, 638, { a: ka * (1 - split), size: 20, color: MUTED });
+  seg(g, [K0[0] - 48, K0[1]], [740, K0[1]], ramp(t, 1.3, 1.6), COB3, 2.5, ka * (1 - split), [5, 7]);
+  // right: recipients
+  const ra = ramp(t, 1.0, 1.5);
+  card(g, 1180, 430, 612, 130, ra); card(g, 1180, 590, 612, 130, ra);
+  lockGlyph(g, 1236, 482, 1, COB3, ra * (1 - ramp(t, 3.5, 3.8))); lockGlyph(g, 1236, 642, 1, COB3, ra * (1 - ramp(t, 3.6, 3.9)));
+  text(g, 'mbp-m3.mumbai.acme.eth', 1280, 488, { a: ra, size: 22, color: INK, font: 'Geist Mono', weight: 600, align: 'left' });
+  text(g, 'device key · meshy.enckey · X25519', 1280, 520, { a: ra, size: 20, color: MUTED, align: 'left' });
+  text(g, 'acme.eth', 1280, 648, { a: ra, size: 22, color: INK, font: 'Geist Mono', weight: 600, align: 'left' });
+  text(g, 'org key · meshy.orgkey · X25519', 1280, 680, { a: ra, size: 20, color: MUTED, align: 'left' });
+  text(g, 'wrapped key', 1764, 488, { a: ramp(t, 3.6, 3.9), size: 20, color: COB3, font: 'Geist Mono', align: 'right' });
+  text(g, 'wrapped key', 1764, 648, { a: ramp(t, 3.7, 4.0), size: 20, color: COB3, font: 'Geist Mono', align: 'right' });
+  for (const [i, R] of [[0, R1], [1, R2]]) {
+    const p = ramp(t, 2.9 + i * 0.12, 3.7 + i * 0.12);
+    if (p > 0) keyGlyph(g, lerp(K0[0], R[0], p), lerp(K0[1], R[1], p), lerp(1.6, 1.1, p), COB3, 1);
+  }
+  // bottom: the record on ENS
+  const ba = ramp(t, 3.8, 4.3);
+  card(g, 128, 810, 1664, 110, ba, '#3A4AB8');
+  text(g, 'meshy.policy', 160, 856, { a: ba, size: 22, color: COB3, font: 'Geist Mono', weight: 600, align: 'left' });
+  text(g, '= {"v":1,"alg":"x25519-hkdf-sha256-xchacha20poly1305","n":"q3…","c":"Zx9…","r":[2 wrapped keys]}', 340, 856, { a: ba, size: 20, color: '#C9CDD2', font: 'Geist Mono', align: 'left' });
+  text(g, 'stored on the grant’s name · public, but only mbp-m3 and the org can open it', 160, 892, { a: ba, size: 20, color: MUTED, align: 'left' });
+}
+// --- 17 / 20: the laptop ---
+const LAP = { x: 300, y: 340, w: 920, h: 540 };
+function laptopFrame(g, a) {
+  g.save(); g.globalAlpha = a;
+  g.fillStyle = '#1B1D22'; g.strokeStyle = '#3A3D44'; g.lineWidth = 2; rr(g, LAP.x - 18, LAP.y - 18, LAP.w + 36, LAP.h + 36, 26); g.fill(); g.stroke();
+  g.fillStyle = '#0D1016'; rr(g, LAP.x, LAP.y, LAP.w, LAP.h, 8); g.fill();
+  const gr = g.createLinearGradient(0, LAP.y + LAP.h + 18, 0, LAP.y + LAP.h + 50); gr.addColorStop(0, '#D9DCE2'); gr.addColorStop(1, '#7E828A');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(LAP.x - 110, LAP.y + LAP.h + 18); g.lineTo(LAP.x + LAP.w + 110, LAP.y + LAP.h + 18); g.lineTo(LAP.x + LAP.w + 96, LAP.y + LAP.h + 46); g.lineTo(LAP.x - 96, LAP.y + LAP.h + 46); g.closePath(); g.fill();
+  g.fillStyle = '#9A9EA6'; rr(g, LAP.x + LAP.w / 2 - 80, LAP.y + LAP.h + 18, 160, 8, 4); g.fill();
+  [['#FF5F57', 0], ['#FEBC2E', 22], ['#28C840', 44]].forEach(([c, dx]) => { g.fillStyle = c; g.beginPath(); g.arc(LAP.x + 30 + dx, LAP.y + 26, 7, 0, 6.2832); g.fill(); });
+  g.restore();
+  text(g, 'meshy · mbp-m3.mumbai.acme.eth', LAP.x + LAP.w / 2, LAP.y + 34, { a, size: 20, color: MUTED, font: 'Geist Mono' });
+}
+const ROUTES = [['claude-1', '~/code/site', 'rw', '41 min'], ['claude-1', '~/notes', 'ro', '41 min'], ['ci-bot', 'npm test', 'cmd', '15 min']];
+const LIVE1 = [['claude-1', 'read  ~/code/site/app.ts', 'ok'], ['claude-1', 'open  ~/.ssh/id_ed25519', 'MESHY_BLOCKED'], ['ci-bot', 'exec  npm test', 'ok'], ['ci-bot', 'exec  curl x.sh | sh', 'MESHY_BLOCKED'], ['claude-1', 'write ~/code/site/app.ts', 'ok']];
+const LIVE2 = [['claude-1', 'session killed · grant gone', 'in ~150 ms'], ['claude-1', 'read  ~/code/site/app.ts', 'MESHY_REVOKED'], ['ci-bot', 'exec  npm test', 'ok']];
+const LAP_AGENTS = { 'claude-1': [1640, 470], 'ci-bot': [1640, 770] };
+function sceneLaptop(g, t, revoked) {
+  laptopFrame(g, 1);
+  const x0 = LAP.x + 40, cR = LAP.x + LAP.w - 40;
+  const block = revoked ? 12073941 : 12073940;
+  text(g, 'APPROVED ROUTES · FROM ENS', x0, LAP.y + 96, { size: 20, color: COB3, weight: 600, align: 'left' });
+  text(g, `synced at block ${revoked && t < 1.0 ? 12073940 : block}`, cR, LAP.y + 96, { size: 20, color: MUTED, font: 'Geist Mono', align: 'right' });
+  ROUTES.forEach(([who, what, mode, left], i) => {
+    const y = LAP.y + 140 + i * 36, a = revoked ? 1 : ramp(t, 0.9 + i * 0.12, 1.2 + i * 0.12);
+    const gone = revoked && who === 'claude-1' ? ramp(t, 0.9, 1.4) : 0;
+    const col = gone > 0.5 ? BADTXT : INK;
+    text(g, who, x0, y, { a, size: 20, color: col, font: 'Geist Mono', align: 'left' });
+    text(g, what, x0 + 150, y, { a, size: 20, color: gone > 0.5 ? BADTXT : '#C9CDD2', font: 'Geist Mono', align: 'left' });
+    text(g, mode, x0 + 420, y, { a, size: 20, color: gone > 0.5 ? BADTXT : MUTED, font: 'Geist Mono', align: 'left' });
+    text(g, gone > 0.5 ? 'revoked' : left, cR, y, { a, size: 20, color: gone > 0.5 ? BADTXT : MUTED, font: 'Geist Mono', align: 'right' });
+    if (gone > 0) seg(g, [x0, y - 7], [lerp(x0, cR, gone), y - 7], 1, BADTXT, 2, a);
+  });
+  g.save(); g.strokeStyle = '#22262C'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, LAP.y + 238); g.lineTo(cR, LAP.y + 238); g.stroke(); g.restore();
+  text(g, 'LIVE', x0, LAP.y + 278, { size: 20, color: COB3, weight: 600, align: 'left' });
+  // live list: LIVE1 rows (and in the revoke scene LIVE2 rows push in from below)
+  const rows = [];
+  if (!revoked) LIVE1.forEach((r, i) => rows.push({ r, at: 1.4 + i * 0.6 }));
+  else { LIVE1.forEach(r => rows.push({ r, at: -1 })); LIVE2.forEach((r, i) => rows.push({ r, at: 1.6 + i * 0.6 })); }
+  const visible = rows.filter(o => t >= o.at + 0.45 || o.at < 0);
+  const shownRows = visible.slice(-5);
+  shownRows.forEach((o, i) => {
+    const y = LAP.y + 318 + i * 38, a = o.at < 0 ? 1 : ramp(t, o.at + 0.45, o.at + 0.7);
+    const [who, what, res] = o.r, bad = res !== 'ok';
+    g.save(); g.globalAlpha = a; g.fillStyle = bad ? BAD : OK; g.beginPath(); g.arc(x0 + 6, y - 7, 6, 0, 6.2832); g.fill(); g.restore();
+    text(g, who, x0 + 24, y, { a, size: 20, color: INK, font: 'Geist Mono', align: 'left' });
+    text(g, what, x0 + 150, y, { a, size: 20, color: '#C9CDD2', font: 'Geist Mono', align: 'left' });
+    text(g, res, cR, y, { a, size: 20, color: bad ? BADTXT : COB3, font: 'Geist Mono', weight: 600, align: 'right' });
+  });
+  // agents + packets arriving at the laptop
+  for (const [name, at] of Object.entries(LAP_AGENTS)) {
+    icon(g, 'agent', at[0], at[1], 56, 'sel', 1);
+    text(g, name, at[0], at[1] + 70, { size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+    seg(g, [at[0] - 44, at[1]], [LAP.x + LAP.w + 24, at[1]], 1, COB3, 2, 0.3);
+  }
+  for (const o of rows) {
+    if (o.at < 0) continue;
+    const q = ramp(t, o.at, o.at + 0.45); if (q <= 0 || q >= 1) continue;
+    const [who, , res] = o.r; if (res === 'in ~150 ms') continue;
+    const at = LAP_AGENTS[who], bad = res !== 'ok';
+    const x = lerp(at[0] - 44, LAP.x + LAP.w + 24, q);
+    g.save(); g.fillStyle = bad ? BADTXT : COB3; g.shadowColor = g.fillStyle; g.shadowBlur = 14; g.beginPath(); g.arc(x, at[1], 7, 0, 6.2832); g.fill(); g.restore();
+  }
+  text(g, revoked ? 'The grant is gone from ENS, so meshy drops the route and kills the session.' : 'Seatbelt on macOS · every file, command and port checked against these routes', LAP.x + LAP.w / 2, 990, { size: 20, color: MUTED });
+}
+// --- 18 / 19: every device, then the admin revokes ---
+const DEV_KIND = { 'alice': 'laptop', 'mbp-m3': 'laptop', 'office-streams': 'server', 'gpu-4090': 'server', 'cpu-vm': 'server', 'rw-rtx-4070-12gb': 'server' };
+const DEV_LABEL = { 'alice': 'alice-mbp', 'mbp-m3': 'mbp-m3', 'office-streams': 'office-streams', 'gpu-4090': 'gpu-4090', 'cpu-vm': 'cpu-vm', 'rw-rtx-4070-12gb': 'rtx-4070' };
+const DEV_ROUTES = { 'alice': 0, 'mbp-m3': 3, 'office-streams': 1, 'gpu-4090': 2, 'cpu-vm': 1, 'rw-rtx-4070-12gb': 1 };
+const FLOWS = [
+  ['claude-1', [250, 930], 'mbp-m3', [0.9, 2.1, 3.0], [false, true, false]],
+  ['lens-bot', [230, 690], 'office-streams', [1.2, 2.4], [false, false]],
+  ['analyst', [1700, 700], 'cpu-vm', [1.0, 2.7], [false, true]],
+  ['ci-bot', [1500, 985], 'gpu-4090', [1.5, 2.9], [false, false]],
+];
+const CHIPS = [['claude-1.mbp-m3', 470], ['lens-bot.office-streams', 800], ['analyst.cpu-vm', 1130], ['ci-bot.gpu-4090', 1450]];
+function sceneDevices(g, t, revoke, tr = 0) {
+  const ids = Object.keys(MESH);
+  for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) seg(g, MESH[ids[a]], MESH[ids[b]], 1, TUN, 2, 0.3);
+  // agents and their grant lines
+  for (const [name, at, to, times, bads] of FLOWS) {
+    const cut = revoke && name === 'claude-1';
+    const lineA = cut ? 1 - ramp(tr, 2.9, 3.5) : 1;
+    const B = MESH[to], dx = B[0] - at[0], dy = B[1] - at[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    const s0 = [at[0] + ux * 46, at[1] + uy * 46], s1 = [B[0] - ux * 52, B[1] - uy * 52];
+    seg(g, s0, s1, 1, cut && tr > 2.6 ? BADTXT : COB3, 3, 0.55 * lineA, cut && tr > 2.6 ? [4, 8] : null);
+    icon(g, 'agent', at[0], at[1], 56, 'sel', 1);
+    text(g, name, at[0], at[1] + 70, { size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+    if (!revoke) times.forEach((t0, i) => {
+      const q = ramp(t, t0, t0 + 0.6); if (q <= 0 || q >= 1) return;
+      const stop = bads[i] ? 0.9 : 1, col = bads[i] ? BADTXT : COB3;
+      g.save(); g.fillStyle = col; g.shadowColor = col; g.shadowBlur = 14; g.beginPath(); g.arc(lerp(s0[0], s1[0], q * stop), lerp(s0[1], s1[1], q * stop), 7, 0, 6.2832); g.fill(); g.restore();
+    });
+  }
+  // devices, each with meshy's ring
+  for (const id of ids) {
+    const [x, y] = MESH[id];
+    const flash = !revoke ? 0 : 0;
+    g.save(); g.strokeStyle = COB3; g.globalAlpha = 0.55; g.lineWidth = 2; g.setLineDash([4, 6]); g.beginPath(); g.arc(x, y, 52, 0, 6.2832); g.stroke(); g.restore();
+    icon(g, DEV_KIND[id], x, y, 56, 'sel', 1);
+    text(g, DEV_LABEL[id], x, y + 82, { size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+    let n = DEV_ROUTES[id]; if (revoke && id === 'mbp-m3' && tr > 3.0) n = 1;
+    text(g, `meshy · ${n} route${n === 1 ? '' : 's'}`, x, y + 108, { size: 20, color: MUTED, halo: true });
+  }
+  if (!revoke) return;
+  // ENS band with the live grants; alice unregisters claude-1's
+  const ba = ramp(tr, 0.1, 0.7);
+  const half = 760 * ba;
+  g.save(); g.globalAlpha = ba; g.fillStyle = 'rgba(43,63,224,0.12)'; g.strokeStyle = COB3; g.lineWidth = 2; rr(g, 960 - half, 300, half * 2, 78, 20); g.fill(); g.stroke(); g.restore();
+  text(g, 'ENSv2', 230, 348, { a: ba, size: 24, color: INK, weight: 600, align: 'left' });
+  CHIPS.forEach(([name, x], i) => {
+    let a = ramp(tr, 0.4 + i * 0.1, 0.8 + i * 0.1);
+    const target = i === 0;
+    const hot = target ? ramp(tr, 1.8, 2.0) : 0, gone = target ? ramp(tr, 2.7, 3.3) : 0;
+    a *= 1 - gone;
+    if (a <= 0) return;
+    g.save(); g.globalAlpha = a; g.fillStyle = hot > 0.5 ? 'rgba(200,115,43,0.2)' : '#171B26'; g.strokeStyle = hot > 0.5 ? BADTXT : '#3A4AB8'; g.lineWidth = 1.5; rr(g, x - 150, 320, 300, 38, 10); g.fill(); g.stroke(); g.restore();
+    text(g, name, x, 346, { a, size: 20, color: hot > 0.5 ? BADTXT : INK, font: 'Geist Mono' });
+    if (target && tr > 2.0) seg(g, [x - 132, 339], [lerp(x - 132, x + 132, ramp(tr, 2.0, 2.4)), 339], 1, BADTXT, 2, a);
+  });
+  // alice -> unregister()
+  const al = MESH['alice'];
+  seg(g, [al[0] - 40, al[1] - 34], [CHIPS[0][1] + 40, 362], ramp(tr, 1.1, 1.7), BADTXT, 3, 1 - ramp(tr, 3.0, 3.5), [6, 8]);
+  text(g, 'alice · unregister()', 720, 410, { a: ramp(tr, 1.4, 1.8) * (1 - ramp(tr, 3.1, 3.5)), size: 20, color: BADTXT, font: 'Geist Mono', weight: 600, halo: true });
+  text(g, 'block 12073941', 960 + 760 - 24, 404, { a: ramp(tr, 2.2, 2.6), size: 20, color: BADTXT, font: 'Geist Mono', halo: true, align: 'right' });
+  // the new block reaches mbp-m3
+  const pq = ramp(tr, 2.5, 3.1);
+  if (pq > 0 && pq < 1) { const m = MESH['mbp-m3']; g.save(); g.strokeStyle = BADTXT; g.lineWidth = 3; g.globalAlpha = 1 - pq * 0.4; g.beginPath(); g.arc(lerp(CHIPS[0][1], m[0], pq), lerp(378, m[1], pq), 10 + pq * 12, 0, 6.2832); g.stroke(); g.restore(); }
+  const ring = ramp(tr, 3.0, 3.6);
+  if (ring > 0 && ring < 1) { const m = MESH['mbp-m3']; g.save(); g.strokeStyle = BADTXT; g.globalAlpha = 1 - ring; g.lineWidth = 3; g.beginPath(); g.arc(m[0], m[1], 52 + ring * 40, 0, 6.2832); g.stroke(); g.restore(); }
 }
 
 window.SCENE = { draw, setDots, CLIPS, W, H };
