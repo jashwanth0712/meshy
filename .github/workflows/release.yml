@@ -4,10 +4,12 @@
 #   Actions → release → Run workflow (version)     -> same, from the UI
 #
 # 1. cli      (ubuntu)  meshy, meshyd, meshy-mesh, meshy-admin for macOS + Linux, meshy-sync for Linux
-# 2. publish  (ubuntu)  creates the GitHub release with the CLI + checksums.txt, marks it Latest
-#                       -> `curl -fsSL https://get.meshy.live | sh` serves it from this point
+# 2. publish  (ubuntu)  creates the GitHub release with the CLI + checksums.txt (not Latest yet)
 # 3. mac      (macOS)   builds Meshy.app (+ bundled CLIs), signs + notarizes when the secrets
-#                       exist (else ad-hoc), attaches Meshy.dmg / Meshy-mac.zip, updates checksums
+#                       exist (else ad-hoc), attaches Meshy.dmg / Meshy-mac.zip, updates checksums,
+#                       and only then marks the release Latest: releases/latest/download/Meshy.dmg
+#                       (meshy.live/download) and get.meshy.live never point at a release
+#                       that has no DMG yet
 #
 # Optional secrets for a notarized app (no Gatekeeper warning):
 #   MACOS_CERT_P12_BASE64   Developer ID Application cert + key, exported as .p12, base64
@@ -60,7 +62,7 @@ jobs:
         with:
           name: cli
           path: out
-      - name: Create or update the release (CLI first, Latest)
+      - name: Create or update the release (CLI first; Latest once the DMG is attached)
         run: |
           set -euo pipefail
           R=${{ github.repository }}
@@ -69,7 +71,7 @@ jobs:
               --notes "Install or update: \`curl -fsSL https://get.meshy.live | sh\` · Mac app: \`Meshy.dmg\` (attached when the macOS build finishes). Built by GitHub Actions; every archive is listed in checksums.txt."
           fi
           gh release upload "$VERSION" out/* --repo "$R" --clobber
-          gh release edit "$VERSION" --repo "$R" --draft=false --latest
+          gh release edit "$VERSION" --repo "$R" --draft=false --latest=false
 
   mac:
     needs: publish
@@ -123,3 +125,4 @@ jobs:
           shasum -a 256 Meshy.dmg Meshy-mac.zip >> c.txt
           mv c.txt checksums.txt
           gh release upload "$VERSION" Meshy.dmg Meshy-mac.zip checksums.txt --repo "$R" --clobber
+          gh release edit "$VERSION" --repo "$R" --latest   # now Meshy.dmg exists: safe to be the download
