@@ -1,0 +1,63 @@
+<section id="architecture-planes" data-transition="fade" style="background:#121417;color:#F1F1EE;font-family:'Geist', Arial, sans-serif;padding:128px">
+<div style="position:absolute;left:128px;top:296px;width:1664px;height:108px;background:#171A1F;border:1px solid #8C9BFF;border-radius:16px"></div>
+<div style="position:absolute;left:128px;top:452px;width:320px;height:228px;background:#171A1F;border:1px solid #2E333B;border-radius:16px"></div>
+<div style="position:absolute;left:528px;top:452px;width:400px;height:228px;background:#171A1F;border:1px solid #2E333B;border-radius:16px"></div>
+<div style="position:absolute;left:1008px;top:452px;width:784px;height:228px;background:#171A1F;border:1px solid #2E333B;border-radius:16px"></div>
+<div style="position:absolute;left:1376px;top:468px;width:392px;height:196px;background:#14161A;border:2px dashed #8C9BFF;border-radius:12px"></div>
+<div style="position:absolute;left:1400px;top:568px;width:344px;height:76px;background:#1F2433;border-radius:8px"></div>
+<div style="position:absolute;left:128px;top:728px;width:800px;height:224px;background:#171A1F;border:1px solid #2E333B;border-radius:16px"></div>
+<div style="position:absolute;left:1008px;top:728px;width:784px;height:224px;background:#171A1F;border:1px solid #2E333B;border-radius:16px"></div>
+<x-connector x1="288" y1="404" x2="288" y2="452" style="color:#8C9BFF;border-width:2px"></x-connector>
+<x-connector x1="728" y1="404" x2="728" y2="452" style="color:#8C9BFF;border-width:2px"></x-connector>
+<x-connector x1="1192" y1="404" x2="1192" y2="452" style="color:#8C9BFF;border-width:2px"></x-connector>
+<x-connector x1="448" y1="566" x2="528" y2="566" style="color:#8C9BFF;border-width:3px"></x-connector>
+<x-connector x1="928" y1="566" x2="1008" y2="566" style="color:#8C9BFF;border-width:3px"></x-connector>
+<x-connector x1="728" y1="680" x2="728" y2="728" style="color:#5A606A;border-width:2px"></x-connector>
+<x-connector x1="1192" y1="680" x2="1192" y2="728" style="color:#5A606A;border-width:2px"></x-connector>
+<p style="position:absolute;left:128px;top:112px;width:900px;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8C9BFF">Technical architecture</p>
+<h2 style="position:absolute;left:128px;top:148px;width:1664px;font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px;color:#F1F1EE">Five planes, one source of truth</h2>
+<p style="position:absolute;left:128px;top:236px;width:1664px;font-size:28px;line-height:1.3;color:#9AA1AB">ENS decides · the mesh carries · meshyd enforces · Arkiv remembers · Ethereum settles</p>
+<p style="position:absolute;left:160px;top:308px;width:540px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#8C9BFF">Control · ENSv2 on Sepolia</p>
+<p style="position:absolute;left:160px;top:348px;width:540px;font-family:'Geist Mono', 'Courier New', monospace;font-size:32px;line-height:1.2;white-space:nowrap;color:#F1F1EE"><span style="color:#8C9BFF">claude-1</span>.db1.prod.acme.eth</p>
+<p style="position:absolute;left:720px;top:310px;width:344px;font-size:24px;line-height:30px;padding:4px 16px;border:1px solid #3A3F47;border-radius:19px;color:#C9CDD2">expiry = grant lifetime</p>
+<p style="position:absolute;left:1076px;top:310px;width:344px;font-size:24px;line-height:30px;padding:4px 16px;border:1px solid #3A3F47;border-radius:19px;color:#C9CDD2">unregister() = revoke</p>
+<p style="position:absolute;left:1432px;top:310px;width:344px;font-size:24px;line-height:30px;padding:4px 16px;border:1px solid #3A3F47;border-radius:19px;color:#C9CDD2">roleBitmap 0: can’t move</p>
+<p style="position:absolute;left:720px;top:356px;width:344px;font-size:24px;line-height:30px;padding:4px 16px;border:1px solid #3A3F47;border-radius:19px;color:#C9CDD2">EAC scoped admins</p>
+<p style="position:absolute;left:1076px;top:356px;width:344px;font-size:24px;line-height:30px;padding:4px 16px;border:1px solid #3A3F47;border-radius:19px;color:#C9CDD2">own resolver per agent</p>
+<p style="position:absolute;left:1432px;top:356px;width:344px;font-size:24px;line-height:30px;padding:4px 16px;border:1px solid #3A3F47;border-radius:19px;color:#C9CDD2">meshy.policy, sealed</p>
+<p style="position:absolute;left:304px;top:411px;width:220px;font-size:24px;white-space:nowrap;color:#9AA1AB">pinned host key</p>
+<p style="position:absolute;left:744px;top:411px;width:280px;font-size:24px;white-space:nowrap;color:#9AA1AB">ACLs compiled from ENS</p>
+<p style="position:absolute;left:1208px;top:411px;width:320px;font-size:24px;white-space:nowrap;color:#9AA1AB">re-checked every block</p>
+<p style="position:absolute;left:152px;top:468px;width:272px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9AA1AB">Agent</p>
+<p style="position:absolute;left:152px;top:506px;width:272px;font-family:'Geist Mono', 'Courier New', monospace;font-size:28px;line-height:1.2;color:#F1F1EE">claude-1</p>
+<p style="position:absolute;left:152px;top:560px;width:272px;font-size:24px;line-height:1.4;color:#9AA1AB">meshy CLI · MCP plugin</p>
+<p style="position:absolute;left:152px;top:596px;width:272px;font-size:24px;line-height:1.4;color:#9AA1AB">World ID-backed</p>
+<p style="position:absolute;left:552px;top:468px;width:352px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9AA1AB">Transport</p>
+<p style="position:absolute;left:552px;top:506px;width:352px;font-size:28px;font-weight:600;line-height:1.2;color:#F1F1EE">WireGuard mesh</p>
+<p style="position:absolute;left:552px;top:560px;width:352px;font-size:24px;line-height:1.4;color:#9AA1AB">NetBird embed, userspace</p>
+<p style="position:absolute;left:552px;top:596px;width:352px;font-size:24px;line-height:1.4;color:#9AA1AB">run by staked providers</p>
+<p style="position:absolute;left:1032px;top:468px;width:320px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9AA1AB">Enforce · meshyd</p>
+<p style="position:absolute;left:1032px;top:512px;width:320px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;white-space:nowrap;color:#F1F1EE"><span style="color:#6E7580">1</span> Authenticate</p>
+<p style="position:absolute;left:1032px;top:552px;width:320px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;white-space:nowrap;color:#F1F1EE"><span style="color:#6E7580">2</span> AuthorizeSession</p>
+<p style="position:absolute;left:1032px;top:592px;width:320px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;white-space:nowrap;color:#F1F1EE"><span style="color:#6E7580">3</span> AuthorizeService</p>
+<p style="position:absolute;left:1032px;top:632px;width:320px;font-size:24px;white-space:nowrap;color:#F2A65A">kills on revoke, ~150 ms</p>
+<p style="position:absolute;left:1400px;top:480px;width:344px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#8C9BFF">Sandbox</p>
+<p style="position:absolute;left:1400px;top:516px;width:344px;font-size:24px;white-space:nowrap;color:#9AA1AB">bwrap + GateFS · Seatbelt</p>
+<p style="position:absolute;left:1400px;top:589px;width:344px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;text-align:center;white-space:nowrap;color:#F1F1EE">/srv/reports : ro</p>
+<p style="position:absolute;left:744px;top:687px;width:260px;font-size:24px;white-space:nowrap;color:#9AA1AB">stake · paid per seat</p>
+<p style="position:absolute;left:1208px;top:687px;width:300px;font-size:24px;white-space:nowrap;color:#9AA1AB">sealed audit, batched</p>
+<p style="position:absolute;left:152px;top:744px;width:752px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9AA1AB">Settle · Sepolia contracts</p>
+<p style="position:absolute;left:152px;top:786px;width:360px;font-family:'Geist Mono', 'Courier New', monospace;font-size:28px;line-height:1.2;color:#F1F1EE">ProviderRegistry</p>
+<p style="position:absolute;left:152px;top:830px;width:360px;font-size:24px;line-height:1.4;color:#9AA1AB">Stake ≥ 0.01 ETH. Slashed by an on-chain ENS fraud proof.</p>
+<p style="position:absolute;left:552px;top:786px;width:352px;font-family:'Geist Mono', 'Courier New', monospace;font-size:28px;line-height:1.2;color:#F1F1EE">MeshySubscription</p>
+<p style="position:absolute;left:552px;top:830px;width:352px;font-size:24px;line-height:1.4;color:#9AA1AB">USDC per seat, escrowed: 95% provider, 5% treasury.</p>
+<p style="position:absolute;left:1032px;top:744px;width:736px;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9AA1AB">Remember · Arkiv</p>
+<p style="position:absolute;left:1032px;top:786px;width:310px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;white-space:nowrap;color:#F1F1EE">meshy.session</p>
+<p style="position:absolute;left:1360px;top:786px;width:408px;font-size:24px;white-space:nowrap;color:#9AA1AB">grant + 1 d · revoke 90 d</p>
+<p style="position:absolute;left:1032px;top:822px;width:310px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;white-space:nowrap;color:#F2A65A">meshy.blocked</p>
+<p style="position:absolute;left:1360px;top:822px;width:408px;font-size:24px;white-space:nowrap;color:#9AA1AB">30 days</p>
+<p style="position:absolute;left:1032px;top:858px;width:310px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;white-space:nowrap;color:#F1F1EE">meshy.audit-chunk</p>
+<p style="position:absolute;left:1360px;top:858px;width:408px;font-size:24px;white-space:nowrap;color:#9AA1AB">30 days, gzip JSONL</p>
+<p style="position:absolute;left:1032px;top:904px;width:736px;font-size:24px;white-space:nowrap;color:#9AA1AB">Sealed · read-only · writer must match the device’s ENS addr</p>
+<aside>Five planes around one source of truth. Control (top, outlined in blue because everything reads it): ENSv2 on Sepolia. Every org, network, device, service, agent and grant is a name in its own UserRegistry. Native expiry is the grant lifetime; unregister() is revoke; grants are registered with roleBitmap 0 so the agent can't renew or move them; Enhanced Access Control gives delegated admins root roles on one network and a setter role for only meshy.policy; every agent gets its own PermissionedResolver where it may set only meshy.ssh. The arrows show ENS state flowing down: the agent CLI pins the device's SSH host key from meshy.ssh-host (no trust on first use), the provider's meshy-sync compiles NetBird groups, policies and DNS from ENS, and meshyd re-checks every live grant on every block with findExactOwner plus getState. Data path (middle): the agent (meshy CLI or the Claude Code MCP plugin, admitted only with a provider-signed World ID attestation) reaches the device over a WireGuard mesh built on NetBird's client/embed in userspace, run by staked providers. meshyd authorizes in three steps: Authenticate (key, addr, World ID), AuthorizeSession (live device grant plus a policy that decrypts and matches the token id) and AuthorizeService (a live service grant; meshyd dials only the ENS-declared target). The session runs inside the dashed sandbox: bubblewrap with GateFS, a policy-checking FUSE loopback, on Linux, and Seatbelt on macOS, down to the granted folder. If a grant dies, meshyd kills the session about 150 ms after it sees the block, and it fails closed if the chain view goes stale for 45 s. Bottom left: settlement on Sepolia. ProviderRegistry holds provider stake and lets anyone slash with an EIP-712 attestation checked against ENSv2 on-chain (ancestor dead, expired at issuance, or re-registered); 50% goes to the reporter. MeshySubscription charges USDC per seat into escrow, 95% to the provider and 5% to the treasury, with prorated refunds. Bottom right: Arkiv. meshyd batches three entity types, each with its own lifetime. Payloads are sealed to the org key, entities are read-only, and readers only trust entities whose $owner matches the device's addr record in ENS. Honest status: the NetBird mesh is built but has not yet run on a live provider (agents reach meshyd over TCP today), and the World ID attestation on the demo agent is a dev signature.</aside>
+</section>

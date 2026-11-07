@@ -1,0 +1,44 @@
+<section id="crypto" data-transition="fade" style="background:#121417;color:#F1F1EE;font-family:'Geist', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:112px;width:900px;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#8C9BFF">Why crypto</p>
+<h2 style="position:absolute;left:128px;top:148px;width:1664px;font-size:64px;font-weight:600;line-height:1.1;letter-spacing:-1px;color:#F1F1EE">Six primitives, no middleman</h2>
+<p style="position:absolute;left:128px;top:236px;width:1664px;font-size:28px;line-height:1.3;color:#9AA1AB">Take any one away and a trusted operator has to come back.</p>
+<div style="position:absolute;left:128px;top:316px;width:1664px;display:grid;grid-template-columns:539px 539px 539px;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#171A1F;border:1px solid #2A2F37;border-radius:16px;padding:28px">
+<x-icon name="Trust" style="color:#8C9BFF;width:48px;height:48px"></x-icon>
+<p style="font-size:32px;font-weight:600;line-height:38px;color:#F1F1EE">Stake &amp; slash</p>
+<p style="font-size:24px;line-height:1.4;color:#9AA1AB">Strangers can run your tunnels. If they cheat, anyone can take their ETH.</p>
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#6E7580">ProviderRegistry.slash()</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#171A1F;border:1px solid #2A2F37;border-radius:16px;padding:28px">
+<x-icon name="Chart" style="color:#8C9BFF;width:48px;height:48px"></x-icon>
+<p style="font-size:32px;font-weight:600;line-height:38px;color:#F1F1EE">Seats in USDC</p>
+<p style="font-size:24px;line-height:1.4;color:#9AA1AB">Orgs pay providers per seat from escrow, with prorated refunds.</p>
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#6E7580">MeshySubscription</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#171A1F;border:1px solid #2A2F37;border-radius:16px;padding:28px">
+<x-icon name="Lock" style="color:#8C9BFF;width:48px;height:48px"></x-icon>
+<p style="font-size:32px;font-weight:600;line-height:38px;color:#F1F1EE">Sealed policy</p>
+<p style="font-size:24px;line-height:1.4;color:#9AA1AB">Grants are public on-chain. The folders inside them are not.</p>
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#6E7580">X25519 · XChaCha20-Poly1305</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#171A1F;border:1px solid #2A2F37;border-radius:16px;padding:28px">
+<x-icon name="Database" style="color:#8C9BFF;width:48px;height:48px"></x-icon>
+<p style="font-size:32px;font-weight:600;line-height:38px;color:#F1F1EE">Append-only audit</p>
+<p style="font-size:24px;line-height:1.4;color:#9AA1AB">Not even the org’s own admins can delete what an agent did.</p>
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#6E7580">Arkiv read-only entities</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#171A1F;border:1px solid #2A2F37;border-radius:16px;padding:28px">
+<x-icon name="Clock" style="color:#8C9BFF;width:48px;height:48px"></x-icon>
+<p style="font-size:32px;font-weight:600;line-height:38px;color:#F1F1EE">A shared clock</p>
+<p style="font-size:24px;line-height:1.4;color:#9AA1AB">Every daemon agrees when a grant ends: at a block, not a server’s say-so.</p>
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#6E7580">findExactOwner, every block</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#171A1F;border:1px solid #2A2F37;border-radius:16px;padding:28px">
+<x-icon name="Verified" style="color:#8C9BFF;width:48px;height:48px"></x-icon>
+<p style="font-size:32px;font-weight:600;line-height:38px;color:#F1F1EE">Proof of human</p>
+<p style="font-size:24px;line-height:1.4;color:#9AA1AB">A person stands behind every agent, with no personal data on-chain.</p>
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;line-height:34px;color:#6E7580">World ID → EIP-191 attestation</p>
+</div>
+</div>
+<aside>Why this can't be built without crypto. Stake and slash: providers deposit at least 0.01 ETH in ProviderRegistry and sign EIP-712 admission attestations; if one admits a peer to a name that was already dead, anyone can submit the attestation, the contract checks ENSv2 on-chain, and the reporter gets half the stake. That's what lets strangers run an org's tunnels. Seats in USDC: MeshySubscription pulls USDC per seat, sends 5% to the treasury, escrows the rest for the provider, and refunds unused months on cancel, with no invoices or payment accounts between org and provider. Sealed policy: the chain is public, so meshy.policy is a multi-recipient envelope (X25519, HKDF-SHA256, XChaCha20-Poly1305) readable only by the device and the org, and the dashboard seals it in the browser byte-for-byte compatible with the Go code. Append-only audit: Arkiv entities are created read-only, written by the device's own key, and trusted only when $owner matches the device's ENS addr. A shared clock: expiry and revocation are decided by block state, so every daemon agrees, and meshyd fails closed if its view of the chain goes stale. Proof of human: the provider validates a World ID Agent Pass ID token server-side and signs an attestation bound to the agent's address and an opaque per-org hash of the human; no World ID token or personal data goes on-chain. Honest status: the demo agent's attestation is currently a dev signature until World sandbox credentials are set up, and provider admission attestations are not yet produced by meshy-sync, so a real slash hasn't been demoed.</aside>
+</section>

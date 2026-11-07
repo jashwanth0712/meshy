@@ -1,0 +1,243 @@
+<title>Meshy Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&family=Geist+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one 16:9 stage letterboxed to the window; slides and live scenes share it. Single deliberate dark look. */
+:root {
+  --ink: #0B0C0F;
+  --panel: #14161B;
+  --line: #262B36;
+  --fg: #F1F1EE;
+  --muted: #9AA1AB;
+  --dim: #6E7580;
+  --accent: #8C9BFF;
+  --cobalt: #2B3FE0;
+  --display: 'Geist', 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--ink); color: var(--fg); font-family: var(--display); overflow: hidden;
+  padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+.viewport { position: fixed; inset: 0; }
+.stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: var(--ink); cursor: pointer; }
+.stage * { box-sizing: border-box; }
+.stage canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; transition: opacity 380ms ease; }
+.stage section { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; opacity: 0; transition: opacity 380ms ease; visibility: hidden; }
+.stage section.on { opacity: 1; visibility: visible; }
+.stage section p, .stage section h1, .stage section h2, .stage section h3 { margin: 0; }
+.stage section hr { border: 0; margin: 0; }
+.stage section aside { display: none; }
+.stage section img { max-width: none; }
+.copy { position: absolute; left: 128px; top: 104px; width: 1500px; pointer-events: none; transition: opacity 340ms ease; }
+.copy .eyebrow { font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+.copy h1 { font-size: 64px; font-weight: 600; line-height: 1.1; letter-spacing: -1px; margin: 0 0 18px; }
+.copy p { font-size: 28px; line-height: 1.3; color: var(--muted); margin: 0; }
+
+.hud { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; justify-content: center;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  transition: opacity 300ms ease; }
+.hud.idle { opacity: 0; }
+.hud button { font: 600 14px var(--display); color: var(--fg); background: rgba(20,22,27,0.85); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+.hud button:hover { border-color: #3A4AB8; }
+.hud button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hud .count { font: 400 13px var(--mono); color: var(--muted); min-width: 64px; text-align: center; }
+.progress { position: fixed; left: 0; bottom: 0; height: 3px; background: var(--cobalt); transition: width 300ms ease; }
+.notes { position: fixed; left: 50%; transform: translateX(-50%); bottom: 64px; width: min(900px, calc(100% - 32px)); max-height: 40vh; overflow: auto;
+  background: rgba(20,22,27,0.94); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; font-size: 15px; line-height: 1.5; color: var(--fg); }
+.notes b { color: var(--accent); font-weight: 600; display: block; margin-bottom: 6px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
+.help { font-size: 12px; color: var(--dim); }
+@media (max-width: 640px) { .help { display: none; } }
+</style>
+
+<div class="viewport" id="viewport">
+  <div class="stage" id="stage" role="region" aria-label="Meshy presentation" aria-roledescription="slide deck" tabindex="0">
+    <canvas id="cv" width="1920" height="1080"></canvas>
+    <div class="copy" id="copy"><p class="eyebrow" id="eyebrow"></p><h1 id="title"></h1><p id="sub"></p></div>
+    <div id="slides">
+/*__SLIDES__*/
+    </div>
+  </div>
+</div>
+<div class="progress" id="progress"></div>
+<nav class="hud" id="hud" aria-label="Presentation controls">
+  <button id="prev" type="button">Back</button>
+  <span class="count" id="count">1 / 1</span>
+  <button id="next" type="button">Next</button>
+  <button id="notesBtn" type="button" aria-pressed="false">Notes</button>
+  <button id="fsBtn" type="button">Full screen</button>
+  <span class="help">← → to move · N notes · F full screen</span>
+</nav>
+<div class="notes" id="notes" hidden></div>
+<div class="sr" aria-live="polite" id="live" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></div>
+
+<script>
+/*__SCENE__*/
+</script>
+<script>
+SCENE.setDots(/*__DOTS__*/);
+const SCENE_STEPS = /*__STEPS__*/;
+const ORDER = /*__ORDER__*/;
+(function () {
+  // ---------- deck shims: <x-icon> and <x-connector> ----------
+  const ICONS = {
+    Trust: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    Chart: '<path d="M3 3v18h18"/><path d="M8 16v-4"/><path d="M13 16V9"/><path d="M18 16V6"/>',
+    Lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    Database: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    Clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    Verified: '<path d="M12 2l2.4 2.1 3.1-.4.9 3 2.8 1.5-1 3 1 3-2.8 1.5-.9 3-3.1-.4L12 22l-2.4-2.1-3.1.4-.9-3L2.8 15.8l1-3-1-3 2.8-1.5.9-3 3.1.4z"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/>',
+    Warning: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  };
+  document.querySelectorAll('x-icon').forEach(el => {
+    const s = el.getAttribute('style') || '';
+    const span = document.createElement('span');
+    span.setAttribute('style', s + ';display:inline-block');
+    span.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[el.getAttribute('name')] || ''}</svg>`;
+    el.replaceWith(span);
+  });
+  document.querySelectorAll('x-connector').forEach(el => {
+    const st = el.getAttribute('style') || '';
+    const color = (st.match(/color:\s*([^;]+)/) || [])[1] || '#8C9BFF';
+    const w = parseFloat((st.match(/border-width:\s*([\d.]+)/) || [])[1] || '2');
+    const [x1, y1, x2, y2] = ['x1', 'y1', 'x2', 'y2'].map(k => +el.getAttribute(k));
+    const head = el.getAttribute('head') || 'end';
+    const id = 'm' + Math.random().toString(36).slice(2, 8);
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width', 1920); svg.setAttribute('height', 1080); svg.setAttribute('viewBox', '0 0 1920 1080');
+    svg.setAttribute('style', 'position:absolute;left:0;top:0;pointer-events:none');
+    svg.innerHTML = `<defs><marker id="${id}" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="${color}"/></marker></defs>` +
+      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}" stroke-linecap="round" ${head === 'none' ? '' : `marker-end="url(#${id})"`}/>`;
+    el.replaceWith(svg);
+  });
+
+  // ---------- slide list ----------
+  const sections = Object.fromEntries([...document.querySelectorAll('#slides > section')].map(s => [s.id, s]));
+  const SL = ORDER.map(o => typeof o === 'number' ? { type: 'scene', k: o, ...SCENE_STEPS[o] } : { type: 'html', id: o, el: sections[o] });
+  const cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const stage = document.getElementById('stage'), copy = document.getElementById('copy');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let idx = 0, anim = null, frame = { clip: 0, t: SCENE.CLIPS[0].len }, shownCopy = null;
+
+  function fit() {
+    const w = innerWidth, h = innerHeight;
+    const s = Math.min(w / 1920, h / 1080);
+    stage.style.transform = `translate(${-960 * s}px, ${-540 * s}px) scale(${s})`;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const px = Math.max(1, Math.round(1920 * s * dpr));
+    if (cv.width !== px) { cv.width = px; cv.height = Math.round(px * 9 / 16); }
+    render();
+  }
+  function render() { const k = cv.width / 1920; g.setTransform(k, 0, 0, k, 0, 0); SCENE.draw(g, frame.clip, frame.t); }
+
+  function setCopy(step, instant) {
+    const key = step ? step.k : -1;
+    if (shownCopy === key) return;
+    shownCopy = key;
+    const apply = () => {
+      if (step) {
+        document.getElementById('eyebrow').textContent = step.eyebrow;
+        document.getElementById('title').textContent = step.title;
+        document.getElementById('sub').textContent = step.sub;
+      }
+      copy.style.opacity = step ? 1 : 0;
+    };
+    if (instant || !step) { apply(); return; }
+    copy.style.opacity = 0; setTimeout(() => { if (shownCopy === key) apply(); }, 340);
+  }
+  function showLayer(item) {
+    const isScene = item.type === 'scene';
+    cv.style.opacity = isScene ? 1 : 0;
+    for (const s of Object.values(sections)) s.classList.toggle('on', !isScene && s === item.el);
+    setCopy(isScene ? item : null);
+  }
+  function play(clip, dir, fromT, done) {
+    if (anim) cancelAnimationFrame(anim.raf);
+    const len = SCENE.CLIPS[clip].len;
+    if (reduce) { frame = { clip, t: dir > 0 ? len : 0 }; render(); anim = null; done && done(); return; }
+    let t = fromT ?? (dir > 0 ? 0 : len), last = performance.now();
+    const tick = now => {
+      t += (now - last) / 1000 * (dir > 0 ? 1 : -1.15); last = now;
+      t = Math.max(0, Math.min(len, t));
+      frame = { clip, t }; render();
+      if ((dir > 0 && t < len) || (dir < 0 && t > 0)) anim.raf = requestAnimationFrame(tick);
+      else { anim = null; done && done(); }
+    };
+    anim = { raf: requestAnimationFrame(tick), clip, dir };
+  }
+  function settle(k) { if (anim) { cancelAnimationFrame(anim.raf); anim = null; } frame = { clip: k, t: SCENE.CLIPS[k].len }; render(); }
+  const sceneIndex = k => SL.findIndex(it => it.type === 'scene' && it.k === k);
+
+  function goTo(n, animate = true) {
+    n = Math.max(0, Math.min(SL.length - 1, n));
+    const cur = SL[idx], nxt = SL[n];
+    if (nxt.type === 'scene') {
+      if (animate && cur.type === 'scene' && n === idx + 1) play(nxt.k, 1);
+      else if (animate && cur.type === 'scene' && n === idx - 1) play(cur.k, -1, null, () => settle(nxt.k));
+      else if (animate && cur.type !== 'scene' && n === idx + 1 && nxt.k === 0) play(0, 1);
+      else settle(nxt.k);
+    } else if (anim) { cancelAnimationFrame(anim.raf); anim = null; }
+    idx = n; showLayer(nxt); sync();
+  }
+  function next() {
+    if (anim && anim.dir < 0) { const i = sceneIndex(anim.clip); idx = i; showLayer(SL[i]); play(anim.clip, 1, frame.t); sync(); return; }
+    if (anim) { settle(anim.clip); return; }
+    if (idx < SL.length - 1) goTo(idx + 1);
+  }
+  function prev() {
+    if (anim && anim.dir > 0) {
+      const c = anim.clip, i = sceneIndex(c);
+      if (c === 0 || SL[i - 1].type !== 'scene') { settle(c); return; }
+      idx = i - 1; showLayer(SL[idx]); play(c, -1, frame.t, () => settle(SL[idx].k)); sync(); return;
+    }
+    if (anim) { settle(SL[idx].k); return; }
+    if (idx > 0) goTo(idx - 1);
+  }
+  function sync() {
+    document.getElementById('count').textContent = `${idx + 1} / ${SL.length}`;
+    document.getElementById('progress').style.width = `${(idx + 1) / SL.length * 100}%`;
+    const it = SL[idx];
+    const title = it.type === 'scene' ? it.title : (it.el.querySelector('h1,h2')?.textContent || it.el.id);
+    document.getElementById('live').textContent = `Slide ${idx + 1} of ${SL.length}: ${title}`;
+    const notes = it.type === 'scene' ? it.notes : (it.el.querySelector('aside')?.textContent || '');
+    document.getElementById('notes').innerHTML = `<b>Notes · ${idx + 1}</b>` + (notes ? notes.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) : 'No notes for this slide.');
+    try { history.replaceState(null, '', '#slide-' + (idx + 1)); } catch (e) {}
+  }
+
+  // ---------- input ----------
+  stage.addEventListener('click', e => { if (!e.target.closest('a')) next(); });
+  document.getElementById('next').addEventListener('click', e => { e.stopPropagation(); next(); });
+  document.getElementById('prev').addEventListener('click', e => { e.stopPropagation(); prev(); });
+  const notesEl = document.getElementById('notes'), notesBtn = document.getElementById('notesBtn');
+  const toggleNotes = () => { notesEl.hidden = !notesEl.hidden; notesBtn.setAttribute('aria-pressed', String(!notesEl.hidden)); };
+  notesBtn.addEventListener('click', e => { e.stopPropagation(); toggleNotes(); });
+  const fs = () => { const d = document; (d.fullscreenElement ? d.exitFullscreen() : d.documentElement.requestFullscreen?.())?.catch?.(() => {}); };
+  document.getElementById('fsBtn').addEventListener('click', e => { e.stopPropagation(); fs(); });
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('.hud') && (e.key === 'Enter' || e.key === ' ')) return;
+    if (['ArrowRight', ' ', 'Enter', 'PageDown', 'ArrowDown'].includes(e.key)) { e.preventDefault(); next(); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace', 'ArrowUp'].includes(e.key)) { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') goTo(0, false);
+    else if (e.key === 'End') goTo(SL.length - 1, false);
+    else if (e.key === 'n' || e.key === 'N') toggleNotes();
+    else if (e.key === 'f' || e.key === 'F') fs();
+  });
+  let tx = null;
+  stage.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  stage.addEventListener('touchend', e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 40) { e.preventDefault(); dx < 0 ? next() : prev(); } });
+  const hud = document.getElementById('hud'); let idleT;
+  const wake = () => { hud.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => hud.classList.add('idle'), 2500); };
+  addEventListener('mousemove', wake); addEventListener('keydown', wake); wake();
+  addEventListener('resize', fit);
+
+  // start: honour #slide-N
+  const m = location.hash.match(/^#slide-(\d+)$/);
+  idx = m ? Math.max(0, Math.min(SL.length - 1, +m[1] - 1)) : 0;
+  if (SL[idx].type === 'scene') frame = { clip: SL[idx].k, t: SCENE.CLIPS[SL[idx].k].len };
+  showLayer(SL[idx]); setCopy(SL[idx].type === 'scene' ? SL[idx] : null, true); sync(); fit();
+  Promise.all(['400 20px "Geist"', '600 20px "Geist"', '400 20px "Geist Mono"', '600 20px "Geist Mono"'].map(f => document.fonts.load(f))).then(render, render);
+})();
+</script>
