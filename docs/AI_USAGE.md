@@ -8,5 +8,5 @@ As ETHGlobal and Arkiv require, this file records where and how AI tools were us
   - `contracts/`: subagent. 31 forge tests; deployed and verified on Sepolia.
   - `meshy/provider` and `meshy/cmd/meshy-sync`: subagent. Spec deviations were checked on the branch before merging (see LEARNINGS #48).
   - Arkiv depth fixes (`arkiv/*.md`, per-type lifetimes, owner filter): subagent. The owner filter was re-verified live by the main agent.
-  - `web/` dashboard, `menubar/`, `meshnet/`, `e2e/`: main agent.
+  - `web/` dashboard, `mac/`, `meshnet/`, `e2e/`: main agent.
   - A human (@jashwanth0712) drove the product decisions, provided keys and funds, and ran the real-wallet lifecycle (add device, grant, revoke) from MetaMask.

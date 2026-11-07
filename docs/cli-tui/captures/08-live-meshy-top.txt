@@ -1,0 +1,36 @@
+ ◉━ ✦ MESHY mission control   meshydemo.eth  agent                                            sepolia #12,076,976 ● fresh 16s ago  19:23:16 
+╭─ TOPOLOGY ───────────────────────────────────────────────────────────╮╭─ SESSIONS ───────────────────────────────────────────────────────╮
+│ ◆ meshydemo.eth                                                      ││ (sessions are shown by `meshyd top` on the device)               │
+│                                                                      │╰──────────────────────────────────────────────────────────────────╯
+│                                                                      │╭─ GRANTS ─────────────────────────────────────────────────────────╮
+│                                                                      ││ map: Get "https://api.meshy.live/v1/map?org=meshydemo.eth": cont…│
+│                                                                      ││                                                                  │
+╰──────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────╯
+╭─ AUDIT FEED ─────────────────────────────────────────────────────────╮╭─ CHAIN · SEPOLIA ────────────────────────────────────────────────╮
+│ 10:26:26  REVOKE  claude-1  claude-1.db1.prod · block #12074344 · ki…││          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀         │
+│ 10:26:26   END    claude-1  claude-1.db1.prod  93b205a3b873          ││ tx/block ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣧⣤⣠⣤⣤⣄⣤⣤⣤⣤⣤⣄⣤⣤⣠⣤⣤⣄⣤⣤⣤⣤⣤⣤⣤⣤⣄⣠⣤    128  │
+│ 10:26:16  START   claude-1  claude-1.db1.prod  93b205a3b873          │╰──────────────────────────────────────────────────────────────────╯
+│ 10:26:07   END    claude-1  claude-1.db1.prod  6f09bd48cdec          │╭─ REVOKE → KILL ──────────────────────────────────────────────────╮
+│ 10:26:07  START   claude-1  claude-1.db1.prod  6f09bd48cdec          ││  ┓  ━━┓  ┓  ┏━━   revoke → kill                                  │
+│ 10:25:41   END    claude-1  claude-1.db1.prod  827a2bc7d720          ││  ┃   ━┫  ┃  ┣━┓   ms after head #12074344                        │
+│ 10:25:41  START   claude-1  claude-1.db1.prod  827a2bc7d720          ││  ┻  ━━┛  ┻  ┗━┛   claude-1 · avg 1352 ms over 5                  │
+│ 10:24:21   END    claude-1  claude-1.db1.prod  b93d89810109          ││                                                                  │
+│ 10:23:54  REVOKE  claude-1  claude-1.db1.prod · block #12074331 · ki…││ sessions 0   grants live 0   blocked 4   denied 3                │
+│ 10:19:26  START   claude-1  claude-1.db1.prod  b93d89810109          ││                                                                  │
+│ 07:54:45   DENY   claude-1  MESHY_NO_GRANT grant=claude-1.pi.home.me…││                                                                  │
+│ 07:54:41   END    claude-1  claude-1.camera.pi.home  d2e608991a26    ││                                                                  │
+│ 07:54:41  START   claude-1  claude-1.camera.pi.home  d2e608991a26    ││                                                                  │
+│ 07:54:33  BLOCK   claude-1  connect   MESHY_NO_GRANT grant=claude-1.…││                                                                  │
+│ 06:04:14   DENY   claude-1  MESHY_NO_GRANT resource=db1.prod.meshyde…││                                                                  │
+│ 06:04:12   END    claude-1  claude-1.db1.prod  6e06d9c16928          ││                                                                  │
+│ 06:04:12  REVOKE  claude-1  claude-1.db1.prod · block #12073050 · ki…││                                                                  │
+│ 06:04:06  START   claude-1  claude-1.db1.prod  6e06d9c16928          ││                                                                  │
+│ 06:03:36   END    claude-1  claude-1.db1.prod  113748233721          ││                                                                  │
+│ 06:03:36  REVOKE  claude-1  claude-1.db1.prod · block #12073047 · ki…││                                                                  │
+│ 06:03:21  START   claude-1  claude-1.db1.prod  113748233721          ││                                                                  │
+│ 06:02:50   END    claude-1  claude-1.db1.prod  085c32d3a3a2          ││                                                                  │
+│ 06:02:50  REVOKE  claude-1  claude-1.db1.prod · block #12073043 · ki…││                                                                  │
+│ 06:02:34  BLOCK   claude-1  access   read-only grant                 ││                                                                  │
+│ 06:02:29  BLOCK   claude-1  access   outside grant                   ││                                                                  │
+╰──────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────╯
+ q quit  ↑↓ select  tab pane  c copy ssh  o dashboard  p pause  ? help                                                                      

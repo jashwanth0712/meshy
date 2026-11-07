@@ -1,0 +1,97 @@
+<!-- {"title": "Who can reach what · Insights", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-6 pt-10 lg:px-8">
+  <div class="eyebrow">meshydemo.eth / activity / reach</div>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">Who could reach what at 10:21:00</h1>
+      <p class="lede">Rebuilt from ENS as it was at block ≈ 12,074,318: live grants, their sealed policies (decrypted here), and the wallets that could have granted more</p>
+    </div>
+    <div class="flex gap-2">
+      <span class="tag tag-lime">Org key loaded</span>
+      <button class="btn btn-outline btn-sm" data-copy="https://meshy-bay.vercel.app/org/meshydemo.eth/activity/reach?at=2026-11-06T10:21:00%2B05:30&amp;pathh=3f9a0c1d22be">Copy link</button>
+    </div>
+  </div>
+</section>
+
+<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
+  <nav class="subtabs" aria-label="Activity views">
+    <a href="./index.html">Overview</a>
+    <a href="./timeline.html">Timeline</a>
+    <a href="./access.html">Access</a>
+    <a href="./reach.html" aria-current="page">Who can reach what</a>
+    <a href="./files.html">Files &amp; refusals</a>
+    <a href="./replay.html">Session replay</a>
+  </nav>
+
+  <div class="card">
+    <div class="card-h"><h2 class="h3">Time</h2><div class="flex items-center gap-2 text-[13px]"><span class="muted">Jump to</span><button class="btn btn-ghost btn-sm">◀ previous change</button><button class="btn btn-ghost btn-sm">next change ▶</button><button class="btn btn-ghost btn-sm">block…</button></div></div>
+    <div class="card-b">
+      <div class="scrub">
+        <div class="rail"></div>
+        <span class="snap" style="left:.8%"></span><span class="snap rv" style="left:1.05%"></span><span class="snap" style="left:1.2%"></span><span class="snap rv" style="left:1.35%"></span><span class="snap" style="left:1.5%"></span><span class="snap rv" style="left:1.6%"></span>
+        <span class="snap" style="left:42.4%" data-tip="07:54:38 · camera grant created by 0xf846"></span>
+        <span class="snap" style="left:62.9%" data-tip="08:50:10 · rig1 grant created by 0xf846"></span>
+        <span class="snap" style="left:64.6%" data-tip="08:54:38 · camera grant expired"></span>
+        <span class="snap rv" style="left:67.5%" data-tip="09:02:26 · rig1 grant revoked (block 12,073,941)"></span>
+        <span class="snap" style="left:95.9%" data-tip="10:19:05 · db1 grant #4 created"></span>
+        <span class="snap rv" style="left:98.6%" data-tip="10:26:26 · db1 grant #4 revoked (block 12,074,344)"></span>
+        <span class="knob" style="left:96.7%"></span><span class="now" style="left:93%">10:21:00</span>
+        <span class="st" style="left:1%">06:00</span><span class="st" style="left:22.2%">07:00</span><span class="st" style="left:44.4%">08:00</span><span class="st" style="left:66.7%">09:00</span><span class="st" style="left:88.9%">10:00</span>
+      </div>
+      <p class="mt-1 text-[13px] muted">Each tick is a grant created (grey) or ended (amber). Dragging snaps to them.</p>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div class="card overflow-x-auto">
+      <div class="card-h"><h2 class="h3">Reach matrix</h2>
+        <div class="legend"><span><i class="sw" style="background:color-mix(in srgb,var(--s-read) 30%,transparent)"></i>ro</span><span><i class="sw" style="background:color-mix(in srgb,var(--s-write) 30%,transparent)"></i>rw</span><span><i class="sw" style="background:color-mix(in srgb,var(--s-list) 30%,transparent)"></i>port</span><span><i class="sw" style="border:1px dashed var(--border-strong)"></i>could grant</span></div>
+      </div>
+      <table class="mx">
+        <thead><tr><th></th><th>db1.prod</th><th>pi.home</th><th>camera.pi.home</th><th>rig1.home</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono font-semibold">claude-1<div class="font-sans text-[11px] font-normal muted">agent · human-backed</div></td>
+            <td><span class="cell ro" data-tip="<b>claude-1.db1.prod.meshydemo.eth</b> · tokenId …d4<br>granted 10:19:05 by 0x45e8…E0EA (you) · expiry 11:19:05<br>policy (decrypted): <code>/srv/reports</code> ro"><span class="mode">ro</span> <span class="mono">/srv/reports</span><br><span class="text-[11px] muted">until 11:19 · by you</span></span></td>
+            <td><span class="cell none">—<br><span class="text-[11px]">refused at 07:54</span></span></td>
+            <td><span class="cell none">—<br><span class="text-[11px]">expired 08:54</span></span></td>
+            <td><span class="cell none">—<br><span class="text-[11px]">revoked 09:02</span></span></td>
+          </tr>
+          <tr>
+            <td class="mono">0x45e8…E0EA<div class="font-sans text-[11px] muted">org owner</div></td>
+            <td><span class="cell can">could grant</span></td><td><span class="cell can">could grant</span></td><td><span class="cell can">could grant</span></td><td><span class="cell can">could grant</span></td>
+          </tr>
+          <tr>
+            <td class="mono">0xf846…Fc98<div class="font-sans text-[11px] muted">admin of home (EAC)</div></td>
+            <td><span class="cell none">no role on prod</span></td><td><span class="cell can">could grant</span></td><td><span class="cell can">could grant</span></td><td><span class="cell can">could grant</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="border-t hairline px-5 py-3 text-[13px] muted"><b class="text-foreground">Changes since 09:00:</b> <span class="text-foreground">+ claude-1 → db1.prod ro</span> · − claude-1 → rig1.home (revoked by 0xf846) · − claude-1 → camera (expired)</div>
+    </div>
+
+    <div class="space-y-6">
+      <div class="card">
+        <div class="card-h"><h2 class="h3">Ask about a path</h2></div>
+        <div class="card-b space-y-3">
+          <label class="search"><input value="/srv/reports on db1.prod" aria-label="Path"></label>
+          <div class="rounded-xl bg-accent p-4 text-[14px] leading-relaxed text-accent-foreground">
+            At <b>10:21:00 IST</b>, <b>1 agent</b> could read <span class="mono">/srv/reports</span> on db1, and no agent could write it:
+            <div class="mt-2 mono text-[13px]">claude-1 · ro · from 10:19:05 · ended 10:26:26 (revoked, block 12,074,344)</div>
+            <div class="mt-2 text-[13px]">Only the org owner could have granted more, because prod has no delegated admin.</div>
+          </div>
+          <p class="text-[12px] muted">The longest prefix wins, the same rule as <code>policy.Check</code>. The link carries a hash of the path, not the path.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2 class="h3">db1 folders at 10:21</h2><span class="text-xs muted">from <code>meshy.roots</code></span></div>
+        <div class="text-[13px]">
+          <div class="row"><span class="mono flex-1">/srv/reports</span><span class="badge b-info">claude-1 ro</span></div>
+          <div class="row"><span class="mono flex-1 pl-4">drafts/</span><span class="badge b-info">claude-1 ro</span></div>
+          <div class="row"><span class="mono flex-1">/srv/backups</span><span class="muted">nobody</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>Without the org key</b> the matrix still renders, because grants, windows, granters and EAC roles are public ENS data. Folder cells then read "folders (sealed)" and path questions are disabled.</div>
+</main>

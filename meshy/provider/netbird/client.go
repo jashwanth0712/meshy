@@ -112,15 +112,38 @@ type Policy struct {
 }
 
 type PolicyRule struct {
-	ID            string   `json:"id,omitempty"`
-	Name          string   `json:"name"`
-	Enabled       bool     `json:"enabled"`
-	Bidirectional bool     `json:"bidirectional"`
-	Protocol      string   `json:"protocol"` // "tcp", "udp", "all"
-	Action        string   `json:"action"`   // "accept"
-	Sources       []string `json:"sources,omitempty"`
-	Destinations  []string `json:"destinations,omitempty"`
-	Ports         []string `json:"ports,omitempty"`
+	ID            string    `json:"id,omitempty"`
+	Name          string    `json:"name"`
+	Enabled       bool      `json:"enabled"`
+	Bidirectional bool      `json:"bidirectional"`
+	Protocol      string    `json:"protocol"` // "tcp", "udp", "all"
+	Action        string    `json:"action"`   // "accept"
+	Sources       GroupRefs `json:"sources,omitempty"`
+	Destinations  GroupRefs `json:"destinations,omitempty"`
+	Ports         []string  `json:"ports,omitempty"`
+}
+
+// GroupRefs is a list of group IDs. NetBird accepts IDs on write but
+// returns group objects ({"id","name",...}) on read; both decode here.
+type GroupRefs []string
+
+func (g *GroupRefs) UnmarshalJSON(b []byte) error {
+	var ids []string
+	if err := json.Unmarshal(b, &ids); err == nil {
+		*g = ids
+		return nil
+	}
+	var objs []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(b, &objs); err != nil {
+		return err
+	}
+	*g = make(GroupRefs, len(objs))
+	for i, o := range objs {
+		(*g)[i] = o.ID
+	}
+	return nil
 }
 
 type PolicyCreate struct {

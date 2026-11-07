@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -63,13 +64,42 @@ func (n Name) Label() string { l, _, _ := strings.Cut(string(n), "."); return l 
 // Parent returns the name without its first label.
 func (n Name) Parent() Name { _, p, _ := strings.Cut(string(n), "."); return Name(p) }
 
-// Org returns the org 2LD (last two labels), e.g. "acme.eth".
+// OrgParents are shared parent names under which orgs are free subnames
+// (MeshyOrgFactory): an org under one of them has three labels, e.g.
+// acme.meshy.eth. Extend with MESHY_ORG_PARENTS (comma-separated).
+var OrgParents = func() []string {
+	ps := []string{"meshy.eth"}
+	for _, p := range strings.Split(os.Getenv("MESHY_ORG_PARENTS"), ",") {
+		if p = strings.TrimSpace(strings.ToLower(p)); p != "" {
+			ps = append(ps, p)
+		}
+	}
+	return ps
+}()
+
+// Org returns the org a name belongs to: the 2LD ("acme.eth"), or the 3LD for
+// orgs under a shared parent ("acme.meshy.eth"). A name that is itself a shared
+// parent is returned as is.
 func (n Name) Org() Name {
 	parts := strings.Split(string(n), ".")
 	if len(parts) < 2 {
 		return n
 	}
+	for _, p := range OrgParents {
+		if strings.HasSuffix(string(n), "."+p) && len(parts) >= 3 {
+			return Name(strings.Join(parts[len(parts)-3:], "."))
+		}
+	}
 	return Name(strings.Join(parts[len(parts)-2:], "."))
+}
+
+// Depth returns how many labels n has below its org (db1.prod.acme.eth -> 2).
+func (n Name) Depth() int {
+	org := string(n.Org())
+	if string(n) == org {
+		return 0
+	}
+	return strings.Count(strings.TrimSuffix(string(n), "."+org), ".") + 1
 }
 
 // ErrBadName is returned for names that do not fit Meshy's namespace.
@@ -80,7 +110,7 @@ func GrantName(agentLabel string, resource Name) (Name, error) {
 	if err := validLabel(agentLabel); err != nil {
 		return "", err
 	}
-	if strings.Count(string(resource), ".") < 3 { // db1.prod.acme.eth
+	if resource.Depth() < 2 { // db1.prod.acme.eth
 		return "", fmt.Errorf("%w: resource %q", ErrBadName, resource)
 	}
 	return Name(agentLabel + "." + string(resource)), nil
@@ -92,6 +122,15 @@ func AgentName(agentLabel string, resource Name) (Name, error) {
 		return "", err
 	}
 	return Name(agentLabel + ".agents." + string(resource.Org())), nil
+}
+
+// PersonName returns the member identity name of label in resource's org
+// (label.people.<org>, orgs created with MeshyOrgFactory).
+func PersonName(label string, resource Name) (Name, error) {
+	if err := validLabel(label); err != nil {
+		return "", err
+	}
+	return Name(label + ".people." + string(resource.Org())), nil
 }
 
 func validLabel(l string) error {

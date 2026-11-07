@@ -38,6 +38,7 @@ type Event struct {
 	Block       uint64    `json:"block,omitempty"`     // chain block that triggered a revoke
 	Latency     float64   `json:"latencyMs,omitempty"` // revoke: head seen -> session killed
 	Argv        []string  `json:"argv,omitempty"`
+	DurationMs  int64     `json:"durationMs,omitempty"`  // session.end: how long the session ran
 	GrantExpiry time.Time `json:"grantExpiry,omitempty"` // set on SessionStart; drives per-session Arkiv lifetime
 }
 

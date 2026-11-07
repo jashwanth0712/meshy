@@ -11,8 +11,12 @@ If you're an agent picking this up, read in this order: **STATUS â†’ LEARNINGS â
 | [INTERFACES.md](INTERFACES.md) | The contracts between components: ENS names and records, policy envelope, approve flow, World attestation, Arkiv schema, agent-facing strings |
 | [ONCHAIN.md](ONCHAIN.md) | Every record we write, who reads it, why it exists, and what we removed |
 | [RUNBOOK.md](RUNBOOK.md) | How to run everything locally and live on Sepolia: processes, ports, state dirs, demo scripts, troubleshooting |
+| [DEMO-3-MACS.md](DEMO-3-MACS.md) | Step-by-step demo on three MacBooks: two devices sharing folders, one Claude agent, grant / block / live revoke over the mesh |
+| [DNS.md](DNS.md) | meshy.live: hostnames, Vercel DNS, software distribution (GitHub Releases + installer), status |
 | [AUDIT.md](AUDIT.md) | Honest plan-vs-built and prize-depth audit (ENS / World / Arkiv), with the fix list |
 | [PLAN.md](PLAN.md) | The original build plan: architecture, UI/UX, demo script, test plan. Partly superseded; see STATUS |
+| [mac/PLAN.md](mac/PLAN.md) | Meshy for macOS menu-bar menu: menu tree, data refresh, browser sign-in (`meshy://signin`), edge cases, tests |
+| [ui-revamp/PLAN.md](ui-revamp/PLAN.md) | Planned web UI revamp (Electric palette, ASCII horizon hero, shadcn/ui, new logo): audit, tokens, component map, step plan, innovations; [mockups](ui-revamp/mockups/index.html) |
 | [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md) | Accounts, keys and funds that need a human (faucets, World sandbox, VPS, repo visibility) |
 | [AI_USAGE.md](AI_USAGE.md) | AI-use disclosure required by ETHGlobal and Arkiv |
 | [../arkiv/](../arkiv/) | Arkiv prize files: schema, friction, reach, why-arkiv, how-you-use-arkiv |
@@ -24,7 +28,7 @@ If you're an agent picking this up, read in this order: **STATUS â†’ LEARNINGS â
 | `meshnet/` | `meshy-mesh`: userspace WireGuard bridge (NetBird `client/embed`); a separate module because of a dependency conflict | [meshnet/README.md](../meshnet/README.md) |
 | `web/` | Next.js 16 dashboard: Access, Directory, Activity, Billing, Provider, Settings, Approve | [web/README.md](../web/README.md) |
 | `contracts/` | Foundry: `ProviderRegistry` (stake/slash with an ENS fraud proof), `MeshySubscription` (per-seat USDC); deployed on Sepolia | [contracts/README.md](../contracts/README.md) |
-| `menubar/` | macOS menu-bar app (Go systray) | [menubar/README.md](../menubar/README.md) |
+| `mac/` | macOS menu-bar app (Swift/AppKit) | [mac/README.md](../mac/README.md) |
 | `agent/claude-plugin/` | Claude Code plugin: zero-dependency MCP server + skill + `/meshy:join` | [agent/claude-plugin/README.md](../agent/claude-plugin/README.md) |
 | `deploy/` | meshyd Docker image, Linux sandbox test image, provider compose | [deploy/README.md](../deploy/README.md) |
 | `e2e/` | End-to-end scripts: Sepolia fork (`run-local.sh`, `services-local.sh`) and live demo (`live-demo.sh`) | [e2e/README.md](../e2e/README.md) |

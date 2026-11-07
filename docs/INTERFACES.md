@@ -106,8 +106,25 @@ The record value is `base64url(JSON)` (no padding) of:
 - `POST /v1/agent/device-flow/start` takes `{org, agent, addr}` and returns `{pollId, userCode, verificationUri, verificationUriComplete, expiresIn, interval}`. This is the World IdP OIDC device flow.
 - `POST /v1/agent/device-flow/poll` takes `{pollId}` and returns `{status: "pending"|"denied"|"expired"|"ok", attestation?}`. The ID token is validated server-side (RS256 JWKS, iss, aud, exp, auth_time, acr).
 - `POST /v1/agent/attest-dev` takes `{org, agent, addr}` and returns `{attestation, dev: true}`. It only exists with `--dev-attest`.
-- `GET /v1/map?org=` returns the org tree from ENS logs. Grants are a flat list (`fullName = <agent>.<target>`); services are not yet classified (STATUS pending #7).
-- `POST /v1/admit` takes `{name, wgPubKey, sig}` (EIP-191 by the name's owner over `meshy-admit:<name>:<wgPubKey>`) and returns `{setupKey, managementUrl}`, or 503 without NetBird.
+- `GET /v1/health` also returns `mesh: {enabled, management, orgs, providerId, seatsEnforced, lastSync{groups, policies, peersMatched, peersEvicted, policiesAdded, policiesRemoved, err}}`.
+- `GET /v1/map?org=` returns the org tree from ENS logs.
+  - Each device has `kind`, `meta` and `services: [{name, fullName, device, spec}]`, where `spec` is the raw `meshy.service` JSON.
+  - Each grant has `kind: "device"|"service"`, `agent` (`<label>.agents.<org>`), `target` (the device or service name), `device` (what the agent connects to) and `status`.
+- `POST /v1/admit` takes `{name, wgPubKey (base64, 32 bytes), sig}`.
+  - `sig` is EIP-191 over `meshy-admit:<name>:<wgPubKey>`, by the name's **addr record** (daemon or agent key) or its owner.
+  - Only devices (`<d>.<net>.<org>`) and agents (`<a>.agents.<org>`) can join.
+  - Errors: `MESHY_NOT_ON_ENS` and `MESHY_EXPIRED` (403); `MESHY_WG_MISMATCH` and `MESHY_NOT_AUTHORIZED` (403); `MESHY_NO_SUBSCRIPTION`, `MESHY_WRONG_PROVIDER` and `MESHY_SEATS_EXCEEDED` (402).
+  - On success it returns `{setupKey (one-off, 1 h, auto-group = the name's group), managementUrl, peerName, group, attestation, seats}`.
+- `attestation` is an EIP-712 `Attestation(uint256 providerId, bytes dnsName, uint256 resource, uint64 issuedAt, uint64 validUntil, bytes32 peerKey)`.
+  - Domain: `{name "ProviderRegistry", version "1", chainId, verifyingContract}`.
+  - `resource` is the parent registry's `getResource(labelhash)` at issuance.
+  - It is accepted as-is by `ProviderRegistry.slash(a, sig)`.
+- `GET /v1/attestations?name=` returns every admission signed (newest first, max 200).
+- `GET /v1/seats?org=` returns `{seats, used, paidUntil, providerId}`, where `used` = devices + agents.
+- **NetBird naming contract:**
+  - peer = ENS name with `.` → `-`
+  - groups = `meshy:res:<device>`, `meshy:agent:<agent>`
+  - policies = `meshy:grant:<grant name>`
 
 ## 8. meshyd authorization (three steps)
 1. **Login (`Authenticate`):** the SSH username is the agent label. The key must equal `meshy.ssh` on `<label>.agents.<org>`, the agent must have an `addr`, and it needs a valid `meshy.worldid` attestor signature. No grant is required.

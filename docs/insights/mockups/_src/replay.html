@@ -1,0 +1,83 @@
+<!-- {"title": "Session replay · Insights", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-6 pt-10 lg:px-8">
+  <div class="eyebrow">meshydemo.eth / activity / session / s_9c41e2</div>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">Session replay</h1>
+      <p class="lede"><span class="mono">claude-1</span> on <span class="mono">db1.prod</span> over the WireGuard mesh · 10:26:16 → 10:26:26 IST · killed 1,316 ms after block 12,074,344</p>
+    </div>
+    <div class="flex gap-2">
+      <span class="tag tag-sun">⚡ Revoked</span>
+      <button class="btn btn-outline btn-sm">Export JSON</button>
+    </div>
+  </div>
+</section>
+
+<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
+  <nav class="subtabs" aria-label="Activity views">
+    <a href="./index.html">Overview</a>
+    <a href="./timeline.html">Timeline</a>
+    <a href="./access.html">Access</a>
+    <a href="./reach.html">Who can reach what</a>
+    <a href="./files.html">Files &amp; refusals</a>
+    <a href="./replay.html" aria-current="page">Session replay</a>
+  </nav>
+
+  <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
+    <aside class="card self-start">
+      <div class="card-h"><h2 class="h3">Sessions</h2><span class="text-xs muted">claude-1 · 6 Nov</span></div>
+      <div class="text-[13px]">
+        <a class="row bg-accent" href="#"><span class="mono tnum">10:26:16</span><span class="flex-1 truncate">db1 · mesh</span><span class="badge b-warn">⚡</span></a>
+        <a class="row hover:bg-muted" href="#"><span class="mono tnum">10:26:07</span><span class="flex-1 truncate">db1</span><span class="muted">exit 0</span></a>
+        <a class="row hover:bg-muted" href="#"><span class="mono tnum">10:25:41</span><span class="flex-1 truncate">db1</span><span class="muted">exit 0</span></a>
+        <a class="row hover:bg-muted" href="#"><span class="mono tnum">10:19:26</span><span class="flex-1 truncate">db1 · shell</span><span class="badge b-bad">!</span></a>
+        <a class="row hover:bg-muted" href="#"><span class="mono tnum">07:54:41</span><span class="flex-1 truncate">camera · port</span><span class="muted">4 s</span></a>
+        <a class="row hover:bg-muted" href="#"><span class="mono tnum">06:04:06</span><span class="flex-1 truncate">db1</span><span class="badge b-warn">⚡</span></a>
+        <a class="row hover:bg-muted" href="#"><span class="mono tnum">06:02:34</span><span class="flex-1 truncate">db1</span><span class="badge b-bad">✕</span></a>
+      </div>
+    </aside>
+
+    <div class="min-w-0 space-y-6">
+      <div class="grid gap-4 sm:grid-cols-4">
+        <div class="card stat"><div class="v">10.2 s</div><div class="l">duration</div></div>
+        <div class="card stat"><div class="v">9</div><div class="l">file ops <span class="text-xs">(illustrative)</span></div></div>
+        <div class="card stat"><div class="v">0</div><div class="l">blocked</div></div>
+        <div class="card stat"><div class="v">137</div><div class="l">exit (killed)</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-b space-y-2">
+          <div class="flex items-center justify-between text-[13px]"><span class="font-medium">Replay</span><span class="muted">drag to step through · <kbd>←</kbd> <kbd>→</kbd></span></div>
+          <input id="replay-range" type="range" min="0" max="7" value="7" class="w-full accent-[var(--primary)]" aria-label="Replay position">
+        </div>
+        <div class="px-5 pb-5">
+          <div class="term">
+            <div data-step="0"><span class="ts">10:26:16.402</span><span class="dim"># session.start · grant claude-1.db1.prod.meshydemo.eth · tokenId …d4 · chan exec</span></div>
+            <div data-step="0"><span class="ts">10:26:16.402</span>$ sh -c 'while :; do ls /srv/reports; sleep 1; done'</div>
+            <div data-step="1"><span class="ts">10:26:16.418</span><span class="op">readdir</span>/srv/reports</div>
+            <div data-step="2"><span class="ts">10:26:17.2  </span><span class="r">⚡ revoke tx sent by 0x45e8…E0EA</span> <span class="dim">(dashboard, not on Arkiv yet: G13)</span></div>
+            <div data-step="3"><span class="ts">10:26:17.431</span><span class="op">readdir</span>/srv/reports <span class="dim">· ×7 more, once a second</span></div>
+            <div data-step="4"><span class="ts">10:26:24.4  </span><span class="r">⚡ block 12,074,344 · LabelUnregistered(claude-1.db1.prod)</span></div>
+            <div data-step="5"><span class="ts">10:26:24.9  </span><span class="dim">meshyd saw the head · grant check: findExactOwner = 0x0</span></div>
+            <div data-step="6"><span class="ts">10:26:26.216</span><span class="r">MESHY_REVOKED grant=claude-1.db1.prod.meshydemo.eth block=12074344 reason="revoked or expired"; session terminated</span></div>
+            <div data-step="7"><span class="ts">10:26:26.220</span><span class="dim"># session.end · exit 137 · Arkiv entity 0xb3d5…863d · $owner 0x7Dec…3384 (db1's ENS addr) · read-only</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2 class="h3">Where the time went</h2><span class="text-xs muted">tx sent → session dead</span></div>
+        <div class="card-b space-y-3">
+          <div class="brk">
+            <div style="flex:7.2;background:var(--muted)" data-tip="Sepolia inclusion · ~7.2 s<br>needs the revoker's tx time (G13)">Sepolia inclusion ~7.2 s</div>
+            <div style="flex:.5;background:var(--accent);color:var(--accent-foreground)" data-tip="propagation to meshyd's RPC · ~0.5 s">RPC</div>
+            <div style="flex:1.3;background:var(--revoked-bg);color:#3a2e00" data-tip="<b>latencyMs = 1,316</b><br>meshyd saw the head → process group SIGKILLed">daemon 1.3 s</div>
+          </div>
+          <p class="text-[13px] muted">Only the daemon segment is on Arkiv today (<code>latencyMs</code>, public). The rest comes from the revoker's tx and the block timestamp once G13 records the send time. It's the same picture as the ui-revamp "Revoke you can watch" dialog, rebuilt after the fact.</p>
+        </div>
+      </div>
+
+      <div class="note"><b>What replay can't show yet.</b> This session was a one-shot <code>sh -c</code>, so its argv is the whole story. For an interactive <code>/bin/sh -l</code> (the 10:19:26 session), only the login is recorded. Exec capture (G7) adds a line per program run, with no keystrokes.</div>
+    </div>
+  </div>
+</main>

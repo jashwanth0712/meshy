@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for Meshy.app and its bundled CLIs (Developer ID builds).
+  Meshy is not sandboxed, so outgoing network (WKWebView, URLSession), spawning the
+  bundled meshy/meshyd/meshy-mesh and calling launchctl need no entitlement. WKWebView's
+  JIT runs in WebKit's own processes. Add an exception here only when something breaks.
+-->
+<plist version="1.0">
+<dict/>
+</plist>

@@ -1,6 +1,5 @@
 "use client";
 import { use } from "react";
-import { DEFAULT_ORG } from "@/lib/config";
 import { MeshyProvider } from "@/lib/store";
 import { Approve } from "./Approve";
 
@@ -9,7 +8,14 @@ type SP = Record<string, string | string[] | undefined>;
 export function ApproveEntry({ searchParams }: { searchParams: Promise<SP> }) {
   const q = use(searchParams);
   const get = (k: string) => (Array.isArray(q[k]) ? q[k]![0] : (q[k] as string | undefined)) ?? "";
-  const org = (get("org") || DEFAULT_ORG).toLowerCase();
+  const org = get("org").toLowerCase();
+  if (!org) {
+    return (
+      <main className="mx-auto max-w-md px-6 py-24 text-[15px] text-muted">
+        This invite link is missing its org. Ask the admin who sent it for a new link.
+      </main>
+    );
+  }
   return (
     <MeshyProvider org={org}>
       <Approve org={org} agent={get("agent")} addr={get("addr")} ssh={get("ssh")} />

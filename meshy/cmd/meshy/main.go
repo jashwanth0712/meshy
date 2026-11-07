@@ -2,6 +2,7 @@
 //
 //	meshy join <invite-url>               generate keys, open approval page, wait for ENS
 //	meshy whoami                          show this agent's identity and records
+//	meshy top [--demo]                    live mission-control dashboard (JSON when piped)
 //	meshy grants <resource>...            grant status (expiry countdown) per resource
 //	meshy ssh <resource> [--] <command>   run a command on a resource (ENS-pinned host key)
 package main
@@ -33,6 +34,7 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 
 	"github.com/jashwanth0712/meshy/meshy/enskit"
+	"github.com/jashwanth0712/meshy/meshy/tui"
 )
 
 const defaultRPC = "https://ethereum-sepolia-rpc.publicnode.com"
@@ -48,14 +50,25 @@ func env(k, def string) string {
 type Identity struct {
 	Agent string `json:"agent"` // label, e.g. claude-1
 	Org   string `json:"org"`   // acme.eth
-	Addr  string `json:"addr"`
-	SSH   string `json:"ssh"` // authorized_keys line
-	dir   string
-	key   gossh.Signer
-	eth   *ecdsa.PrivateKey
+	// Kind is "" (an agent, <label>.agents.<org>) or "person" (a member,
+	// <label>.people.<org>, joined with an invite from the People page).
+	Kind string `json:"kind,omitempty"`
+	Addr string `json:"addr"`
+	SSH  string `json:"ssh"` // authorized_keys line
+	// Mesh is the provider management URL once `meshy mesh-join` succeeded;
+	// resources are then dialled by ENS name over the WireGuard mesh.
+	Mesh string `json:"mesh,omitempty"`
+	dir  string
+	key  gossh.Signer
+	eth  *ecdsa.PrivateKey
 }
 
-func (i *Identity) Name() enskit.Name { return enskit.Name(i.Agent + ".agents." + i.Org) }
+func (i *Identity) Name() enskit.Name {
+	if i.Kind == "person" {
+		return enskit.Name(i.Agent + ".people." + i.Org)
+	}
+	return enskit.Name(i.Agent + ".agents." + i.Org)
+}
 
 func home() string {
 	if d := os.Getenv("MESHY_HOME"); d != "" {
@@ -65,8 +78,34 @@ func home() string {
 	return filepath.Join(h, ".meshy")
 }
 
-func loadIdentity() (*Identity, error) {
-	dir := home()
+func loadIdentity() (*Identity, error) { return loadIdentityFrom(home()) }
+
+// loadIdentityFor picks the identity for the org that name belongs to: the one
+// in MESHY_HOME if set; else ~/.meshy if its org matches; else any
+// ~/.meshy/person-*.<org> created by `meshy login` or `meshy join-org`.
+func loadIdentityFor(name enskit.Name) (*Identity, error) {
+	if os.Getenv("MESHY_HOME") != "" {
+		return loadIdentity()
+	}
+	org := string(name.Org())
+	def, defErr := loadIdentity()
+	if defErr == nil && def.Org == org {
+		return def, nil
+	}
+	h, _ := os.UserHomeDir()
+	dirs, _ := filepath.Glob(filepath.Join(h, ".meshy", "person-*"))
+	for _, d := range dirs {
+		if id, err := loadIdentityFrom(d); err == nil && id.Org == org {
+			return id, nil
+		}
+	}
+	if defErr == nil {
+		return def, nil // let the daemon say MESHY_UNKNOWN_AGENT / MESHY_NO_GRANT
+	}
+	return nil, fmt.Errorf("no Meshy identity for %s on this machine: run `meshy login` (or `meshy join <invite-link>`)", org)
+}
+
+func loadIdentityFrom(dir string) (*Identity, error) {
 	b, err := os.ReadFile(filepath.Join(dir, "agent.json"))
 	if err != nil {
 		return nil, errors.New("no Meshy identity yet: run `meshy join <invite-link>`")
@@ -132,7 +171,17 @@ func ensClient(ctx context.Context) (*enskit.Client, error) {
 	return enskit.NewClient(c, common.HexToAddress(env("MESHY_ENS_HELPER", enskit.SepoliaUniversalHelper.Hex()))), nil
 }
 
+// version is set at release time: -ldflags "-X main.version=v0.3.2" (scripts/release.sh).
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Printf("meshy %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+			return
+		}
+	}
 	if len(os.Args) < 2 {
 		usage()
 	}
@@ -140,12 +189,26 @@ func main() {
 	switch os.Args[1] {
 	case "join":
 		err = cmdJoin(os.Args[2:])
+	case "join-org":
+		err = cmdJoinOrg(os.Args[2:])
+	case "login":
+		err = cmdLogin(os.Args[2:])
 	case "whoami":
 		err = cmdWhoami()
+	case "top":
+		err = cmdTop(os.Args[2:])
 	case "grants":
 		err = cmdGrants(os.Args[2:])
 	case "connect":
 		err = cmdConnect(os.Args[2:])
+	case "mesh-join":
+		err = cmdMeshJoin(os.Args[2:])
+	case "mount":
+		err = cmdMount(os.Args[2:])
+	case "request":
+		err = cmdRequest(os.Args[2:])
+	case "verify-siwe":
+		err = cmdVerifySIWE(os.Args[2:])
 	case "curl":
 		var code int
 		code, err = cmdCurl(os.Args[2:])
@@ -167,20 +230,152 @@ func main() {
 	}
 }
 
+var stdout io.Writer = os.Stdout
+
 func usage() {
 	fmt.Fprint(os.Stderr, `meshy — agent access to Meshy resources (ENSv2-controlled)
 
+  meshy login                           sign in with your wallet; joins this machine to your orgs
   meshy join <invite-link>              set up this agent and wait for approval
+  meshy join-org <invite-link> [--name alice]
+                                        join an org as a person (People → Invite link)
   meshy whoami                          identity and ENS records
   meshy grants <resource>...            what you can access and for how long
   meshy ssh <resource> [--] <command>   run a command on a resource (folder sandbox)
+  meshy mount <device>                  show the folders you were granted in Finder (network volume)
+  meshy request access <target> [--path p --mode ro|rw --dur s]
+                                        ask the org's admins for access (they see it in Meshy)
   meshy connect <service> [--local :8001]  tunnel to a service, e.g. camera.pi.home.acme.eth
+  meshy mesh-join --provider <url>      join the provider's WireGuard mesh as this agent's own peer
   meshy curl <service> [/path]          one HTTP request to a service
+  meshy verify-siwe --sig 0x… < msg     check a Sign-In with Ethereum message, print the signer
+  meshy -v                              print the version
+  meshy top [--org o.eth] [--demo]      live mission-control view of the org (JSON when piped)
 
 Errors are machine-readable: MESHY_BLOCKED, MESHY_REVOKED, MESHY_EXPIRED,
 MESHY_NO_GRANT, MESHY_NOT_HUMAN_BACKED.
 `)
 	os.Exit(2)
+}
+
+// ---- top ----
+
+func cmdTop(args []string) error {
+	fs := flag.NewFlagSet("top", flag.ExitOnError)
+	var o tui.Options
+	o.Flags(fs)
+	fs.Parse(args)
+	o.Mode = "agent"
+	ids := localIdentities()
+	o.Orgs = orgsOf(ids)
+	o.MeFor = func(org string) string {
+		for _, id := range ids {
+			if id.Org == org {
+				return string(id.Name())
+			}
+		}
+		return ""
+	}
+	if o.Org == "" && len(o.Orgs) > 0 {
+		o.Org = o.Orgs[0]
+	}
+	if o.Org == "" && !o.Demo {
+		return errors.New("MESHY_NO_ORG this machine isn't in an org yet: run `meshy login` (or open Meshy for Mac and sign in), or pass --org <org.eth>")
+	}
+	o.Me = o.MeFor(o.Org)
+	// This machine also shares a device (Meshy for Mac › Share this Mac, or meshyd run):
+	// show its live sessions, kill switch and events too.
+	if o.Control == "" {
+		o.Control = localControlSocket()
+	}
+	return tui.Run(context.Background(), o)
+}
+
+// localControlSocket finds a running meshyd's control socket under ~/.meshy.
+func localControlSocket() string {
+	h, _ := os.UserHomeDir()
+	socks, _ := filepath.Glob(filepath.Join(h, ".meshy", "*", "control.sock"))
+	for _, s := range socks {
+		if c, err := net.DialTimeout("unix", s, 500*time.Millisecond); err == nil {
+			c.Close()
+			return s
+		}
+	}
+	return ""
+}
+
+// localIdentities is every Meshy identity on this machine: the agent in
+// ~/.meshy (or MESHY_HOME) and each member identity from `meshy login`.
+func localIdentities() []*Identity {
+	var out []*Identity
+	if id, err := loadIdentity(); err == nil {
+		out = append(out, id)
+	}
+	if os.Getenv("MESHY_HOME") == "" {
+		h, _ := os.UserHomeDir()
+		dirs, _ := filepath.Glob(filepath.Join(h, ".meshy", "person-*"))
+		for _, d := range dirs {
+			if id, err := loadIdentityFrom(d); err == nil {
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+
+// orgsOf lists the orgs of ids (first seen first), plus the org this Mac
+// shares a device in (from the Meshy for Mac app), so `meshy top` follows the
+// machine instead of a fixed org.
+func orgsOf(ids []*Identity) []string {
+	seen := map[string]bool{}
+	var orgs []string
+	add := func(o string) {
+		o = strings.ToLower(strings.TrimSpace(o))
+		if o != "" && !seen[o] {
+			seen[o] = true
+			orgs = append(orgs, o)
+		}
+	}
+	for _, id := range ids {
+		add(id.Org)
+	}
+	for _, o := range macAppOrgs() {
+		add(o)
+	}
+	return orgs
+}
+
+// macAppOrgs reads the orgs the signed-in wallet added in Meshy for Mac
+// (its preferences: "orgs.<address>"), current org first.
+func macAppOrgs() []string {
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+	// Try new bundle ID first; fall back to the old one so existing installs still work.
+	raw, err := exec.Command("/bin/sh", "-c", "defaults export live.meshy.mac - | plutil -convert json -o - -").Output()
+	if err != nil || len(raw) == 0 {
+		raw, err = exec.Command("/bin/sh", "-c", "defaults export eth.meshydemo.mac - | plutil -convert json -o - -").Output()
+		if err != nil {
+			return nil
+		}
+	}
+	var prefs map[string]any
+	if json.Unmarshal(raw, &prefs) != nil {
+		return nil
+	}
+	who := strings.ToLower(fmt.Sprint(prefs["identity.address"]))
+	var out []string
+	if cur, ok := prefs["org."+who].(string); ok {
+		out = append(out, cur)
+	}
+	if list, ok := prefs["orgs."+who].([]any); ok {
+		for _, o := range list {
+			if s, ok := o.(string); ok {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
 }
 
 // ---- join ----
@@ -204,10 +399,14 @@ func cmdJoin(args []string) error {
 	if err != nil {
 		return fmt.Errorf("bad invite link: %w", err)
 	}
+	// People-page invites (https://meshy.live/join/…) are for people: same flow as join-org.
+	if strings.HasPrefix(u.Path, "/join/") {
+		return cmdJoinOrg(append([]string{fs.Arg(0)}, args[:len(args)-1]...))
+	}
 	q := u.Query()
 	org, agent := q.Get("org"), q.Get("agent")
 	if org == "" || agent == "" {
-		return errors.New("invite link must contain org= and agent=")
+		return errors.New("that isn't a Meshy invite link: use a meshy.live/join/… link (people) or an /approve?org=…&agent=… link (agents)")
 	}
 	id, err := createIdentity(agent, org)
 	if err != nil {
@@ -259,6 +458,12 @@ func joined(ctx context.Context, ens *enskit.Client, id *Identity) (bool, string
 	if strings.TrimSpace(ssh) != id.SSH {
 		return false, "meshy.ssh not set to our key yet"
 	}
+	if id.Kind == "person" {
+		if a, err := ens.Addr(ctx, r.Resolver, id.Name()); err != nil || !strings.EqualFold(a.Hex(), id.Addr) {
+			return false, "waiting for this device's key on the name (second step on the join page)"
+		}
+		return true, ""
+	}
 	if att, _ := r.Text(ctx, ens, "meshy.worldid"); att == "" {
 		return false, "waiting for World ID attestation"
 	}
@@ -303,18 +508,24 @@ func cmdWhoami() error {
 }
 
 func cmdGrants(args []string) error {
-	id, err := loadIdentity()
-	if err != nil {
-		return err
-	}
 	if len(args) == 0 {
 		return errors.New("usage: meshy grants <resource ens name>...")
+	}
+	id, err := loadIdentityFor(enskit.Name(args[0]))
+	if err != nil {
+		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	ens, err := ensClient(ctx)
 	if err != nil {
 		return err
+	}
+	// A member's grants may be owned by their wallet (the owner of their
+	// people name) rather than this machine's key.
+	wallet := common.Address{}
+	if id.Kind == "person" {
+		wallet, _ = ens.ExactOwner(ctx, id.Name(), nil)
 	}
 	for _, res := range args {
 		g, err := enskit.GrantName(id.Agent, enskit.Name(res))
@@ -338,7 +549,7 @@ func cmdGrants(args []string) error {
 		}
 		exp := time.Unix(int64(r.State.Expiry), 0)
 		fmt.Printf("MESHY_GRANT resource=%s grant=%s expires=%s left=%s owner_ok=%v\n",
-			res, g, exp.Format(time.RFC3339), time.Until(exp).Round(time.Second), owner.Hex() == id.Addr)
+			res, g, exp.Format(time.RFC3339), time.Until(exp).Round(time.Second), strings.EqualFold(owner.Hex(), id.Addr) || (wallet != (common.Address{}) && owner == wallet))
 	}
 	return nil
 }
@@ -358,7 +569,7 @@ func cmdSSH(args []string) (int, error) {
 	if len(cmdArgs) > 0 && cmdArgs[0] == "--" {
 		cmdArgs = cmdArgs[1:]
 	}
-	id, err := loadIdentity()
+	id, err := loadIdentityFor(resource)
 	if err != nil {
 		return 0, err
 	}
@@ -444,7 +655,36 @@ func dialResource(id *Identity, resource enskit.Name, endpoint string) (*gossh.C
 		HostKeyCallback: gossh.FixedHostKey(hostKey),
 		Timeout:         15 * time.Second,
 	}
-	conn, err := gossh.Dial("tcp", addr, cfg)
+	var conn *gossh.Client
+	if id.Mesh == "" && endpoint == "" && strings.HasSuffix(addr, ":22") && strings.HasPrefix(addr, string(resource)) {
+		// No endpoint on ENS and not on the mesh yet: join it now instead of
+		// failing on a name only mesh DNS knows.
+		fmt.Fprintf(os.Stderr, "Joining the Meshy mesh as %s (first time only)…\n", id.Name())
+		if err := meshJoin(id, env("MESHY_PROVIDER", "https://api.meshy.live")); err != nil {
+			return nil, fmt.Errorf("MESHY_NOT_ON_MESH %s can't join the mesh: %v", id.Name(), err)
+		}
+	}
+	if id.Mesh != "" && endpoint == "" {
+		// Over the provider mesh: the endpoint record is ignored and the
+		// resource is found by its ENS name among mesh peers.
+		nc, derr := meshDial(id, string(resource), "22")
+		if derr == nil {
+			var c gossh.Conn
+			var chans <-chan gossh.NewChannel
+			var reqs <-chan *gossh.Request
+			c, chans, reqs, err = gossh.NewClientConn(nc, string(resource)+":22", cfg)
+			if err == nil {
+				conn = gossh.NewClient(c, chans, reqs)
+			} else {
+				nc.Close()
+			}
+		} else {
+			err = derr
+		}
+		addr = "mesh:" + string(resource)
+	} else {
+		conn, err = gossh.Dial("tcp", addr, cfg)
+	}
 	if err != nil {
 		if strings.Contains(err.Error(), "unable to authenticate") {
 			return nil, fmt.Errorf("MESHY_NOT_ADMITTED resource=%s agent=%s (identity not approved, key mismatch, or not human-backed; run `meshy whoami`)", resource, id.Name())
@@ -472,7 +712,7 @@ func cmdConnect(args []string) error {
 		return errors.New("usage: meshy connect <service ens name> [--local 127.0.0.1:8001]")
 	}
 	service := enskit.Name(fs.Arg(0))
-	id, err := loadIdentity()
+	id, err := loadIdentityFor(service)
 	if err != nil {
 		return err
 	}
@@ -527,7 +767,7 @@ func cmdCurl(args []string) (int, error) {
 	if fs.NArg() > 1 {
 		path = fs.Arg(1)
 	}
-	id, err := loadIdentity()
+	id, err := loadIdentityFor(service)
 	if err != nil {
 		return 0, err
 	}

@@ -20,7 +20,7 @@ cd meshnet && go build -o ~/.local/bin/meshy-mesh .
 cd web && pnpm install && pnpm dev
 ```
 ```bash
-cd menubar && ./build-app.sh && open dist/Meshy.app
+cd mac && ./build.sh && open dist/Meshy.app
 ```
 ```bash
 cd contracts && forge install foundry-rs/forge-std --no-git && forge test
@@ -35,17 +35,31 @@ cd contracts && forge install foundry-rs/forge-std --no-git && forge test
 | `~/.meshy/meshyd-demo/` | `db1.prod` daemon keys (Arkiv writer `0x7Dec…3384`, funded) |
 | `~/.meshy/meshyd-pi/` | `pi.home` daemon keys (Arkiv writer `0x6E36…5B7F`, funded) |
 | `~/.meshy/meshyd-rig1/` | `rig1.home` daemon keys (unfunded on Arkiv, so it runs with `--arkiv ""`) |
-| `~/.meshy/agent-claude-1/` | `claude-1` agent identity (SSH key + eth key); use with `MESHY_HOME=~/.meshy/agent-claude-1` |
+| `~/.meshy/agent-claude-1/` | `claude-1` agent identity (SSH key + eth key); use with `MESHY_HOME=~/.meshy/agent-claude-1`. `mesh/` holds its WireGuard peer state; `agent.json` `mesh` is the management URL |
+| `~/.meshy/meshyd-demo/mesh/` | db1's WireGuard peer state (`config.json` holds the WG key, `management`) |
+| `~/.meshy/aws.env` | AWS CLI credentials (`. ~/.meshy/aws.env`), region ap-south-1 |
+| `~/.meshy/meshy-provider.pem` | SSH key for the VPS: `ssh -i ~/.meshy/meshy-provider.pem ubuntu@16.4.10.3` |
+| `~/.meshy/netbird.env` | NetBird owner email/password (web UI only) and `NB_PAT` (management API token) |
 
 ## 3. What is running
 | Process | Port / socket | Start command |
 |---|---|---|
 | Dashboard | http://localhost:3000 | `.claude/launch.json` `meshy-web` (or `pnpm --dir meshy/web dev`) |
-| meshy-sync (provider API) | :8787 | `meshy-sync --sepolia https://ethereum-sepolia-rpc.publicnode.com --dev-attest --cors http://localhost:3000` |
+| meshy-sync, local dev copy (provider API) | :8787 | `meshy-sync --sepolia https://ethereum-sepolia-rpc.publicnode.com --dev-attest --cors http://localhost:3000`. The **live** one is on the VPS (below) |
 | meshyd `db1.prod.meshydemo.eth` | 127.0.0.1:2222, `/tmp/meshyd-live.sock` | see §4 |
 | meshyd `pi.home.meshydemo.eth` | 127.0.0.1:2252, `/tmp/meshyd-pi.sock` | see §4 |
 | meshyd `rig1.home.meshydemo.eth` | 127.0.0.1:2262, `/tmp/meshyd-rig1.sock` | see §4 (`--arkiv ""`) |
 | Camera stand-in (service `camera.pi…`) | 127.0.0.1:8001 | `cd ~/meshy-demo/camera && python3 -m http.server 8001 --bind 127.0.0.1` |
+
+| meshy-mesh for db1 (WireGuard peer `db1-prod-meshydemo-eth`) | mesh :22 → 127.0.0.1:2222 | `meshyd mesh-join --name db1.prod.meshydemo.eth --state ~/.meshy/meshyd-demo --provider https://sync.16-4-10-3.sslip.io` |
+
+**On the VPS** (`ssh -i ~/.meshy/meshy-provider.pem ubuntu@16.4.10.3`):
+- **Instance:** EC2 `i-09e95f7f94c625171` (t3.medium, ap-south-1), security group `sg-08b40dcf795522840` (22, 80, 443, 8787 tcp; 3478 udp), elastic IP 16.4.10.3.
+- `~/netbird/`: NetBird's generated compose (netbird-server, dashboard, traefik). `sudo docker compose ps`.
+- `~/meshy-sync/`: meshy-sync compose (binary copied in), `state/attestor.key`, `state/attestations.jsonl`, `sync.env` (NetBird token). Logs: `sudo docker logs -f meshy-sync`.
+- **Redeploy meshy-sync:** `cd meshy && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /tmp/ms ./cmd/meshy-sync && scp -i ~/.meshy/meshy-provider.pem /tmp/ms ubuntu@16.4.10.3:meshy-sync/meshy-sync && ssh -i ~/.meshy/meshy-provider.pem ubuntu@16.4.10.3 'cd meshy-sync && sudo docker compose up -d --build'`
+- **Inspect NetBird:** `. ~/.meshy/netbird.env; curl -s https://16-4-10-3.sslip.io/api/peers -H "Authorization: Token $NB_PAT" | jq`
+- **Stop billing:** `. ~/.meshy/aws.env; aws ec2 stop-instances --instance-ids i-09e95f7f94c625171`. The elastic IP keeps the address, and with it the TLS names.
 
 Live view of a daemon: `meshyd status -w --control /tmp/meshyd-live.sock`
 
@@ -82,6 +96,13 @@ meshy curl camera.pi.home.meshydemo.eth /snapshot.json
 meshy connect camera.pi.home.meshydemo.eth --local 127.0.0.1:18001
 ```
 **A new agent:** run `meshy join 'http://localhost:3000/approve?org=meshydemo.eth&agent=<label>'`, then open the printed `MESHY_APPROVE_URL` and approve it. Or approve from the CLI with `meshy-admin agent add --approve '<url>' --dev-attest-key $(cat ~/.meshy/attestor.key)`.
+
+### Over the provider mesh
+```bash
+MESHY_HOME=~/.meshy/agent-claude-1 meshy mesh-join --provider https://sync.16-4-10-3.sslip.io   # once
+MESHY_HOME=~/.meshy/agent-claude-1 meshy ssh db1.prod.meshydemo.eth -- ls ~/meshy-demo/srv/reports
+```
+Once `agent.json` has `mesh`, every `meshy ssh/connect/curl` goes over WireGuard (with `meshy.endpoint` ignored), and it only works while a live grant has opened a NetBird policy. To go back to direct TCP, remove `mesh` from `agent.json`.
 
 ## 7. Tests
 ```bash

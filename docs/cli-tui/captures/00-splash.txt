@@ -1,0 +1,30 @@
+
+
+
+
+
+
+
+
+                                                    ◯               ✧
+                                                    │ ╲
+                                                    │   ╲       ╱   │
+                                                    │     ╲   ╱     │
+                                                    │       ◯       │
+                                                    │               │
+                                                    │
+                                                    │
+                                                    ●
+
+                                                  █▀▄▀█ █▀▀ █▀ █ █ █▄█
+                                                  █ ▀ █ ██▄ ▄█ █▀█  █
+
+                                 scoped, revocable access for agents · ENSv2 on Sepolia
+
+
+
+
+
+
+
+

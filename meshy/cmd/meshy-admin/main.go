@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -109,7 +110,17 @@ func (c *cli) admin(ctx context.Context) (*enskit.Admin, error) {
 	return a, nil
 }
 
+// version is set at release time: -ldflags "-X main.version=v0.3.2" (scripts/release.sh).
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Printf("meshy-admin %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+			return
+		}
+	}
 	if len(os.Args) < 3 && !(len(os.Args) == 2 && (os.Args[1] == "grant" || os.Args[1] == "revoke" || os.Args[1] == "show")) {
 		usage()
 	}
@@ -119,6 +130,10 @@ func main() {
 	switch os.Args[1] + " " + arg(2) {
 	case "org init":
 		err = orgInit(ctx, os.Args[3:])
+	case "org create":
+		err = orgCreate(ctx, os.Args[3:])
+	case "parent init":
+		err = parentInit(ctx, os.Args[3:])
 	case "network add":
 		err = networkAdd(ctx, os.Args[3:])
 	case "resource add":
@@ -158,6 +173,8 @@ func usage() {
 	fmt.Fprint(os.Stderr, `meshy-admin — manage a Meshy org in ENSv2
 
   org init      --label acme [--attestor 0x..]
+  org create    --label acme              (free acme.meshy.eth via MeshyOrgFactory, one tx)
+  parent init   --label meshy [--years 1]   (parent for free org subnames, e.g. acme.meshy.eth)
   network add   --org acme.eth --name prod
   resource add  --org acme.eth --network prod --join meshy-join:...
   agent add     --org acme.eth --approve '<MESHY_APPROVE_URL>' [--dev-attest-key hex]
@@ -230,6 +247,41 @@ func orgInit(ctx context.Context, args []string) error {
 		return err
 	}
 	fmt.Printf("Org ready. Org key saved in %s (needed to read encrypted audit payloads).\n", stateDir())
+	return nil
+}
+
+// parentInit registers <label>.eth with its own registry + resolver, owned by
+// the admin key. MeshyOrgFactory is then granted REGISTRAR on that registry so
+// anyone can create <org>.<label>.eth in one transaction (docs/orgs/PLAN.md).
+func parentInit(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("parent init", flag.ExitOnError)
+	var c cli
+	c.register(fs)
+	label := fs.String("label", "", "parent label (registers <label>.eth)")
+	years := fs.Int("years", 1, "registration term in years")
+	fs.Parse(args)
+	if *label == "" {
+		return errors.New("--label required")
+	}
+	a, err := c.admin(ctx)
+	if err != nil {
+		return err
+	}
+	resolver, err := a.DeployResolver(ctx)
+	if err != nil {
+		return fmt.Errorf("deploy resolver: %w", err)
+	}
+	step("parent resolver %s", resolver.Hex())
+	reg, err := a.DeployRegistry(ctx)
+	if err != nil {
+		return fmt.Errorf("deploy registry: %w", err)
+	}
+	step("parent registry %s", reg.Hex())
+	if _, err := a.RegisterETH(ctx, *label, a.From(), reg, resolver, time.Duration(*years)*365*24*time.Hour); err != nil {
+		return fmt.Errorf("register %s.eth: %w", *label, err)
+	}
+	step("registered %s.eth", *label)
+	fmt.Printf("PARENT name=%s.eth registry=%s resolver=%s\n", *label, reg.Hex(), resolver.Hex())
 	return nil
 }
 
@@ -447,6 +499,13 @@ func grant(ctx context.Context, args []string) error {
 	ens := enskit.NewClient(a.Eth, enskit.SepoliaUniversalHelper)
 	agentName, _ := enskit.AgentName(*agent, res)
 	ag, err := ens.Lookup(ctx, agentName)
+	if err != nil || ag.State.Status != enskit.Registered {
+		// Not an agent: maybe a member (<label>.people.<org>).
+		pn, _ := enskit.PersonName(*agent, res)
+		if pr, perr := ens.Lookup(ctx, pn); perr == nil && pr.State.Status == enskit.Registered {
+			agentName, ag, err = pn, pr, nil
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("agent %s: %w", agentName, err)
 	}

@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { rememberOrg } from "./recent";
 import { type Address, type PublicClient, type WalletClient, createWalletClient, custom } from "viem";
 import { sepolia } from "viem/chains";
 import { loadOrg, publicClient, type OrgTree } from "./ens";
@@ -28,6 +29,10 @@ type Ctx = {
   setOrgKey: (k?: string) => void;
   toast: (msg: string, kind?: "ok" | "err" | "info") => void;
   toasts: { id: number; msg: string; kind: string }[];
+  /** The connected wallet's role in the org, read from ENSv2 (/api/role). */
+  role?: { role: "owner" | "admin" | "member"; adminOf: string[] };
+  /** Owner or delegated admin: may give, revoke, approve, invite and remove. Members only request. */
+  canManage: boolean;
 };
 
 const C = createContext<Ctx | null>(null);
@@ -75,6 +80,7 @@ export function MeshyProvider({ org: initialOrg, children }: { org: string; chil
     try {
       const t = await loadOrg(client, org);
       setTree(t);
+      rememberOrg(org);
       sessionStorage.setItem(`meshy.tree.${org}`, JSON.stringify(t, (_, v) => (typeof v === "bigint" ? { $big: v.toString() } : v)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -93,6 +99,23 @@ export function MeshyProvider({ org: initialOrg, children }: { org: string; chil
     }
     refresh();
   }, [org, refresh]);
+
+  const [role, setRole] = useState<Ctx["role"]>();
+  useEffect(() => {
+    setRole(undefined);
+    if (!account) return;
+    let stop = false;
+    fetch(`/api/role?org=${encodeURIComponent(org)}&address=${account}`)
+      .then((r) => r.json())
+      .then((j: { role?: "owner" | "admin" | "member"; adminOf?: string[] }) => !stop && j.role && setRole({ role: j.role, adminOf: j.adminOf ?? [] }))
+      .catch(() => {});
+    return () => {
+      stop = true;
+    };
+  }, [account, org]);
+  // The owner is known from the tree right away; admins once /api/role answers.
+  const isOwner = !!account && !!tree && tree.owner.toLowerCase() === account.toLowerCase();
+  const canManage = isOwner || role?.role === "owner" || role?.role === "admin";
 
   const syncChain = useCallback(async () => {
     if (!window.ethereum) return;
@@ -133,7 +156,7 @@ export function MeshyProvider({ org: initialOrg, children }: { org: string; chil
 
   return (
     <C.Provider
-      value={{ client, wallet, account, chainOk, connect, org, setOrg, tree, loading, error, refresh, orgKey, setOrgKey, toast, toasts }}
+      value={{ client, wallet, account, chainOk, connect, org, setOrg, tree, loading, error, refresh, orgKey, setOrgKey, toast, toasts, role, canManage }}
     >
       {children}
     </C.Provider>

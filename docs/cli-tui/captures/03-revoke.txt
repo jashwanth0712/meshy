@@ -1,0 +1,40 @@
+ ◉━ ✦ MESHY mission control   meshydemo.eth  ·  db1.prod  DEMO               sepolia #12,076,886 ● fresh 3s ago  daemon lag 0 blk  19:23:40 
+                           ╳  REVOKED claude-1.db1.prod · block #12076886 · session killed 1316 ms after head  ╳ 
+╭─ TOPOLOGY ───────────────────────────────────────────────────────────╮╭─ SESSIONS ───────────────────────────────────────────────────────╮
+│ ◆ meshydemo.eth                                                      ││ ╳ 93b205 claude-1   KILLED  block #12076886 +1316 ms             │
+│ ├─▣ prod                                                             ││ ⠋ 5d1e09 codex-2   $ make test                   ███████░ 40m39s │
+│ │ ├─◉ db1       ◂┄┄┄┄┄┄┄┄ ╳ ┄┄┄┄┄┄┄ ✦ claude-1  revoked              ││     /home/dev/src:rw  · up 5m21s                                 │
+│ │ └─○ api                                                            │╰──────────────────────────────────────────────────────────────────╯
+│ │   └─◇ grafana ◂┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ ✦ gemini-3 expired               │╭─ GRANTS ─────────────────────────────────────────────────────────╮
+│ └─▣ home                                                             ││ claude-1 → db1.prod            ╳╳╳╳╳╳╳╳╳╳╳╳╳╳╳╳╳╳╳  REVOKED      │
+│   ├─○ pi                                                             ││ claude-1 → camera.pi.home      ▌░░░░░░░░░░░░░░░░░░     27s       │
+│   │ └─◇ camera  ◂┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ ✦ claude-1                       ││ codex-2 → rig1.home            ███████████████████  40m39s       │
+│   └─◉ rig1      ◂━━━━━●━━━━━━━━●━━━ ✦ codex-2                        ││ gemini-3 → grafana.api.prod    ░░░░░░░░░░░░░░░░░░░ expired       │
+│                                                                      ││                                                                  │
+╰──────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────╯
+╭─ AUDIT FEED ─────────────────────────────────────────────────────────╮╭─ CHAIN · SEPOLIA ────────────────────────────────────────────────╮
+│ 19:23:39  REVOKE  claude-1  claude-1.db1.prod · block #12076886 · ki…││          ⠀⠀⠀⠀⠀⠀⠀⢀⡆⢠⡀⡀⡆⢸⡄⣰⠀⣄⢀⢰⠀⣧⢀⡆⢠⡀⡀⡆⢸⡄⣰⠀⣄⢀⢰⠀⣧⢀⡆⢠⡀⡀⡆⢸⡄⣰⠀         │
+│ 19:23:38    op    claude-1  ×15  262.6kB 2 writes  … /srv/data/order…││ tx/block ⠀⠀⠀⠀⠀⠀⠀⣾⣿⣾⣧⣷⣿⣼⣷⣿⣷⣿⣼⣾⣧⣿⣾⣿⣾⣧⣷⣿⣼⣷⣿⣷⣿⣼⣾⣧⣿⣾⣿⣾⣧⣷⣿⣼⣷⣿⣷     92  │
+│ 19:23:35    op    claude-1  ×14  217.2kB 3 writes  … /srv/data/order…││          ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⢠⡇⡆⣸⣠⢠⣆⡆⣼⢰⢀⣇⡄⣴⣰⢠⡇⡆⣸⣠⢠⣆⡆⣼⢰⢀⣇⡄⣴⡀         │
+│ 19:23:32    op    claude-1  ×14  239.0kB 1 write  … /srv/data/schema…││ ops/s    ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣾⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣇      0  │
+│ 19:23:29    op    claude-1  ×7    86.5kB 2 writes  … /srv/data/schem…│╰──────────────────────────────────────────────────────────────────╯
+│ 19:23:28  BLOCK   claude-1  write /etc/passwd  outside grant         │╭─ REVOKE → KILL ──────────────────────────────────────────────────╮
+│ 19:23:27    op    claude-1  ×14  200.7kB 2 writes  … /srv/data/order…││  ┓  ━━┓  ┓  ┏━━   revoke → kill                                  │
+│ 19:23:24    op    claude-1  ×16  145.4kB 3 writes  … /srv/data/order…││  ┃   ━┫  ┃  ┣━┓   ms after head #12076886                        │
+│ 19:23:21    op    claude-1  ×13   28.4kB 2 writes  … /srv/data/order…││  ┻  ━━┛  ┻  ┗━┛   claude-1 · avg 1316 ms over 1                  │
+│ 19:23:18    op    claude-1  ×3     1.5kB 1 write  … /srv/logs/pg.log ││                                                                  │
+│ 19:23:15    op    claude-1  ×3     1.5kB  … /srv/data/schema.sql     ││ sessions 1   grants live 2   blocked 1   denied 0                │
+│ 19:23:12    op    claude-1  ×3     1.5kB 1 write  … /srv/data/idx/or…││                                                                  │
+│ 19:23:09    op    claude-1  ×3     1.5kB  … /srv/data/orders.csv     ││                                                                  │
+│ 19:23:06    op    claude-1  ×3     1.5kB 1 write  … /srv/data/users.…││                                                                  │
+│ 19:23:03    op    claude-1  ×3     1.5kB  … /srv/logs/pg.log         ││                                                                  │
+│ 19:23:00    op    claude-1  ×3     1.5kB 1 write  … /srv/data/schema…││                                                                  │
+│ 19:22:57    op    claude-1  ×3     1.5kB  … /srv/data/idx/orders_pk  ││                                                                  │
+│ 19:22:54    op    claude-1  ×3     1.5kB 1 write  … /srv/data/orders…││                                                                  │
+│ 19:22:51    op    claude-1  ×3     1.5kB  … /srv/data/users.parquet  ││                                                                  │
+│ 19:22:48    op    claude-1  ×3     1.5kB 1 write  … /srv/logs/pg.log ││                                                                  │
+│ 19:22:45    op    claude-1  ×3     1.5kB  … /srv/data/schema.sql     ││                                                                  │
+│ 19:22:42    op    claude-1  ×3     1.5kB 1 write  … /srv/data/idx/or…││                                                                  │
+│ 19:22:39    op    claude-1  read    /srv/data/orders.csv 512B        ││                                                                  │
+╰──────────────────────────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────╯
+ q quit  ↑↓ select  tab pane  k kill  c copy ssh  o dashboard  p pause  ? help                                                              

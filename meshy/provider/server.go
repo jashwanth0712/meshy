@@ -46,6 +46,21 @@ type Config struct {
 	NetBirdMgmtURL    string
 	FromBlock         uint64
 	Log               *slog.Logger
+
+	// Orgs whose ENS state is reconciled into NetBird (deny-by-default mesh).
+	Orgs []string
+	// On-chain economics. Zero Subscription disables seat enforcement.
+	Subscription     common.Address
+	ProviderRegistry common.Address
+	ProviderID       uint64
+	ChainID          uint64
+	// StateDir holds attestations.jsonl (evidence for slashing challenges).
+	StateDir string
+	// OrgFactory: MeshyOrgFactory; orgs it creates are discovered and reconciled
+	// automatically and get TrialSeats until they subscribe.
+	OrgFactory     common.Address
+	OrgFactoryFrom uint64
+	Invites        common.Address // MeshyInvites (Claimed events: memberships)
 }
 
 // Server is the meshy-sync HTTP server.
@@ -55,7 +70,12 @@ type Server struct {
 	flows      *FlowManager
 	mapBuilder *MapBuilder
 	nb         *netbird.Client
+	rec        *netbird.Reconciler
+	attest     *attestLog
+	requests   *requestBook
 	log        *slog.Logger
+	// actFor overrides the ENS check in mayActFor (tests).
+	actFor func(ctx context.Context, name string, signer common.Address) (bool, error)
 }
 
 // NewServer creates a Server and connects to Sepolia.
@@ -100,8 +120,16 @@ func NewServer(ctx context.Context, cfg Config, signerKey *ecdsa.PrivateKey) (*S
 			FromBlock: fromBlock,
 			Log:       log,
 		},
-		nb:  nb,
-		log: log,
+		nb:       nb,
+		attest:   newAttestLog(cfg.StateDir),
+		requests: newRequestBook(cfg.StateDir),
+		log:      log,
+	}
+	if nb != nil {
+		s.rec = &netbird.Reconciler{Client: nb, Log: log}
+	}
+	if s.cfg.ChainID == 0 {
+		s.cfg.ChainID = 11155111
 	}
 	return s, nil
 }
@@ -115,6 +143,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/agent/attest-dev", s.handleAttestDev)
 	mux.HandleFunc("GET /v1/map", s.handleMap)
 	mux.HandleFunc("POST /v1/admit", s.handleAdmit)
+	mux.HandleFunc("GET /v1/attestations", s.handleAttestations)
+	mux.HandleFunc("GET /v1/seats", s.handleSeats)
+	mux.HandleFunc("GET /v1/orgs", s.handleMyOrgs)
+	mux.HandleFunc("GET /v1/requests", s.handleRequestsList)
+	mux.HandleFunc("POST /v1/requests", s.handleRequestsCreate)
+	mux.HandleFunc("POST /v1/requests/withdraw", s.handleRequestsWithdraw)
 
 	return s.corsMiddleware(mux)
 }
@@ -162,6 +196,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"world":     worldMode,
 		"devAttest": s.cfg.DevAttest,
 		"version":   Version,
+		"mesh":      s.meshHealth(),
 	})
 }
 
@@ -260,109 +295,21 @@ func (s *Server) handleMap(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, m)
 }
 
-func (s *Server) handleAdmit(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name     string `json:"name"`
-		WGPubKey string `json:"wgPubKey"`
-		Sig      string `json:"sig"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
-		return
-	}
-	if req.Name == "" || req.WGPubKey == "" || req.Sig == "" {
-		jsonError(w, http.StatusBadRequest, "name, wgPubKey, sig are required")
-		return
-	}
-
+func (s *Server) meshHealth() map[string]any {
 	if s.nb == nil {
-		jsonError(w, http.StatusServiceUnavailable, "NetBird not configured; set --netbird-api and --netbird-token")
-		return
+		return map[string]any{"enabled": false}
 	}
-
-	// Recover signer from EIP-191 signature.
-	signer, err := AdmitSigner(req.Name, req.WGPubKey, req.Sig)
-	if err != nil {
-		jsonError(w, http.StatusBadRequest, "invalid signature: "+err.Error())
-		return
+	out := map[string]any{
+		"enabled":       true,
+		"management":    s.cfg.NetBirdMgmtURL,
+		"orgs":          s.cfg.Orgs,
+		"providerId":    s.cfg.ProviderID,
+		"seatsEnforced": s.cfg.Subscription != (common.Address{}),
 	}
-
-	// Verify that the signer owns the ENS name.
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-	defer cancel()
-
-	name := enskit.Name(req.Name)
-	owner, err := s.mapBuilder.ENS.ExactOwner(ctx, name, nil)
-	if err != nil {
-		jsonError(w, http.StatusBadGateway, "ENS lookup: "+err.Error())
-		return
+	if s.rec != nil {
+		out["lastSync"] = s.rec.Last
 	}
-	if owner == (common.Address{}) {
-		jsonError(w, http.StatusForbidden, "name not registered or expired")
-		return
-	}
-	if !strings.EqualFold(owner.Hex(), signer.Hex()) {
-		jsonError(w, http.StatusForbidden, "signature does not match owner of "+req.Name)
-		return
-	}
-
-	// Optionally check meshy.wg record matches.
-	rec, err := s.mapBuilder.ENS.Lookup(ctx, name)
-	if err == nil && rec.Resolver != (common.Address{}) {
-		if wgRec, err := rec.Text(ctx, s.mapBuilder.ENS, "meshy.wg"); err == nil && wgRec != "" {
-			if wgRec != req.WGPubKey {
-				jsonError(w, http.StatusForbidden, "meshy.wg record does not match provided wgPubKey")
-				return
-			}
-		}
-	}
-
-	// Determine auto_groups: the network group for this device's network.
-	// The name structure: <device>.<network>.<org>.eth or <resource>.<network>.<org>.eth
-	autoGroups := []string{}
-	parts := strings.Split(req.Name, ".")
-	if len(parts) >= 4 {
-		// Try to get the network group from NetBird.
-		netLabel := parts[1]
-		orgLabel := strings.Join(parts[2:], ".")
-		netGroupName := netbird.PeerName("") // placeholder
-		_ = netGroupName
-		groups, err := s.nb.ListGroups(ctx)
-		if err == nil {
-			netTarget := "meshy:net:" + netLabel + "." + orgLabel
-			for _, g := range groups {
-				if g.Name == netTarget {
-					autoGroups = append(autoGroups, g.ID)
-					break
-				}
-			}
-		}
-	}
-
-	// Create a one-off setup key.
-	key, err := s.nb.CreateSetupKey(ctx, netbird.CreateSetupKeyRequest{
-		Name:       "meshy-admit-" + req.Name + "-" + fmt.Sprintf("%d", time.Now().Unix()),
-		Type:       "one-off",
-		ExpiresIn:  3600, // 1 hour to use
-		AutoGroups: autoGroups,
-		UsageLimit: 1,
-		Ephemeral:  false,
-	})
-	if err != nil {
-		s.log.Warn("admit: create setup key", "name", req.Name, "err", err)
-		jsonError(w, http.StatusInternalServerError, "setup key: "+err.Error())
-		return
-	}
-
-	mgmtURL := s.cfg.NetBirdMgmtURL
-	if mgmtURL == "" {
-		mgmtURL = s.cfg.NetBirdAPI
-	}
-
-	jsonOK(w, map[string]any{
-		"setupKey":      key.Key,
-		"managementUrl": mgmtURL,
-	})
+	return out
 }
 
 // --- helpers ---

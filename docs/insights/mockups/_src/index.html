@@ -1,0 +1,38 @@
+<!-- {"title": "Insights", "active": "activity", "shell": "app"} -->
+<section class="mx-auto max-w-7xl px-6 pb-6 pt-10 lg:px-8">
+  <div class="eyebrow">meshydemo.eth / activity</div>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="display">Insights</h1>
+      <p class="lede">Every grant from ENS and every session, refusal and kill from Arkiv, joined on one timeline you can filter, share and verify.</p>
+    </div>
+    <span class="tag tag-cyan">Mockups · docs/insights/PLAN.md</span>
+  </div>
+</section>
+
+<main class="mx-auto max-w-7xl space-y-6 px-6 lg:px-8">
+  <nav class="subtabs" aria-label="Activity views">
+    <a href="./index.html" aria-current="page">Overview</a>
+    <a href="./timeline.html">Timeline</a>
+    <a href="./access.html">Access</a>
+    <a href="./reach.html">Who can reach what</a>
+    <a href="./files.html">Files &amp; refusals</a>
+    <a href="./replay.html">Session replay</a>
+  </nav>
+
+  <div class="grid gap-4 sm:grid-cols-4">
+    <div class="card stat"><div class="v">36</div><div class="l">audit entities on Arkiv · 2 writers</div></div>
+    <div class="card stat"><div class="v">12</div><div class="l">sessions · 7 refused</div></div>
+    <div class="card stat"><div class="v">162 ms</div><div class="l">median kill after a revoke</div></div>
+    <div class="card stat"><div class="v">0</div><div class="l">file-op chunks <span class="text-xs">(no audited daemon yet)</span></div></div>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <a href="./timeline.html" class="card card-b block hover:bg-muted/40"><div class="eyebrow">V1 · V9</div><div class="h3 mt-1">Agent timeline</div><p class="mt-1 text-[14px] muted">What did claude-1 do on db1? Sessions, refusals and ⚡ kills per device, with idle time collapsed, plus facets, saved views and flags.</p></a>
+    <a href="./access.html" class="card card-b block hover:bg-muted/40"><div class="eyebrow">V2 · V6 · V8</div><div class="h3 mt-1">Access granted vs. used</div><p class="mt-1 text-[14px] muted">A Gantt of grant lifetimes against real use, with granter and revoker, kill latencies, and grants that could be narrower.</p></a>
+    <a href="./reach.html" class="card card-b block hover:bg-muted/40"><div class="eyebrow">V4</div><div class="h3 mt-1">Who could reach what at T</div><p class="mt-1 text-[14px] muted">Scrub to any moment: agents × devices, decrypted paths, and who could have granted more. "Who could read /srv/reports at 10:21?"</p></a>
+    <a href="./files.html" class="card card-b block hover:bg-muted/40"><div class="eyebrow">V3 · V5</div><div class="h3 mt-1">Files &amp; refusals</div><p class="mt-1 text-[14px] muted">A treemap and heatmap of files touched, plus a funnel of where attempts stopped, with Grant this on each refusal.</p></a>
+    <a href="./replay.html" class="card card-b block hover:bg-muted/40"><div class="eyebrow">V7</div><div class="h3 mt-1">Session replay</div><p class="mt-1 text-[14px] muted">argv, ops and the kill, step by step, with a breakdown of where the revoke time went.</p></a>
+    <div class="note"><b>About the data.</b> Times, blocks, latencies, kinds, reasons and counts are the real <code>meshydemo.eth</code> values on Arkiv and ENS (6 Nov). Paths and argv are sealed on Arkiv and illustrative here, and so are allowed file ops, since none exist yet (see PLAN §0, finding 2). Hover any mark for detail.</div>
+  </div>
+</main>

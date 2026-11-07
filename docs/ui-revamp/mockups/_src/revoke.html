@@ -1,0 +1,33 @@
+<!-- {"title": "Revoke", "active": "access", "shell": "app"} -->
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10" aria-hidden="true">
+  <h1 class="display">Access</h1>
+  <p class="lede">One agent can reach one thing right now.</p>
+</section>
+<div class="mx-auto max-w-5xl px-6" aria-hidden="true"><div class="card h-40"></div></div>
+
+<div class="scrim"></div>
+
+<!-- step 1: confirm -->
+<div id="confirm" role="alertdialog" aria-labelledby="c-t" class="pop fixed left-1/2 top-[18vh] z-[55] w-[min(420px,92vw)] -translate-x-1/2 p-6">
+  <h2 id="c-t" class="h2">Revoke claude-1 on db1.prod?</h2>
+  <p class="mt-2 text-[14px] leading-relaxed muted">Its open session ends in the next block. This takes one transaction.</p>
+  <div class="mt-6 flex justify-end gap-2">
+    <a href="access.html" class="btn btn-outline">Cancel</a>
+    <button class="btn btn-danger-solid" onclick="document.getElementById('confirm').hidden=true;document.getElementById('progress').hidden=false">Revoke</button>
+  </div>
+</div>
+
+<!-- step 2: progress (shown after Revoke) -->
+<div id="progress" hidden role="dialog" aria-labelledby="p-t" class="pop fixed left-1/2 top-[18vh] z-[55] w-[min(420px,92vw)] -translate-x-1/2 p-6">
+  <div class="flex items-baseline justify-between">
+    <h2 id="p-t" class="h2">Revoked</h2>
+    <span class="mono tnum text-[13px] muted">11.0 s</span>
+  </div>
+  <ol class="mt-5 space-y-3 text-[14px]">
+    <li class="flex items-center gap-3"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span><span class="flex-1">Transaction sent</span><span class="mono text-xs muted">0.0 s</span></li>
+    <li class="flex items-center gap-3"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span><span class="flex-1">Mined in block 12,073,941</span><span class="mono text-xs muted">9.4 s</span></li>
+    <li class="flex items-center gap-3"><span class="step-dot step-done h-5 w-5"><i data-lucide="check"></i></span><span class="flex-1">Session ended on db1</span><span class="mono text-xs muted">11.0 s</span></li>
+    <li class="flex items-center gap-3"><span class="step-dot step-doing h-5 w-5"><i data-lucide="loader-circle" class="spin"></i></span><span class="flex-1 muted">Recording on Arkiv</span></li>
+  </ol>
+  <div class="mt-6 flex justify-end"><a href="access.html" class="btn btn-outline">Done</a></div>
+</div>

@@ -1,0 +1,48 @@
+<!-- {"title": "Give access", "active": "access", "shell": "app"} -->
+<section class="mx-auto max-w-5xl px-6 pb-8 pt-10" aria-hidden="true">
+  <h1 class="display">Access</h1>
+  <p class="lede">One agent can reach one thing right now.</p>
+</section>
+<div class="mx-auto max-w-5xl px-6" aria-hidden="true"><div class="card h-40"></div></div>
+
+<div class="scrim"></div>
+<aside role="dialog" aria-modal="true" aria-labelledby="sheet-title" class="pop fixed inset-y-2 right-2 z-[55] flex w-[min(480px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl">
+  <header class="flex items-center justify-between px-6 pb-2 pt-6">
+    <h2 id="sheet-title" class="h2">Give access</h2>
+    <a href="access.html" class="btn btn-ghost btn-sm btn-icon" aria-label="Close"><i data-lucide="x"></i></a>
+  </header>
+
+  <div class="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+    <label class="block">
+      <span class="label">Agent</span>
+      <select class="input mono mt-2"><option>claude-1</option></select>
+    </label>
+
+    <fieldset>
+      <legend class="label">Device</legend>
+      <div class="card mt-2 text-[14px]">
+        <label class="row cursor-pointer"><input type="radio" name="t" checked class="accent-[var(--primary)]"><span class="mono flex-1">rig1.home</span></label>
+        <label class="row cursor-pointer"><input type="radio" name="t" class="accent-[var(--primary)]"><span class="mono flex-1">db1.prod</span><span class="text-xs muted">has access</span></label>
+        <label class="row cursor-pointer"><input type="radio" name="t" class="accent-[var(--primary)]"><span class="mono flex-1">pi.home</span></label>
+      </div>
+    </fieldset>
+
+    <label class="block">
+      <span class="label">Folder</span>
+      <input class="input mono mt-2" value="~/meshy-demo/rig1/models">
+      <div class="seg mt-2"><button aria-pressed="true">Read</button><button>Read and write</button></div>
+    </label>
+
+    <div>
+      <span class="label">For</span>
+      <div class="seg mt-2"><button>15 min</button><button aria-pressed="true">1 hour</button><button>4 hours</button></div>
+    </div>
+
+    <p class="rounded-xl bg-muted p-4 text-[14px] leading-relaxed"><b class="mono">claude-1</b> can read <span class="mono">models</span> on <b class="mono">rig1</b> until 15:08. Nothing else on rig1.</p>
+  </div>
+
+  <footer class="flex items-center justify-between border-t border-border px-6 py-4">
+    <span class="text-[13px] muted">2 transactions</span>
+    <a href="access.html" class="btn btn-primary">Give access</a>
+  </footer>
+</aside>

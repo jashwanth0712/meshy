@@ -41,7 +41,17 @@ Each entry gives the **symptom**, the **cause** and the **fix**, plus where the 
 18. **NetBird `client/ssh/server`** has no public-key auth hook and no command-wrap hook, so we wrote our own gliderlabs server.
 19. **Removing a NetBird peer doesn't reset open TCP connections.** The daemon must kill sessions itself.
 20. **External modules importing NetBird must copy its `replace` directives** (circl → cunicu, easyjson → netbirdio).
-21. **Custom DNS zones** in NetBird management (`/api/dns/zones`) can give `ssh db1.prod.acme.eth` with no custom resolver. Not wired yet.
+21. **Custom DNS zones** in NetBird management (`/api/dns/zones`) could give `ssh db1.prod.acme.eth` with no custom resolver. We **don't use them**: a peer is named after its ENS name (dots → dashes), and `meshy-mesh proxy` resolves the ENS name from its peer list. A peer only appears once a policy (that is, a live grant) allows it, so "not found" means no access.
+
+Added while deploying the provider (6 Nov):
+
+50. **NetBird self-host (v0.82) is one script:** `getting-started.sh` with `NETBIRD_NON_INTERACTIVE=true NETBIRD_DOMAIN=<ip-dashes>.sslip.io` installs the combined server, embedded IdP (Dex), dashboard and Traefik with Let's Encrypt. sslip.io names get real certificates, so no DNS setup is needed.
+51. **`/api/setup` runs once per instance**, and only returns a PAT if `NB_SETUP_PAT_ENABLED=true` was already set on `netbird-server`. We created the owner before setting the variable (the compose file was root-owned) and had to wipe the `netbird_data` volume. On the second try we didn't capture the token and had to wipe again. Set the env first, then capture the token in the same command.
+52. **The NetBird API's policy rules are asymmetric:** create takes `sources: ["<groupId>"]`, but list returns `sources: [{id,name,…}]`. Decoding into `[]string` failed every reconcile pass until `GroupRefs` accepted both.
+53. **`client/embed` takes exactly one credential:** a setup key, a JWT, or a private key, never two and never none. To sign the WireGuard key into `/v1/admit` before joining, seed `config.json` with `{"PrivateKey": …}` (NetBird only generates one if it's empty). Pass the setup key on the first join and the private key on later runs.
+54. **The setup key's auto-groups place a new peer immediately.** The reconciler also matches peers to groups by name, so a peer re-registered by hand still lands in the right group.
+55. **A Go ticker queues one tick while a pass is running.** A 10 s reconcile that took more than 10 s ran twice back to back. Wait with `time.After` after each pass instead.
+56. **A provider must never evict on a single bad read.** The map builder skips entries on RPC errors, which would look like "this device is gone". The reconciler only evicts a peer after it has been missing for 2 consecutive passes.
 
 ## Sandboxing
 22. **Docker masks `/proc`,** so `bwrap --proc /proc` fails inside a user namespace.
@@ -82,4 +92,9 @@ Each entry gives the **symptom**, the **cause** and the **fix**, plus where the 
 46. **The GitHub push failed with `fatal error in commit_refs_rules`** (even for existing commits). The REST API worked meanwhile, and it cleared after about 15 minutes. Retry later rather than rewriting history.
 47. **Auto mode blocks creating public repos** and making repos public. A human must do it.
 48. **Subagent reports can misstate details:** flags, ports, "nothing left to do". Always verify on the branch before merging (we caught a mislabelled event name and wrong flag claims).
-49. **Secrets** live only in `~/.meshy/secrets.env` (mode 600). Before each commit, `git grep` for the key values.
+49. **Secrets** live only in `~/.meshy/secrets.env`, `~/.meshy/aws.env`, `~/.meshy/netbird.env` and `~/.meshy/meshy-provider.pem` (all mode 600), and on the VPS in `~/meshy-sync/sync.env`. Before each commit, `git grep` for the key values.
+
+Added 6 Nov:
+
+57. **The AWS access key the user pasted was 26 characters; AWS IDs are 20.** The first 20 worked. If `InvalidClientTokenId` appears with a correct-looking key, check the length.
+58. **Uploads from the dev network to the VPS are slow and occasionally reset** (a 10 MB scp took minutes; one HTTPS POST was reset). `meshadmit.Admit` retries 3 times; redeploy by copying a stripped static binary (`-ldflags='-s -w'`).
