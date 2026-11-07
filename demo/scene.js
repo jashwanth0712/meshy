@@ -217,7 +217,7 @@ function drawIndiaLayer(g, c, o) {
 
 // ---------- clips ----------
 const CLIPS = [
-  { len: 2.8 }, { len: 3.4 }, { len: 4.8 }, { len: 4.4 }, { len: 3.6 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 4.0 }, { len: 3.8 }, { len: 4.4 }, { len: 8.4 }, { len: 3.4 }, { len: 3.4 }, { len: 4.6 }, { len: 4.8 }, { len: 4.4 }, { len: 3.9 }, { len: 3.6 }, { len: 2.0 },
+  { len: 2.8 }, { len: 3.4 }, { len: 4.8 }, { len: 4.4 }, { len: 3.6 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 4.0 }, { len: 3.8 }, { len: 4.4 }, { len: 8.4 }, { len: 3.4 }, { len: 4.4 }, { len: 4.6 }, { len: 4.8 }, { len: 4.4 }, { len: 3.9 }, { len: 3.6 }, { len: 2.0 }, { len: 3.6 },
 ];
 function draw(g, clip, t) {
   g.fillStyle = BG; g.fillRect(0, 0, W, H);
@@ -717,7 +717,7 @@ function drawInsights(g, t, ia) {
 }
 
 // ---------- ENSv2 chapter (clips 15-21): hierarchy, sealing, enforcement, revoke ----------
-const STORY_PREV = { 15: 12, 16: 15, 17: 16, 18: 17, 19: 18, 20: 19, 21: 20 };
+const STORY_PREV = { 22: 12, 15: 22, 16: 15, 17: 16, 18: 17, 19: 18, 20: 19, 21: 20 };
 const endCache = {};
 function canvasLike(g) { const c = document.createElement('canvas'); c.width = g.canvas.width; c.height = g.canvas.height; return c; }
 function endFrame(g, clip) {
@@ -751,7 +751,8 @@ function zoomFrom(g, clip, t, mode, focus, target, content, dur = 0.9) {
   g.restore();
 }
 function drawStory(g, clip, t) {
-  if (clip === 15) zoomFrom(g, 15, t, 'in', [960, 610], [960, 610], cg => sceneTree(cg, t));
+  if (clip === 22) camZoom(g, t, cg => sceneAcme(cg, t, -1));
+  if (clip === 15) { sceneAcme(g, CLIPS[22].len, t); sceneTree(g, t); }
   if (clip === 16) zoomFrom(g, 16, t, 'in', TREE_GRANT_AT, [960, 600], cg => sceneSeal(cg, t));
   if (clip === 17) zoomFrom(g, 17, t, 'in', [960, 895], [760, 620], cg => sceneLaptop(cg, t, false));
   if (clip === 18) zoomFrom(g, 18, t, 'out', [760, 620], MESH['mbp-m3'], cg => sceneDevices(cg, t, false));
@@ -759,56 +760,150 @@ function drawStory(g, clip, t) {
   if (clip === 20) zoomFrom(g, 20, t, 'in', MESH['mbp-m3'], [760, 620], cg => sceneLaptop(cg, t, true));
   if (clip === 21) zoomFrom(g, 21, t, 'out', [760, 620], [330, 880], cg => draw(cg, 12, CLIPS[12].len), 1.6);
 }
+// --- 22: zoom into acme.eth; 15 morphs it into the name tree ---
+// camera zoom from the billing frame: acme's cluster (scale 0.36 about [330,880]) grows to full size about [960,670]
+function camZoom(g, t, content, dur = 1.5) {
+  const e = ease(clamp(t / dur));
+  if (e >= 1) { content(g); return; }
+  const k = g.canvas.width / W;
+  const old = endFrame(g, 12), neu = offscreen(g, content);
+  const s = Math.pow(0.36, 1 - e);                       // scale of the acme layout on screen
+  const P = [lerp(330, 960, e), lerp(880, 670, e)];       // where the layout's centre sits
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+  const put = (img, sc, fx, fy, a) => { if (a <= 0) return; g.globalAlpha = a; g.drawImage(img, (P[0] - fx * sc) * k, (P[1] - fy * sc) * k, img.width * sc, img.height * sc); };
+  put(old, s / 0.36, 330, 880, 1 - ramp(e, 0.35, 0.85));
+  put(neu, s, 960, 670, ramp(e, 0.25, 0.75));
+  g.restore();
+}
+const ACME_ACTORS = [
+  // id, kind, at, ENS name, role, device it holds a grant on, tree row
+  ['bob', 'person', [230, 400], 'bob.people.acme.eth', 'on-call admin · mumbai', 'mbp-m3', 15, true],
+  ['claude-1', 'agent', [230, 650], 'claude-1.agents.acme.eth', 'coding agent', 'mbp-m3', 3],
+  ['lens-bot', 'agent', [230, 900], 'lens-bot.agents.acme.eth', 'vision agent', 'office-streams', 5],
+  ['ml-team', 'team', [1720, 420], 'ml-team.teams.acme.eth', 'team · roadmap', 'rw-rtx-4070-12gb', 13],
+  ['analyst', 'agent', [1720, 690], 'analyst.agents.acme.eth', 'data agent', 'cpu-vm', 10],
+  ['ci-bot', 'agent', [1520, 960], 'ci-bot.agents.acme.eth', 'deploy agent', 'gpu-4090', 8],
+];
+const ACME_DEV = { 'mbp-m3': 2, 'office-streams': 4, 'gpu-4090': 7, 'cpu-vm': 9, 'rw-rtx-4070-12gb': 12, 'alice': 15 };
+const ACME_NETS = [['mumbai.acme.eth', 1, [540, 452]], ['chennai.acme.eth', 6, [1170, 1040]], ['dubai.acme.eth', 11, [1380, 452]], ['people.acme.eth', 14, [960, 327]]];
+function textW(g, str, size, font, weight) { g.save(); g.font = `${weight} ${size}px "${font}"`; const w = g.measureText(str).width; g.restore(); return w; }
+const treeAt = (row, dx = 0) => [TREE_X + TREE[row][0] * TREE_IND + dx, TREE_Y + row * TREE_DY - 7];
+// mt < 0: the static scene (t drives its build-up); mt >= 0: morph clock of clip 15
+function sceneAcme(g, t, mt) {
+  const morph = mt >= 0;
+  const fly = row => morph ? ramp(mt, 0.15 + row * 0.03, 1.05 + row * 0.03) : 0;   // node -> its tree row
+  const out = morph ? 1 - ramp(mt, 0, 0.5) : 1;                                       // lines, rings, labels
+  const lab = morph ? out : ramp(t, 1.3, 1.9);
+  const act = morph ? 1 : ramp(t, 1.6, 2.3);
+  const P = id => { const f = fly(ACME_DEV[id]); const T = treeAt(ACME_DEV[id], 14); return [lerp(MESH[id][0], T[0], f), lerp(MESH[id][1], T[1], f)]; };
+  // network capsules + labels
+  const capA = lab * 0.1;
+  capsule(g, MESH['mbp-m3'], MESH['office-streams'], 150, COB, capA);
+  capsule(g, MESH['cpu-vm'], MESH['gpu-4090'], 150, COB, capA);
+  capsule(g, MESH['rw-rtx-4070-12gb'], MESH['rw-rtx-4070-12gb'], 150, COB, capA);
+  capsule(g, MESH['alice'], MESH['alice'], 150, COB, capA);
+  for (const [name, row, at] of ACME_NETS) {
+    const f = fly(row), T = treeAt(row);
+    const a = morph ? 1 - ramp(f, 0.7, 1) : lab;
+    const x0 = at[0] - textW(g, name, 22, 'Geist Mono', 400) / 2;
+    text(g, name, lerp(x0, T[0], f), lerp(at[1], T[1] + 7, f), { a, size: lerp(22, 20, f), color: COB3, font: 'Geist Mono', align: 'left', halo: true });
+  }
+  // the org at the centre of its mesh
+  { const f = fly(0), T = treeAt(0);
+    const x0 = 960 - textW(g, 'acme.eth', 34, 'Geist Mono', 600) / 2;
+    text(g, 'acme.eth', lerp(x0, T[0], f), lerp(690, T[1] + 7, f), { a: (morph ? 1 - ramp(f, 0.7, 1) : ramp(t, 1.1, 1.7)), size: lerp(34, 20, f), color: INK, font: 'Geist Mono', weight: 600, align: 'left', halo: true }); }
+  // mesh lines
+  const ids = Object.keys(MESH);
+  for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) seg(g, P(ids[a]), P(ids[b]), 1, TUN, 2.2, 0.28 * out);
+  // actors and their grant lines
+  ACME_ACTORS.forEach(([id, kind, at, name, role, to, row, dash], i) => {
+    const ai = morph ? 1 : ramp(t, 1.6 + i * 0.1, 2.1 + i * 0.1);
+    const B = MESH[to], dx = B[0] - at[0], dy = B[1] - at[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    seg(g, [at[0] + ux * 46, at[1] + uy * 46], [B[0] - ux * 50, B[1] - uy * 50], morph ? 1 : ramp(t, 1.9 + i * 0.1, 2.5 + i * 0.1), dash ? '#C9CDD2' : COB3, dash ? 2.5 : 3, (dash ? 0.8 : 0.6) * ai * out, dash ? [7, 8] : null);
+    const f = fly(row), T = treeAt(row, 14);
+    const x = lerp(at[0], T[0], f), y = lerp(at[1], T[1], f);
+    if (id === 'ml-team') for (const [mn, mp] of [['priya', [1610, 352]], ['arjun', [1830, 352]]]) {
+      const mf = fly(17), MT = treeAt(17, mn === 'priya' ? 330 : 420);
+      const mx = lerp(mp[0], MT[0], mf), my = lerp(mp[1], MT[1], mf);
+      seg(g, mp, at, 1, '#3A4AB8', 2, ai * out);
+      icon(g, 'person', mx, my, lerp(34, 14, mf), 'sel', ai * (1 - ramp(mf, 0.75, 1)));
+      text(g, mn, mp[0], mp[1] - 32, { a: ai * out, size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+    }
+    icon(g, kind, x, y, lerp(56, 16, f), 'sel', ai * (1 - ramp(f, 0.75, 1)));
+    const la = ai * (morph ? out : 1);
+    if (id === 'ci-bot') {
+      text(g, name, at[0] + 50, at[1] + 2, { a: la, size: 20, color: INK, font: 'Geist Mono', weight: 600, align: 'left', halo: true });
+      text(g, role, at[0] + 50, at[1] + 30, { a: la, size: 20, color: MUTED, align: 'left', halo: true });
+    } else {
+      text(g, name, at[0], at[1] + 74, { a: la, size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+      text(g, role, at[0], at[1] + 100, { a: la, size: 20, color: MUTED, halo: true });
+    }
+  });
+  // devices with their full names
+  for (const id of ids) {
+    const f = fly(ACME_DEV[id]), [x, y] = P(id);
+    const kind = id === 'alice' ? 'person' : DEV.find(d => d.id === id).kind;
+    icon(g, kind, x, y, lerp(56, 16, f), 'sel', 1 - ramp(f, 0.75, 1));
+    text(g, DEV.find(d => d.id === id).ens, MESH[id][0], MESH[id][1] + 78, { a: lab, size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+  }
+}
 // --- 15: the name tree ---
 const TREE = [
   [0, 'acme.eth', 'org'],
   [1, 'mumbai.acme.eth', 'network'],
   [2, 'mbp-m3.mumbai.acme.eth', 'device · laptop'],
   [3, 'claude-1.mbp-m3.mumbai.acme.eth', 'grant · sealed route', true],
-  [2, 'office-streams.mumbai.acme.eth', 'device · service'],
+  [2, 'office-streams.mumbai.acme.eth', 'device · server'],
+  [3, 'lens-bot.office-streams.mumbai.acme.eth', 'grant'],
   [1, 'chennai.acme.eth', 'network'],
   [2, 'gpu-4090.chennai.acme.eth', 'device · server'],
   [3, 'ci-bot.gpu-4090.chennai.acme.eth', 'grant'],
+  [2, 'cpu-vm.chennai.acme.eth', 'device · server'],
+  [3, 'analyst.cpu-vm.chennai.acme.eth', 'grant'],
+  [1, 'dubai.acme.eth', 'network'],
+  [2, 'rtx-4070.dubai.acme.eth', 'device · server'],
+  [3, 'ml-team.rtx-4070.dubai.acme.eth', 'team grant · roadmap'],
   [1, 'people.acme.eth', 'people'],
   [2, 'alice.people.acme.eth  ·  bob.people.acme.eth', 'members'],
-  [1, 'teams.acme.eth', 'team · roadmap'],
-  [2, 'ml-team.teams.acme.eth', 'team'],
+  [1, 'teams.acme.eth', 'teams · roadmap'],
+  [2, 'ml-team.teams.acme.eth  ·  priya, arjun', 'team'],
   [1, 'agents.acme.eth', 'agents'],
   [2, 'claude-1  ·  lens-bot  ·  analyst  ·  ci-bot', 'agent identities'],
 ];
-const TREE_X = 160, TREE_Y = 352, TREE_DY = 40, TREE_IND = 46;
+const TREE_X = 160, TREE_Y = 340, TREE_DY = 30, TREE_IND = 42;
+const TREE_ROW_AT = i => 0.8 + i * 0.03;
 const TREE_GRANT_AT = [TREE_X + 3 * TREE_IND + 220, TREE_Y + 3 * TREE_DY - 7];
 function sceneTree(g, t) {
   g.save(); g.strokeStyle = '#2E3442'; g.lineWidth = 2;
   TREE.forEach(([d], i) => {
     if (d === 0) return;
-    const a = ramp(t, 0.6 + i * 0.11, 0.9 + i * 0.11); if (a <= 0) return;
+    const a = ramp(t, TREE_ROW_AT(i) + 0.2, TREE_ROW_AT(i) + 0.5); if (a <= 0) return;
     let pi = i - 1; while (TREE[pi][0] >= d) pi--;
-    const x = TREE_X + (d - 1) * TREE_IND + 12, y0 = TREE_Y + pi * TREE_DY + 4, y = TREE_Y + i * TREE_DY - 7;
+    const x = TREE_X + (d - 1) * TREE_IND + 12, y0 = TREE_Y + pi * TREE_DY + 5, y = TREE_Y + i * TREE_DY - 7;
     g.globalAlpha = a; g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y); g.lineTo(x + TREE_IND - 20, y); g.stroke();
   });
   g.restore();
   TREE.forEach(([d, name, tag, hi], i) => {
-    const a = ramp(t, 0.6 + i * 0.11, 0.9 + i * 0.11); if (a <= 0) return;
+    const a = ramp(t, TREE_ROW_AT(i), TREE_ROW_AT(i) + 0.4); if (a <= 0) return;
     const x = TREE_X + d * TREE_IND, y = TREE_Y + i * TREE_DY;
-    if (hi) { const ha = ramp(t, 2.4, 2.9); g.save(); g.globalAlpha = a * ha * 0.9; g.fillStyle = 'rgba(43,63,224,0.22)'; g.strokeStyle = COB; g.lineWidth = 2; rr(g, x - 12, y - 30, 520, 38, 10); g.fill(); g.stroke(); g.restore(); }
-    text(g, name, x, y, { a, size: 22, color: hi ? INK : (d === 0 ? INK : '#C9CDD2'), font: 'Geist Mono', weight: d <= 1 || hi ? 600 : 400, align: 'left' });
+    if (hi) { const ha = ramp(t, 2.9, 3.4); g.save(); g.globalAlpha = a * ha * 0.9; g.fillStyle = 'rgba(43,63,224,0.22)'; g.strokeStyle = COB; g.lineWidth = 2; rr(g, x - 12, y - 24, 470, 32, 9); g.fill(); g.stroke(); g.restore(); }
+    text(g, name, x, y, { a, size: 20, color: hi ? INK : (d === 0 ? INK : '#C9CDD2'), font: 'Geist Mono', weight: d <= 1 || hi ? 600 : 400, align: 'left' });
     text(g, tag, 1060, y, { a: a * 0.95, size: 20, color: hi ? COB3 : DIM, align: 'right' });
   });
   // naming convention panel
-  const pa = ramp(t, 1.8, 2.5);
+  const pa = ramp(t, 2.2, 2.9);
   g.save(); g.globalAlpha = pa; g.fillStyle = '#11131A'; g.strokeStyle = '#22262C'; g.lineWidth = 1.5; rr(g, 1180, 330, 612, 590, 18); g.fill(); g.stroke(); g.restore();
   text(g, 'How a grant is named', 1212, 380, { a: pa, size: 24, color: INK, weight: 600, align: 'left' });
   const parts = [['claude-1', 'agent', COB3], ['mbp-m3', 'device', INK], ['mumbai', 'network', INK], ['acme', 'org', INK], ['eth', 'root', MUTED]];
   parts.forEach(([p, role, col], i) => {
-    const y = 438 + i * 48, a2 = pa * ramp(t, 2.0 + i * 0.08, 2.3 + i * 0.08);
+    const y = 438 + i * 48, a2 = pa * ramp(t, 2.4 + i * 0.08, 2.7 + i * 0.08);
     g.save(); g.globalAlpha = a2; g.fillStyle = '#171B26'; g.strokeStyle = i === 0 ? COB : '#2A2F37'; g.lineWidth = 1.5; rr(g, 1212, y - 28, 220, 38, 10); g.fill(); g.stroke(); g.restore();
     text(g, (i ? '.' : '') + p, 1226, y - 2, { a: a2, size: 22, color: col, font: 'Geist Mono', weight: 600, align: 'left' });
     text(g, role, 1452, y - 2, { a: a2, size: 20, color: MUTED, align: 'left' });
   });
   const rules = ['Every level is its own registry', 'Expiry is the grant’s lifetime', 'unregister() is revoke', 'meshy.policy holds the sealed route'];
   rules.forEach((r, i) => {
-    const a2 = pa * ramp(t, 2.4 + i * 0.1, 2.7 + i * 0.1), y = 718 + i * 44;
+    const a2 = pa * ramp(t, 2.9 + i * 0.1, 3.2 + i * 0.1), y = 718 + i * 44;
     g.save(); g.globalAlpha = a2; g.fillStyle = COB3; g.beginPath(); g.arc(1220, y - 7, 4, 0, 6.2832); g.fill(); g.restore();
     text(g, r, 1236, y, { a: a2, size: 20, color: '#C9CDD2', align: 'left' });
   });
