@@ -217,7 +217,7 @@ function drawIndiaLayer(g, c, o) {
 
 // ---------- clips ----------
 const CLIPS = [
-  { len: 2.8 }, { len: 3.4 }, { len: 4.8 }, { len: 4.4 }, { len: 3.6 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 4.0 }, { len: 3.8 }, { len: 4.4 },
+  { len: 2.8 }, { len: 3.4 }, { len: 4.8 }, { len: 4.4 }, { len: 3.6 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 2.2 }, { len: 4.0 }, { len: 3.8 }, { len: 4.4 }, { len: 8.4 }, { len: 3.4 },
 ];
 function draw(g, clip, t) {
   g.fillStyle = BG; g.fillRect(0, 0, W, H);
@@ -272,6 +272,10 @@ function draw(g, clip, t) {
     if (clip === 10) { ze = ramp(t, 0.4, 1.6); zk = lerp(1, 0.55, ze); zc = [lerp(960, 560, ze), lerp(670, 700, ze)]; }
     if (clip === 11) { const f = ramp(t, 0, 1.2); ze = 1; zk = lerp(0.55, 0.36, f); zc = [lerp(560, 330, f), lerp(700, 880, f)]; }
     if (clip === 12) { ze = 1; zk = 0.36; zc = [330, 880]; }
+    if (clip === 13) { const f = ramp(t, 0.2, 1.4); ze = 1; zk = lerp(0.36, 0.62, f); zc = [lerp(330, 520, f), lerp(880, 690, f)]; }
+    if (clip === 14) { ze = 1; zk = 0.62; zc = [520, 690]; }
+    const meshA = clip === 14 ? 1 - ramp(t, 0, 0.7) : 1;
+    const idA = clip === 13 ? ramp(t, 1.0, 1.6) : clip === 14 ? meshA : 0;
     const M = id => [zc[0] + (MESH[id][0] - MC[0]) * zk, zc[1] + (MESH[id][1] - MC[1]) * zk];
     const mapA = 1 - ramp(p, 0.1, 1.2);
     if (mapA > 0) {
@@ -309,7 +313,7 @@ function draw(g, clip, t) {
     const lineA = clip >= 10 ? lerp(0.28, 0.5, ze) : lerp(0.85, 0.28, dim);
     let n = 0;
     for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) {
-      seg(g, M(ids[a]), M(ids[b]), clamp(lineP * 1.6 - n * 0.04), TUN, lerp(1.4, 2.2, zk), lineA); n++;
+      seg(g, M(ids[a]), M(ids[b]), clamp(lineP * 1.6 - n * 0.04), TUN, lerp(1.4, 2.2, zk), lineA * meshA * (clip >= 13 ? 0.6 : 1)); n++;
     }
     // one actor per step from clip 5 on: the previous one fades away as the next arrives
     const cur = clip >= 5 && clip <= 9 ? ACTORS[clip - 5] : null;
@@ -352,10 +356,20 @@ function draw(g, clip, t) {
       if (clip === 4 && d.id !== 'gpu-4090') dimNode = lerp(1, 0.55, ramp(t, 0.2, 0.9));
       if (clip >= 5 && clip <= 9) dimNode = lerp(0.55, 1, brighten[d.id] ?? 0);
       if (clip === 10) dimNode = lerp(lerp(0.55, 1, brighten[d.id] ?? 0), 1, ze);
-      icon(g, d.kind, x, y, sz, 'sel', dimNode * (d.off ? clamp(f * 4) : 1));
+      icon(g, d.kind, x, y, sz, 'sel', dimNode * meshA * (d.off ? clamp(f * 4) : 1));
+      if (idA > 0) text(g, ({ 'rw-rtx-4070-12gb': 'rtx-4070' })[d.id] ?? d.id, x, y + 48, { a: idA, size: 20, color: MUTED, font: 'Geist Mono', halo: true });
       text(g, d.ens, x, y + 76, { a: ramp(p, 2.2, 3.0) * dimNode * fadeNames, size: lerp(22, 20, m), color: INK, font: 'Geist Mono', weight: 600, halo: true });
     }
-    if (clip >= 10) drawEco(g, clip, t, zc, zk);
+    if (clip >= 10 && clip <= 12) drawEco(g, clip, t, zc, zk);
+    if (clip === 13 && t < 1.0) { // the ecosystem fades away as we zoom back into acme
+      const ea = 1 - ramp(t, 0, 0.8);
+      if (!drawEco.off) drawEco.off = document.createElement('canvas');
+      const off = drawEco.off; if (off.width !== g.canvas.width) { off.width = g.canvas.width; off.height = g.canvas.height; }
+      const og = off.getContext('2d'); og.setTransform(1, 0, 0, 1, 0, 0); og.clearRect(0, 0, off.width, off.height);
+      og.setTransform(g.getTransform()); drawEcoNoAcme(og, [330, 880], 0.36);
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ea; g.drawImage(off, 0, 0); g.restore();
+    }
+    if (clip >= 13) drawArkiv(g, clip, t, M);
     if (clip === 4 || clip === 5) {
       const ag = clip === 4 ? ramp(t, 0.4, 1.1) : out;
       icon(g, 'agent', AGENT[0], AGENT[1], 58 * lerp(1, 0.97, m), 'sel', ag);
@@ -539,6 +553,166 @@ function drawEco(g, clip, t, zc, zk) {
     rr(g, 605, 446, 200, 52, 26); g.fill(); g.stroke(); g.restore();
     text(g, `+${earn} USDC/mo`, 705, 480, { a: ea2, size: 22, color: GREEN, font: 'Geist Mono', weight: 600 });
   }
+}
+
+// ---------- Arkiv: live audit log, then insights (clips 13-14) ----------
+const OK = '#6F7FF5', BAD = '#C8732B', BADTXT = '#F2A65A';
+function drawEcoNoAcme(g, zc, zk) { // billing end state minus acme's own cluster
+  drawEco(g, 12, 99, zc, zk);
+}
+const LOG_ACTORS = {
+  'claude-1': { at: [330, 1000], to: 'gpu-4090', kind: 'agent' },
+  'lens-bot': { at: [140, 860], to: 'office-streams', kind: 'agent' },
+  'analyst': { at: [900, 960], to: 'cpu-vm', kind: 'agent' },
+  'ml-team': { at: [880, 440], to: 'rw-rtx-4070-12gb', kind: 'team' },
+};
+const DEVNAME = { 'gpu-4090': 'gpu-4090', 'office-streams': 'office-streams', 'cpu-vm': 'cpu-vm', 'rw-rtx-4070-12gb': 'rtx-4070' };
+const EVENTS = [
+  ['claude-1', 'read /models', 'ok', 'audit-chunk'],
+  ['lens-bot', 'camera port', 'ok', 'session'],
+  ['analyst', 'read /warehouse', 'ok', 'audit-chunk'],
+  ['claude-1', 'open /etc/shadow', 'bad', 'blocked'],
+  ['ml-team', 'write /runs/12', 'ok', 'audit-chunk'],
+  ['analyst', 'write /warehouse', 'bad', 'blocked'],
+  ['lens-bot', 'stream 18 MB', 'ok', 'audit-chunk'],
+  ['claude-1', 'read /models', 'ok', 'audit-chunk'],
+  ['alice', 'revoke · 216 ms', 'rev', 'revoke'],
+  ['ml-team', 'read /datasets', 'ok', 'audit-chunk'],
+].map(([actor, action, kind, entity], i) => ({ actor, action, kind, entity, t: 1.7 + i * 0.6, time: `14:25:${String(3 + i * 5).padStart(2, '0')}`, device: actor === 'alice' ? 'gpu-4090' : LOG_ACTORS[actor].to }));
+const TBL = { x: 970, y: 320, w: 822, h: 640, row0: 474, rh: 44, cols: [996, 1106, 1214, 1398, 1770] };
+function drawArkiv(g, clip, t, M) {
+  const tt = clip === 13 ? t : 99;            // log progress
+  const ia = clip === 14 ? ramp(t, 0.9, 1.4) : 0;  // insight panels
+  const out = clip === 14 ? 1 - ramp(t, 0.2, 0.9) : 1;
+  // actors + grant lines + packets
+  const aa = (clip === 13 ? ramp(t, 1.0, 1.6) : 1) * (clip === 14 ? 1 - ramp(t, 0, 0.7) : 1);
+  for (const [name, A] of Object.entries(LOG_ACTORS)) {
+    if (aa <= 0) break;
+    const B = M(A.to), dx = B[0] - A.at[0], dy = B[1] - A.at[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    seg(g, [A.at[0] + ux * 34, A.at[1] + uy * 34], [B[0] - ux * 30, B[1] - uy * 30], 1, COB3, 2, 0.35 * aa);
+    icon(g, A.kind, A.at[0], A.at[1], 40, 'sel', aa);
+    text(g, name, A.at[0], A.at[1] + 52, { a: aa, size: 20, color: INK, font: 'Geist Mono', weight: 600, halo: true });
+  }
+  for (const e of EVENTS) {
+    const q = ramp(tt, e.t, e.t + 0.5);
+    if (clip !== 13 || q <= 0 || q >= 1) continue;
+    const from = e.actor === 'alice' ? M('alice') : LOG_ACTORS[e.actor].at;
+    const to = M(e.device);
+    const stop = e.kind === 'ok' ? 1 : 0.86;
+    const x = lerp(from[0], to[0], q * stop), y = lerp(from[1], to[1], q * stop);
+    const col = e.kind === 'ok' ? COB3 : BADTXT;
+    g.save(); g.fillStyle = col; g.shadowColor = col; g.shadowBlur = 14; g.beginPath(); g.arc(x, y, 7, 0, 6.2832); g.fill(); g.restore();
+  }
+  // table
+  const ta = (clip === 13 ? ramp(t, 0.9, 1.5) : 1) * out;
+  if (ta > 0) {
+    g.save(); g.globalAlpha = ta; g.fillStyle = '#11131A'; g.strokeStyle = '#2A2F37'; g.lineWidth = 1.5;
+    rr(g, TBL.x, TBL.y, TBL.w, TBL.h, 18); g.fill(); g.stroke();
+    g.strokeStyle = '#22262C'; g.beginPath(); g.moveTo(TBL.x + 20, 438); g.lineTo(TBL.x + TBL.w - 20, 438); g.stroke(); g.restore();
+    text(g, 'Arkiv', TBL.x + 26, 368, { a: ta, size: 26, color: INK, weight: 600, align: 'left' });
+    text(g, 'one entity per event · written by the device · read-only', TBL.x + 112, 368, { a: ta, size: 20, color: MUTED, align: 'left' });
+    ['time', 'actor', 'device', 'action', 'entity'].forEach((h, i) => text(g, h, TBL.cols[i], 420, { a: ta, size: 20, color: DIM, align: i === 4 ? 'right' : 'left' }));
+    let shown = 0;
+    EVENTS.forEach((e, i) => {
+      const arr = e.t + 0.5, ra = clip === 13 ? ramp(t, arr, arr + 0.3) : 1;
+      if (ra <= 0) return;
+      shown++;
+      let pos = 0; for (let j = i + 1; j < EVENTS.length; j++) pos += clip === 13 ? ramp(t, EVENTS[j].t + 0.5, EVENTS[j].t + 0.8) : 1;
+      const y = TBL.row0 + pos * TBL.rh - (1 - ra) * 16;
+      const a2 = ta * ra * (clip === 14 ? 1 - ramp(t, 0.15 + i * 0.03, 0.5 + i * 0.03) : 1);
+      if (pos % 2 < 1 && a2 > 0) { g.save(); g.globalAlpha = a2 * 0.5; g.fillStyle = '#151820'; g.fillRect(TBL.x + 12, y - 28, TBL.w - 24, TBL.rh - 4); g.restore(); }
+      const bad = e.kind !== 'ok';
+      text(g, e.time, TBL.cols[0], y, { a: a2, size: 20, color: DIM, font: 'Geist Mono', align: 'left' });
+      text(g, e.actor, TBL.cols[1], y, { a: a2, size: 20, color: INK, font: 'Geist Mono', align: 'left' });
+      text(g, DEVNAME[e.device], TBL.cols[2], y, { a: a2, size: 20, color: MUTED, font: 'Geist Mono', align: 'left' });
+      text(g, e.action, TBL.cols[3], y, { a: a2, size: 20, color: bad ? BADTXT : INK, font: 'Geist Mono', align: 'left' });
+      text(g, e.entity, TBL.cols[4], y, { a: a2, size: 20, color: bad ? BADTXT : COB3, font: 'Geist Mono', align: 'right' });
+      // in clip 14 each row flies into its actor's bar
+      if (clip === 14) {
+        const q = ramp(t, 0.2 + i * 0.05, 1.0 + i * 0.05);
+        if (q > 0 && q < 1) {
+          const target = ACTOR_BAR_Y[e.actor] ?? ACTOR_BAR_Y['claude-1'];
+          const px = lerp(TBL.cols[1], P1.x + 210, q), py = lerp(y - 7, target, q);
+          g.save(); g.fillStyle = bad ? BAD : OK; g.globalAlpha = 1 - q * 0.3; g.beginPath(); g.arc(px, py, 7, 0, 6.2832); g.fill(); g.restore();
+        }
+      }
+    });
+    if (clip === 13) text(g, `${shown} entities on Rabdi`, TBL.x + TBL.w - 26, TBL.y + TBL.h - 22, { a: ta, size: 20, color: MUTED, align: 'right' });
+  }
+  if (ia > 0) drawInsights(g, t, ia);
+}
+// ---- insight panels ----
+const P1 = { x: 128, y: 320 }, P2 = { x: 980, y: 320 }, P3 = { x: 128, y: 680 }, P4 = { x: 980, y: 680 }, PW = 812, PH = 320;
+const BY_ACTOR = [['claude-1', 2, 1], ['lens-bot', 2, 0], ['analyst', 1, 1], ['ml-team', 2, 0]];
+const ACTOR_BAR_Y = Object.fromEntries(BY_ACTOR.map((r, i) => [r[0], P1.y + 128 + i * 44 - 7]));
+function panel(g, P, title, subtitle, a) {
+  g.save(); g.globalAlpha = a; g.fillStyle = '#11131A'; g.strokeStyle = '#22262C'; g.lineWidth = 1.5; rr(g, P.x, P.y, PW, PH, 18); g.fill(); g.stroke(); g.restore();
+  text(g, title, P.x + 28, P.y + 46, { a, size: 24, color: INK, weight: 600, align: 'left' });
+  if (subtitle) text(g, subtitle, P.x + 28, P.y + 76, { a, size: 20, color: MUTED, align: 'left' });
+}
+function bar(g, x, y, w, h, color, a, round = 'right') { // 4px rounded data end, square at the baseline
+  if (w <= 0 || h <= 0) return;
+  g.save(); g.globalAlpha = a; g.fillStyle = color; const r = Math.min(4, w / 2, h / 2);
+  g.beginPath();
+  if (round === 'right') { g.moveTo(x, y); g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r); g.lineTo(x + w, y + h - r); g.arcTo(x + w, y + h, x + w - r, y + h, r); g.lineTo(x, y + h); }
+  else { g.moveTo(x, y + h); g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r); g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r); g.lineTo(x + w, y + h); }
+  g.closePath(); g.fill(); g.restore();
+}
+function legendDot(g, x, y, color, label, a) {
+  g.save(); g.globalAlpha = a; g.fillStyle = color; rr(g, x, y - 12, 14, 14, 3); g.fill(); g.restore();
+  text(g, label, x + 22, y, { a, size: 20, color: MUTED, align: 'left' });
+}
+function drawInsights(g, t, ia) {
+  // P1: actions by actor, stacked allowed / blocked
+  panel(g, P1, 'Actions by actor', 'allowed and blocked, from the log', ia);
+  legendDot(g, P1.x + PW - 250, P1.y + 50, OK, 'allowed', ia); legendDot(g, P1.x + PW - 130, P1.y + 50, BAD, 'blocked', ia);
+  const unit = 150, gb = ramp(t, 1.1, 2.1);
+  BY_ACTOR.forEach(([name, ok, bad], i) => {
+    const y = P1.y + 110 + i * 44;
+    text(g, name, P1.x + 28, y + 18, { a: ia, size: 20, color: INK, font: 'Geist Mono', align: 'left' });
+    const x0 = P1.x + 200, wOk = ok * unit * gb, wBad = bad * unit * gb;
+    bar(g, x0, y, wOk, 22, OK, ia, bad ? 'none' : 'right');
+    bar(g, x0 + wOk + (bad ? 2 : 0), y, wBad, 22, BAD, ia);
+    text(g, String(ok + bad), x0 + wOk + wBad + (bad ? 2 : 0) + 12, y + 18, { a: ia * ramp(t, 1.9, 2.2), size: 20, color: INK, font: 'Geist Mono', align: 'left' });
+  });
+  // P2: outcome donut
+  panel(g, P2, 'Outcomes', '10 events in the last minute', ia);
+  const cx = P2.x + 210, cy = P2.y + 200, R = 86, th = 24, gd = ramp(t, 1.4, 2.4);
+  const parts = [[7, OK, 'allowed'], [2, BAD, 'blocked'], [1, '#8A909C', 'revoked']];
+  let a0 = -Math.PI / 2;
+  for (const [v, col] of parts) {
+    const sweep = (v / 10) * Math.PI * 2 * gd;
+    g.save(); g.globalAlpha = ia; g.strokeStyle = col; g.lineWidth = th; g.beginPath(); g.arc(cx, cy, R, a0 + 0.03, a0 + Math.max(0.03, sweep - 0.03)); g.stroke(); g.restore();
+    a0 += sweep;
+  }
+  text(g, '10', cx, cy + 12, { a: ia, size: 44, color: INK, weight: 600 });
+  text(g, 'events', cx, cy + 40, { a: ia, size: 20, color: MUTED });
+  parts.forEach(([v, col, label], i) => {
+    const y = P2.y + 150 + i * 46;
+    legendDot(g, P2.x + 400, y, col, `${v} ${label}`, ia * ramp(t, 1.8 + i * 0.1, 2.2 + i * 0.1));
+  });
+  // P3: actions per device
+  panel(g, P3, 'Actions per device', null, ia * ramp(t, 1.2, 1.6));
+  const devs = [['gpu-4090', 3], ['office-streams', 2], ['cpu-vm', 2], ['rtx-4070', 2]];
+  const a3 = ia * ramp(t, 1.2, 1.6), gv = ramp(t, 1.6, 2.6), base = P3.y + PH - 62;
+  g.save(); g.globalAlpha = a3; g.strokeStyle = '#2A2F37'; g.lineWidth = 1; g.beginPath(); g.moveTo(P3.x + 28, base); g.lineTo(P3.x + PW - 28, base); g.stroke(); g.restore();
+  devs.forEach(([name, v], i) => {
+    const cxb = P3.x + 120 + i * 190, h = v * 52 * gv;
+    bar(g, cxb - 28, base - h, 56, h, OK, a3, 'top');
+    text(g, String(v), cxb, base - h - 12, { a: a3 * ramp(t, 2.3, 2.6), size: 20, color: INK, font: 'Geist Mono' });
+    text(g, name, cxb, base + 32, { a: a3, size: 20, color: MUTED, font: 'Geist Mono' });
+  });
+  // P4: revocation latency (measured)
+  const a4 = ia * ramp(t, 1.4, 1.8);
+  panel(g, P4, 'Revocation latency', 'measured on Sepolia · block seen to session killed', a4);
+  const runs = [120, 192, 132, 216], gl = ramp(t, 1.8, 2.8), base4 = P4.y + PH - 62;
+  g.save(); g.globalAlpha = a4; g.strokeStyle = '#2A2F37'; g.lineWidth = 1; g.beginPath(); g.moveTo(P4.x + 28, base4); g.lineTo(P4.x + PW - 28, base4); g.stroke(); g.restore();
+  runs.forEach((v, i) => {
+    const cxb = P4.x + 120 + i * 190, h = v * 0.7 * gl;
+    bar(g, cxb - 28, base4 - h, 56, h, OK, a4, 'top');
+    text(g, `${v} ms`, cxb, base4 - h - 12, { a: a4 * ramp(t, 2.5, 2.8), size: 20, color: INK, font: 'Geist Mono' });
+    text(g, `revoke ${i + 1}`, cxb, base4 + 32, { a: a4, size: 20, color: MUTED, font: 'Geist Mono' });
+  });
 }
 
 window.SCENE = { draw, setDots, CLIPS, W, H };
