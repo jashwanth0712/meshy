@@ -4,10 +4,6 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
-  // The pitch deck with live scenes (built from /demo by demo/build.py) lives at /demo.
-  async rewrites() {
-    return [{ source: "/demo", destination: "/demo.html" }];
-  },
   turbopack: {
     rules: {
       "*.css": {
@@ -18,10 +14,11 @@ const nextConfig: NextConfig = {
   },
   // meshy.live hosts (docs/DNS.md): get.meshy.live/ is the installer,
   // www.meshy.live redirects to the apex.
+  // /demo is the pitch presentation with live scenes (web/public/demo.html, built by demo/build.py).
   async rewrites() {
     return {
       beforeFiles: [{ source: "/", has: [{ type: "host", value: "get.meshy.live" }], destination: "/install.sh" }],
-      afterFiles: [],
+      afterFiles: [{ source: "/demo", destination: "/demo.html" }],
       fallback: [],
     };
   },
